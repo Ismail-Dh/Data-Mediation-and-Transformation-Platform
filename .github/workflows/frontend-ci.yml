@@ -1,0 +1,20 @@
+name: Frontend CI
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      - name: Install & Build
+        run: |
+          cd frontend
+          npm install
+          npx ng lint
+          npx ng build --configuration=production
