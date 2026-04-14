@@ -1,0 +1,21 @@
+# backend/src/main/resources/application-docker.yml
+spring:
+  datasource:
+    url:      ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate        # Flyway gère le schéma, pas Hibernate
+    show-sql: false
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+server:
+  port: 8080
+
+jwt:
+  secret:     ${JWT_SECRET}
+  expiration: 86400000          # 24h en ms
