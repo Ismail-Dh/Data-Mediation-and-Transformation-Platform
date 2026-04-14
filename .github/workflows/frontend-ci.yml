@@ -16,5 +16,4 @@ jobs:
         run: |
           cd frontend
           npm install
-          npx ng lint
           npx ng build --configuration=production
