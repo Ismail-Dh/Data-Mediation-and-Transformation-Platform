@@ -1,13 +1,18 @@
 package com.miniESB.domain.entity;
 
-
 import com.miniESB.domain.enums.UserRole;
 import jakarta.persistence.*;
+import lombok.*;
 import java.util.ArrayList;
 import java.util.List;
 
 @Entity
 @Table(name = "users")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class User {
 
     @Id
@@ -25,22 +30,6 @@ public class User {
     private UserRole role;
 
     @OneToMany(mappedBy = "createdBy", cascade = CascadeType.ALL, orphanRemoval = false)
+    @Builder.Default
     private List<Pipeline> pipelines = new ArrayList<>();
-
-    public User() {}
-
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
-
-    public String getUsername() { return username; }
-    public void setUsername(String username) { this.username = username; }
-
-    public String getPasswordHash() { return passwordHash; }
-    public void setPasswordHash(String passwordHash) { this.passwordHash = passwordHash; }
-
-    public UserRole getRole() { return role; }
-    public void setRole(UserRole role) { this.role = role; }
-
-    public List<Pipeline> getPipelines() { return pipelines; }
-    public void setPipelines(List<Pipeline> pipelines) { this.pipelines = pipelines; }
 }

@@ -2,9 +2,15 @@ package com.miniESB.domain.entity;
 
 import com.miniESB.domain.enums.RuleType;
 import jakarta.persistence.*;
+import lombok.*;
 
 @Entity
 @Table(name = "validation_rules")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class ValidationRule {
 
     @Id
@@ -25,32 +31,9 @@ public class ValidationRule {
     private boolean active;
 
     @Column(name = "is_global", nullable = false)
-    private boolean isGlobal;
+    private boolean global;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "pipeline_id", nullable = false)
     private Pipeline pipeline;
-
-    public ValidationRule() {}
-
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
-
-    public String getFieldName() { return fieldName; }
-    public void setFieldName(String fieldName) { this.fieldName = fieldName; }
-
-    public RuleType getRuleType() { return ruleType; }
-    public void setRuleType(RuleType ruleType) { this.ruleType = ruleType; }
-
-    public String getPattern() { return pattern; }
-    public void setPattern(String pattern) { this.pattern = pattern; }
-
-    public boolean isActive() { return active; }
-    public void setActive(boolean active) { this.active = active; }
-
-    public boolean isGlobal() { return isGlobal; }
-    public void setGlobal(boolean global) { isGlobal = global; }
-
-    public Pipeline getPipeline() { return pipeline; }
-    public void setPipeline(Pipeline pipeline) { this.pipeline = pipeline; }
 }
