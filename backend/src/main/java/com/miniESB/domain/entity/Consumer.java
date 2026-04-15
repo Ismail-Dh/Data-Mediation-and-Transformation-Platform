@@ -3,7 +3,6 @@ import jakarta.persistence.*;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.catalina.Pipeline;
 @Entity
 @Table(name = "consumers")
 public class Consumer {
