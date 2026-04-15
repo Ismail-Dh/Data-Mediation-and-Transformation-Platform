@@ -1,10 +1,16 @@
 package com.miniESB.domain.entity;
 
 import jakarta.persistence.*;
+import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "exchange_logs")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class ExchangeLog {
 
     @Id
@@ -29,27 +35,4 @@ public class ExchangeLog {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "pipeline_id", nullable = false)
     private Pipeline pipeline;
-
-    public ExchangeLog() {}
-
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
-
-    public LocalDateTime getTimestamp() { return timestamp; }
-    public void setTimestamp(LocalDateTime timestamp) { this.timestamp = timestamp; }
-
-    public String getMessage() { return message; }
-    public void setMessage(String message) { this.message = message; }
-
-    public int getHttpStatus() { return httpStatus; }
-    public void setHttpStatus(int httpStatus) { this.httpStatus = httpStatus; }
-
-    public String getErrorDetail() { return errorDetail; }
-    public void setErrorDetail(String errorDetail) { this.errorDetail = errorDetail; }
-
-    public long getDuration() { return duration; }
-    public void setDuration(long duration) { this.duration = duration; }
-
-    public Pipeline getPipeline() { return pipeline; }
-    public void setPipeline(Pipeline pipeline) { this.pipeline = pipeline; }
 }
