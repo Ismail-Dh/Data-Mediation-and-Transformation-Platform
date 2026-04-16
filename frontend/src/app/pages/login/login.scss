@@ -1,0 +1,200 @@
+// ── Variables ────────────────────────────────────────────────────
+$color-bg-card:       #ffffff;
+$color-header-bg:     #1a1f2e;
+$color-accent:        #5b8dee;
+$color-btn:           #2851c8;
+$color-text-primary:  #1a1a18;
+$color-text-secondary:#6b6b67;
+$color-text-tertiary: #9b9b97;
+$color-border:        rgba(0, 0, 0, 0.12);
+$color-error:         #a32d2d;
+$color-error-bg:      #fcebeb;
+$font-sans:           'DM Sans', system-ui, sans-serif;
+$radius-md:           8px;
+$radius-lg:           12px;
+ 
+// ── Wrapper ───────────────────────────────────────────────────────
+.login-wrapper {
+  min-height: 100vh;
+  background: #f0ede8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: $font-sans;
+  padding: 1.5rem;
+}
+ 
+// ── Card ──────────────────────────────────────────────────────────
+.login-card {
+  background: $color-bg-card;
+  border: 0.5px solid $color-border;
+  border-radius: $radius-lg;
+  overflow: hidden;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+}
+ 
+// ── Header ────────────────────────────────────────────────────────
+.login-header {
+  background: $color-header-bg;
+  padding: 32px 32px 24px;
+  text-align: center;
+}
+ 
+.logo {
+  font-size: 18px;
+  font-weight: 500;
+  color: #ffffff;
+  margin-bottom: 4px;
+  letter-spacing: 0.02em;
+ 
+  .logo-mini {
+    color: $color-accent;
+  }
+}
+ 
+.login-subtitle {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.45);
+  margin: 0;
+}
+ 
+// ── Body ──────────────────────────────────────────────────────────
+.login-body {
+  padding: 24px 32px;
+}
+ 
+// ── Field ─────────────────────────────────────────────────────────
+.field-group {
+  margin-bottom: 14px;
+}
+ 
+.field-label {
+  display: block;
+  font-size: 11px;
+  color: $color-text-secondary;
+  margin-bottom: 4px;
+}
+ 
+.field-input {
+  width: 100%;
+  font-size: 12px;
+  color: $color-text-primary;
+  background: #f5f5f3;
+  border: 0.5px solid $color-border;
+  border-radius: 6px;
+  padding: 8px 10px;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  font-family: $font-sans;
+  box-sizing: border-box;
+ 
+  &::placeholder {
+    color: $color-text-tertiary;
+  }
+ 
+  &:focus {
+    border-color: $color-accent;
+    box-shadow: 0 0 0 3px rgba($color-accent, 0.12);
+  }
+ 
+  &--error {
+    border-color: $color-error !important;
+    box-shadow: 0 0 0 3px rgba($color-error, 0.10);
+  }
+}
+ 
+// ── Password toggle ───────────────────────────────────────────────
+.password-wrapper {
+  position: relative;
+}
+ 
+.password-toggle {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0 4px;
+  line-height: 1;
+  color: $color-text-tertiary;
+ 
+  &:hover {
+    color: $color-text-secondary;
+  }
+}
+ 
+// ── Validation error ──────────────────────────────────────────────
+.field-error {
+  display: block;
+  font-size: 11px;
+  color: $color-error;
+  margin-top: 4px;
+}
+ 
+// ── Alert ─────────────────────────────────────────────────────────
+.alert-error {
+  background: $color-error-bg;
+  color: $color-error;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 12px;
+  margin-bottom: 12px;
+  border: 0.5px solid rgba($color-error, 0.25);
+}
+ 
+// ── Submit button ─────────────────────────────────────────────────
+.btn-signin {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  background: $color-btn;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  padding: 9px 16px;
+  font-size: 12px;
+  font-family: $font-sans;
+  font-weight: 500;
+  cursor: pointer;
+  margin-bottom: 10px;
+  transition: background 0.15s, opacity 0.15s;
+ 
+  &:hover:not(:disabled) {
+    background: darken($color-btn, 6%);
+  }
+ 
+  &:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+  }
+}
+ 
+// ── Spinner ───────────────────────────────────────────────────────
+.spinner {
+  display: inline-block;
+  width: 13px;
+  height: 13px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+ 
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+ 
+// ── Session note ──────────────────────────────────────────────────
+.session-note {
+  font-size: 11px;
+  color: $color-text-tertiary;
+  text-align: center;
+  margin: 0;
+}
