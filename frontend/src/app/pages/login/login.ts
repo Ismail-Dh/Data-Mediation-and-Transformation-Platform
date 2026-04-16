@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { AuthService } from '../../services/auth-service';
 @Component({
   selector: 'app-login',
   imports: [
@@ -19,16 +20,17 @@ loginForm: FormGroup;
  
   constructor(
     private fb: FormBuilder,
+    private authService: AuthService,
     private router: Router
   ) {
     this.loginForm = this.fb.group({
-      email: ['', [Validators.required, Validators.email]],
+      username: ['', [Validators.required, Validators.minLength(3)]],
       password: ['', [Validators.required, Validators.minLength(6)]],
     });
   }
  
-  get email() {
-    return this.loginForm.get('email')!;
+  get username() {
+    return this.loginForm.get('username')!;
   }
  
   get password() {
@@ -48,18 +50,19 @@ loginForm: FormGroup;
     this.isLoading = true;
     this.errorMessage = '';
  
-    const { email, password } = this.loginForm.value;
+    const { username, password } = this.loginForm.value;
  
-   /* this.authService.login(email, password).subscribe({
-      next: () => {
+    this.authService.login(username, password).subscribe({
+      next: (res) => {
         this.isLoading = false;
-        this.router.navigate(['/pipelines']);
+        console.log(res.message);
+        this.router.navigate(['/dashboard']);
       },
       error: (err) => {
         this.isLoading = false;
         this.errorMessage =
-          err?.error?.message || 'Invalid credentials. Please try again.';
+          err?.error?.message || 'Identifiants invalides. Veuillez réessayer.';
       },
-    });*/
+    });
   }
 }

@@ -13,25 +13,25 @@
     <div class="login-body">
       <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" novalidate>
  
-        <!-- Email Field -->
+        <!-- Username Field -->
         <div class="field-group">
-          <label class="field-label" for="email">Email</label>
+          <label class="field-label" for="username">Username</label>
           <input
-            id="email"
-            type="email"
+            id="username"
+            type="text"
             class="field-input"
-            [class.field-input--error]="email.invalid && email.touched"
-            formControlName="email"
-            placeholder="developer@company.com"
-            autocomplete="email"
+            [class.field-input--error]="username.invalid && username.touched"
+            formControlName="username"
+            placeholder="developer"
+            autocomplete="username"
           />
-          @if (email.invalid && email.touched) {
+          @if (username.invalid && username.touched) {
             <span class="field-error">
-              @if (email.errors?.['required']) {
-                <ng-container>Email is required.</ng-container>
+              @if (username.errors?.['required']) {
+                <ng-container>Le nom d'utilisateur est requis.</ng-container>
               }
-              @if (email.errors?.['email']) {
-                <ng-container>Please enter a valid email.</ng-container>
+              @if (username.errors?.['minlength']) {
+                <ng-container>Minimum 3 caractères.</ng-container>
               }
             </span>
           }
@@ -54,7 +54,7 @@
               type="button"
               class="password-toggle"
               (click)="togglePassword()"
-              [attr.aria-label]="showPassword ? 'Hide password' : 'Show password'"
+              [attr.aria-label]="showPassword ? 'Masquer' : 'Afficher'"
             >
               {{ showPassword ? '🙈' : '👁' }}
             </button>
@@ -62,10 +62,10 @@
           @if (password.invalid && password.touched) {
             <span class="field-error">
               @if (password.errors?.['required']) {
-                <ng-container>Password is required.</ng-container>
+                <ng-container>Le mot de passe est requis.</ng-container>
               }
               @if (password.errors?.['minlength']) {
-                <ng-container>Minimum 6 characters.</ng-container>
+                <ng-container>Minimum 6 caractères.</ng-container>
               }
             </span>
           }
@@ -87,7 +87,7 @@
           @if (isLoading) {
             <span class="spinner"></span>
           }
-          <span>{{ isLoading ? 'Signing in…' : 'Sign in with JWT' }}</span>
+          <span>{{ isLoading ? 'Connexion…' : 'Sign in with JWT' }}</span>
         </button>
  
         <!-- Session info -->
