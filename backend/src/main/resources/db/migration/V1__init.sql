@@ -1,18 +1,8 @@
-
--- ENUM types
-CREATE TYPE dataformat AS ENUM ('JSON', 'XML', 'CSV');
-CREATE TYPE imagestatus AS ENUM ('PENDING', 'BUILDING', 'SUCCESS', 'FAILED');
-CREATE TYPE mappingtype AS ENUM ('FIELD_PLACEMENT', 'FORMAT_CHANGE', 'VALUE_TRANSFORM', 'CALCULATED_FIELD', 'RESTRUCTURING');
-CREATE TYPE payloadstatus AS ENUM ('RECEIVED', 'VALIDATED', 'MAPPED', 'SENT', 'FAILED');
-CREATE TYPE pipelinestatus AS ENUM ('DRAFT', 'CONFIGURED', 'VALIDATED');
-CREATE TYPE ruletype AS ENUM ('NOT_NULL', 'TYPE_NUMBER', 'TYPE_DATE', 'REGEX_EMAIL', 'REGEX_PHONE', 'MIN_MAX_LENGTH');
-CREATE TYPE userrole AS ENUM ('ADMIN', 'DEVELOPER');
-
 CREATE TABLE users (
     id BIGSERIAL PRIMARY KEY,
     username VARCHAR(100) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
-    role userrole NOT NULL
+    role VARCHAR(50) NOT NULL
 );
 
 CREATE TABLE providers (
@@ -36,9 +26,9 @@ CREATE TABLE pipelines (
     provider_url VARCHAR(500),
     version VARCHAR(50),
     created_at TIMESTAMP NOT NULL,
-    input_format dataformat NOT NULL,
-    output_format dataformat NOT NULL,
-    status pipelinestatus NOT NULL,
+    input_format VARCHAR(50) NOT NULL,
+    output_format VARCHAR(50) NOT NULL,
+    status VARCHAR(50) NOT NULL,
     user_id BIGINT NOT NULL,
     provider_id BIGINT NOT NULL,
     CONSTRAINT fk_pipeline_user FOREIGN KEY(user_id) REFERENCES users(id),
@@ -50,7 +40,7 @@ CREATE TABLE docker_images (
     image_name VARCHAR(300) NOT NULL,
     tag VARCHAR(100) NOT NULL,
     size_bytes BIGINT,
-    status imagestatus NOT NULL,
+    status VARCHAR(50) NOT NULL,
     built_at TIMESTAMP,
     pipeline_id BIGINT NOT NULL UNIQUE,
     registry_id BIGINT,
@@ -81,9 +71,9 @@ CREATE TABLE exchange_logs (
 CREATE TABLE payloads (
     id BIGSERIAL PRIMARY KEY,
     raw_content TEXT NOT NULL,
-    format dataformat NOT NULL,
+    format VARCHAR(50) NOT NULL,
     received_at TIMESTAMP NOT NULL,
-    status payloadstatus NOT NULL,
+    status VARCHAR(50) NOT NULL,
     pipeline_id BIGINT NOT NULL,
     exchange_log_id BIGINT UNIQUE,
     CONSTRAINT fk_payload_pipeline FOREIGN KEY(pipeline_id) REFERENCES pipelines(id),
@@ -106,7 +96,7 @@ CREATE TABLE mapping_rules (
     id BIGSERIAL PRIMARY KEY,
     source_field VARCHAR(200) NOT NULL,
     target_field VARCHAR(200) NOT NULL,
-    mapping_type mappingtype NOT NULL,
+    mapping_type VARCHAR(50) NOT NULL,
     expression TEXT,
     active BOOLEAN NOT NULL,
     pipeline_id BIGINT NOT NULL,
@@ -116,7 +106,7 @@ CREATE TABLE mapping_rules (
 CREATE TABLE validation_rules (
     id BIGSERIAL PRIMARY KEY,
     field_name VARCHAR(150) NOT NULL,
-    rule_type ruletype NOT NULL,
+    rule_type VARCHAR(50) NOT NULL,
     pattern VARCHAR(500),
     active BOOLEAN NOT NULL,
     is_global BOOLEAN NOT NULL,
