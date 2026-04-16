@@ -12,7 +12,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:15
+        image: postgres:15-alpine
         env:
           POSTGRES_DB: mini_esb
           POSTGRES_USER: admin_mini_esb
@@ -34,6 +34,11 @@ jobs:
           distribution: 'temurin'
 
       - name: Build & Test
+        env:
+          SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/mini_esb
+          SPRING_DATASOURCE_USERNAME: admin_mini_esb
+          SPRING_DATASOURCE_PASSWORD: 1234
+          SPRING_PROFILES_ACTIVE: test
         run: |
           cd backend
           mvn clean test
