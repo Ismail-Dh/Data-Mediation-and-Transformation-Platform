@@ -1,0 +1,100 @@
+<div class="login-wrapper">
+  <div class="login-card">
+ 
+    <!-- Header -->
+    <div class="login-header">
+      <div class="logo">
+        <span class="logo-mini">Mini</span>ESB Studio
+      </div>
+      <p class="login-subtitle">Data Mediation &amp; Transformation Platform</p>
+    </div>
+ 
+    <!-- Form Body -->
+    <div class="login-body">
+      <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" novalidate>
+ 
+        <!-- Email Field -->
+        <div class="field-group">
+          <label class="field-label" for="email">Email</label>
+          <input
+            id="email"
+            type="email"
+            class="field-input"
+            [class.field-input--error]="email.invalid && email.touched"
+            formControlName="email"
+            placeholder="developer@company.com"
+            autocomplete="email"
+          />
+          @if (email.invalid && email.touched) {
+            <span class="field-error">
+              @if (email.errors?.['required']) {
+                <ng-container>Email is required.</ng-container>
+              }
+              @if (email.errors?.['email']) {
+                <ng-container>Please enter a valid email.</ng-container>
+              }
+            </span>
+          }
+        </div>
+ 
+        <!-- Password Field -->
+        <div class="field-group">
+          <label class="field-label" for="password">Password</label>
+          <div class="password-wrapper">
+            <input
+              id="password"
+              [type]="showPassword ? 'text' : 'password'"
+              class="field-input"
+              [class.field-input--error]="password.invalid && password.touched"
+              formControlName="password"
+              placeholder="••••••••••"
+              autocomplete="current-password"
+            />
+            <button
+              type="button"
+              class="password-toggle"
+              (click)="togglePassword()"
+              [attr.aria-label]="showPassword ? 'Hide password' : 'Show password'"
+            >
+              {{ showPassword ? '🙈' : '👁' }}
+            </button>
+          </div>
+          @if (password.invalid && password.touched) {
+            <span class="field-error">
+              @if (password.errors?.['required']) {
+                <ng-container>Password is required.</ng-container>
+              }
+              @if (password.errors?.['minlength']) {
+                <ng-container>Minimum 6 characters.</ng-container>
+              }
+            </span>
+          }
+        </div>
+ 
+        <!-- Global Error -->
+        @if (errorMessage) {
+          <div class="alert-error">
+            {{ errorMessage }}
+          </div>
+        }
+ 
+        <!-- Submit Button -->
+        <button
+          type="submit"
+          class="btn-signin"
+          [disabled]="isLoading"
+        >
+          @if (isLoading) {
+            <span class="spinner"></span>
+          }
+          <span>{{ isLoading ? 'Signing in…' : 'Sign in with JWT' }}</span>
+        </button>
+ 
+        <!-- Session info -->
+        <p class="session-note">Session expires after 2h of inactivity</p>
+ 
+      </form>
+    </div>
+ 
+  </div>
+</div>
