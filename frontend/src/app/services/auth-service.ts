@@ -10,7 +10,7 @@ export interface LoginRequest {
 
 export interface LoginResponse {
   message: string;
-  token: string;
+  accessToken: string;  // corrigé
 }
 
 export interface RegisterRequest {
@@ -20,12 +20,12 @@ export interface RegisterRequest {
 }
 
 export interface RegisterResponse {
-  token: string;
+  accessToken: string;  // corrigé
 }
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private readonly TOKEN_KEY = 'token'; 
+  private readonly TOKEN_KEY = 'token';
   private readonly apiUrl = environment.apiUrl;
 
   constructor(private http: HttpClient) {}
@@ -36,7 +36,7 @@ export class AuthService {
     return this.http
       .post<LoginResponse>(`${this.apiUrl}/auth/login`, body)
       .pipe(
-        tap((res) => localStorage.setItem(this.TOKEN_KEY, res.token))
+        tap((res) => localStorage.setItem(this.TOKEN_KEY, res.accessToken))
       );
   }
 
@@ -46,7 +46,7 @@ export class AuthService {
     return this.http
       .post<RegisterResponse>(`${this.apiUrl}/auth/register`, body)
       .pipe(
-        tap((res) => localStorage.setItem(this.TOKEN_KEY, res.token))
+        tap((res) => localStorage.setItem(this.TOKEN_KEY, res.accessToken))
       );
   }
 

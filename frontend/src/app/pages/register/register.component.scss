@@ -2,9 +2,7 @@
 $blue-900: #0f2a4a;
 $blue-700: #1a4480;
 $blue-500: #2563b0;
-$blue-100: #dbeafe;
 $gray-50:  #f8fafc;
-$gray-100: #f1f5f9;
 $gray-200: #e2e8f0;
 $gray-400: #94a3b8;
 $gray-600: #475569;
@@ -22,8 +20,10 @@ $white:    #ffffff;
   align-items: center;
   justify-content: center;
   padding: 2rem 1rem;
-  gap: 2rem;
+  gap: 1.2rem;
 }
+
+// ── Brand ──────────────────────────────────────────────────────
 .auth-brand {
   text-align: center;
 
@@ -52,55 +52,11 @@ $white:    #ffffff;
     margin: 0;
   }
 }
-// ── Brand ──────────────────────────────────────────────────────
-.auth-brand {
-  text-align: center;
-
-  .brand-logo {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.6rem;
-    margin-bottom: 0.4rem;
-
-    .logo-icon {
-      display: block;
-      width: 32px;
-      height: 32px;
-      background: $blue-700;
-      border-radius: 8px;
-      position: relative;
-
-      &::after {
-        content: '';
-        position: absolute;
-        inset: 7px;
-        border: 2px solid $white;
-        border-radius: 3px;
-      }
-    }
-
-    .logo-text {
-      font-family: 'Georgia', serif;
-      font-size: 1.5rem;
-      font-weight: 700;
-      color: $blue-900;
-      letter-spacing: -0.02em;
-    }
-  }
-
-  .brand-tagline {
-    font-size: 0.8rem;
-    color: $gray-400;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-  }
-}
 
 // ── Card ───────────────────────────────────────────────────────
 .auth-card {
   width: 100%;
-  max-width: 400px;
+  max-width: 420px;
   background: $white;
   border: 1px solid $gray-200;
   border-radius: 12px;
@@ -127,6 +83,17 @@ $white:    #ffffff;
   }
 }
 
+// ── Fields row (Username + Role côte à côte) ───────────────────
+.fields-row {
+  display: flex;
+  gap: 0.75rem;
+
+  .field-group {
+    flex: 1;
+    margin-bottom: 1.25rem;
+  }
+}
+
 // ── Form fields ────────────────────────────────────────────────
 .field-group {
   margin-bottom: 1.25rem;
@@ -141,7 +108,7 @@ $white:    #ffffff;
     margin-bottom: 0.4rem;
   }
 
-  input {
+  input, select {
     width: 100%;
     padding: 0.65rem 0.9rem;
     border: 1.5px solid $gray-200;
@@ -152,6 +119,7 @@ $white:    #ffffff;
     transition: border-color 0.15s, box-shadow 0.15s;
     box-sizing: border-box;
     outline: none;
+    appearance: none;
 
     &::placeholder { color: $gray-400; }
 
@@ -160,12 +128,19 @@ $white:    #ffffff;
       box-shadow: 0 0 0 3px rgba(37, 99, 176, 0.1);
     }
 
-    &.invalid {
-      border-color: $red-600;
-    }
+    &.invalid { border-color: $red-600; }
+  }
+
+  select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.9rem center;
+    padding-right: 2.5rem;
+    cursor: pointer;
   }
 }
 
+// ── Input wrapper (password toggle) ───────────────────────────
 .input-wrapper {
   position: relative;
 
@@ -189,6 +164,7 @@ $white:    #ffffff;
   }
 }
 
+// ── Field error ────────────────────────────────────────────────
 .field-error {
   display: block;
   font-size: 0.78rem;
