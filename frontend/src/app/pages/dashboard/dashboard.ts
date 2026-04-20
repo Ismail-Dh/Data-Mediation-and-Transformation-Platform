@@ -1,10 +1,12 @@
 import { Component } from '@angular/core';
 import { Router } from '@angular/router';
 import { AuthService } from '../../services/auth-service';
+import { MatButtonModule } from '@angular/material/button';
+
 
 @Component({
   selector: 'app-dashboard',
-  imports: [],
+  imports: [MatButtonModule],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss',
 })
