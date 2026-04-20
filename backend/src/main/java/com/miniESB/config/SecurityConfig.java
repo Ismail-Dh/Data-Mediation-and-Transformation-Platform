@@ -40,7 +40,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-            // ✅ 1. CORS branché dans Spring Security
+            // CORS branché dans Spring Security
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
             .csrf(AbstractHttpConfigurer::disable)
@@ -67,7 +67,7 @@ public class SecurityConfig {
         return http.build();
     }
 
-    // ✅ 2. Bean CORS — autorise Angular en dev
+    // 2. Bean CORS — autorise Angular en dev
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
