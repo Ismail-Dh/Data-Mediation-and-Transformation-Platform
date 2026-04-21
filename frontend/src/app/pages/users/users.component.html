@@ -1,0 +1,86 @@
+<div class="users-container">
+
+  <!-- Header -->
+  <div class="users-header">
+    <h1>Gestion des utilisateurs</h1>
+    <button mat-raised-button color="primary" (click)="openCreate()">
+      <mat-icon>person_add</mat-icon> Nouvel utilisateur
+    </button>
+  </div>
+
+  <!-- Spinner -->
+  <div class="spinner-wrapper" *ngIf="loading()">
+    <mat-spinner diameter="48" />
+  </div>
+
+  <!-- Tableau -->
+  <mat-table [dataSource]="users()" *ngIf="!loading()" class="users-table">
+
+    <ng-container matColumnDef="id">
+      <mat-header-cell *matHeaderCellDef>#</mat-header-cell>
+      <mat-cell *matCellDef="let u">{{ u.id }}</mat-cell>
+    </ng-container>
+
+    <ng-container matColumnDef="username">
+      <mat-header-cell *matHeaderCellDef>Nom d'utilisateur</mat-header-cell>
+      <mat-cell *matCellDef="let u">{{ u.username }}</mat-cell>
+    </ng-container>
+
+    <ng-container matColumnDef="role">
+      <mat-header-cell *matHeaderCellDef>Rôle</mat-header-cell>
+      <mat-cell *matCellDef="let u">
+        <span class="role-badge" [class.admin]="u.role === 'ADMIN'">{{ u.role }}</span>
+      </mat-cell>
+    </ng-container>
+
+    <ng-container matColumnDef="actions">
+      <mat-header-cell *matHeaderCellDef>Actions</mat-header-cell>
+      <mat-cell *matCellDef="let u">
+        <button mat-icon-button color="primary" matTooltip="Modifier" (click)="openEdit(u)">
+          <mat-icon>edit</mat-icon>
+        </button>
+        <button mat-icon-button color="warn" matTooltip="Supprimer" (click)="delete(u)">
+          <mat-icon>delete</mat-icon>
+        </button>
+      </mat-cell>
+    </ng-container>
+
+    <mat-header-row *matHeaderRowDef="displayedColumns" />
+    <mat-row *matRowDef="let row; columns: displayedColumns;" />
+  </mat-table>
+
+  <!-- Formulaire Create/Edit -->
+  <div class="form-overlay" *ngIf="showForm()">
+    <div class="form-card">
+      <h2>{{ editingUser() ? 'Modifier' : 'Créer' }} un utilisateur</h2>
+
+      <form [formGroup]="form">
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Nom d'utilisateur</mat-label>
+          <input matInput formControlName="username" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width" *ngIf="!editingUser()">
+          <mat-label>Mot de passe</mat-label>
+          <input matInput type="password" formControlName="password" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Rôle</mat-label>
+          <mat-select formControlName="role">
+            <mat-option value="ADMIN">ADMIN</mat-option>
+            <mat-option value="DEVELOPER">DEVELOPER</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <div class="form-actions">
+          <button mat-button (click)="cancel()">Annuler</button>
+          <button mat-raised-button color="primary" (click)="save()" [disabled]="form.invalid">
+            {{ editingUser() ? 'Modifier' : 'Créer' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+</div>
