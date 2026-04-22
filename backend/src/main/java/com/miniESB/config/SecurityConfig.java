@@ -46,7 +46,7 @@ public class SecurityConfig {
             .csrf(AbstractHttpConfigurer::disable)
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/auth/**", "/actuator/health","/api/users/add").permitAll()
+                .requestMatchers("/auth/**", "/actuator/health","/api/users/add","/api/users/forgot-password","/api/users/reset-password","/api/users/verify-code").permitAll()
                 .anyRequest().authenticated()
             )
             .exceptionHandling(ex -> ex
