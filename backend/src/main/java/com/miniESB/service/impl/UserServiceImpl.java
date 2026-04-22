@@ -2,9 +2,9 @@ package com.miniESB.service.impl;
 
 import com.miniESB.domain.entity.User;
 import com.miniESB.domain.enums.UserRole;
-import com.miniESB.dto.CreateUserRequest;
-import com.miniESB.dto.UpdateUserRequest;
-import com.miniESB.dto.UserResponse;
+import com.miniESB.dto.user.CreateUserRequest;
+import com.miniESB.dto.user.UpdateUserRequest;
+import com.miniESB.dto.user.UserResponse;
 import com.miniESB.repository.UserRepository;
 import com.miniESB.service.UserService;
 import com.miniESB.exception.ResourceNotFoundException;
@@ -82,5 +82,14 @@ public class UserServiceImpl implements UserService {
             user.getUsername(),
             user.getRole().name()
         );
+    }
+    @Override
+    @Transactional
+    public UserResponse resetPassword(Long id, String newPassword) {
+      User user = userRepository.findById(id)
+        .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+      user.setPasswordHash(passwordEncoder.encode(newPassword));
+      user = userRepository.save(user);
+      return toResponse(user);
     }
 }

@@ -1,8 +1,9 @@
 package com.miniESB.service;
 
-import com.miniESB.dto.CreateUserRequest;
-import com.miniESB.dto.UpdateUserRequest;
-import com.miniESB.dto.UserResponse;
+import com.miniESB.dto.user.CreateUserRequest;
+import com.miniESB.dto.user.UpdateUserRequest;
+import com.miniESB.dto.user.UserResponse;
+
 import java.util.List;
 
 /**
@@ -43,4 +44,6 @@ public interface UserService {
      * @return List of UserResponse
      */
     List<UserResponse> getAllUsers();
+    UserResponse resetPassword(Long id, String newPassword);
+
 }
