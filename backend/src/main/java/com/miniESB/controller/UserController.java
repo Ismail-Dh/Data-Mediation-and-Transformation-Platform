@@ -1,8 +1,9 @@
 package com.miniESB.controller;
 
-import com.miniESB.dto.CreateUserRequest;
-import com.miniESB.dto.UpdateUserRequest;
-import com.miniESB.dto.UserResponse;
+import com.miniESB.dto.user.CreateUserRequest;
+import com.miniESB.dto.user.ResetPasswordRequest;
+import com.miniESB.dto.user.UpdateUserRequest;
+import com.miniESB.dto.user.UserResponse;
 import com.miniESB.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -55,4 +56,11 @@ public class UserController {
     public ResponseEntity<List<UserResponse>> getAllUsers() {
         return ResponseEntity.ok(userService.getAllUsers());
     }
+    @PatchMapping("/{id}/reset-password")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<UserResponse> resetPassword(
+        @PathVariable Long id,
+        @Validated @RequestBody ResetPasswordRequest request) {
+       return ResponseEntity.ok(userService.resetPassword(id, request.newPassword()));
+   }
 }

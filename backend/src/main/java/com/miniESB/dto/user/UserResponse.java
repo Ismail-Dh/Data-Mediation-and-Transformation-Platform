@@ -1,4 +1,4 @@
-package com.miniESB.dto;
+package com.miniESB.dto.user;
 
 public record UserResponse(
     Long id,
