@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
-import { environment } from '../environments/environment';
+import { environment } from '../../environments/environment';
 
 export interface LoginRequest {
   username: string;
@@ -10,7 +10,7 @@ export interface LoginRequest {
 
 export interface LoginResponse {
   message: string;
-  accessToken: string;  // corrigé
+  token: string;  // corrigé
 }
 
 export interface RegisterRequest {
@@ -36,7 +36,7 @@ export class AuthService {
     return this.http
       .post<LoginResponse>(`${this.apiUrl}/auth/login`, body)
       .pipe(
-        tap((res) => localStorage.setItem(this.TOKEN_KEY, res.accessToken))
+        tap((res) => localStorage.setItem(this.TOKEN_KEY, res.token))
       );
   }
 
