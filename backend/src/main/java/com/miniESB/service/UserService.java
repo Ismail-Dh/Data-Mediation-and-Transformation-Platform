@@ -10,6 +10,7 @@ import java.util.List;
  * Service interface for user management.
  */
 public interface UserService {
+
     /**
      * Create a new user.
      * @param request DTO containing user data
@@ -44,6 +45,34 @@ public interface UserService {
      * @return List of UserResponse
      */
     List<UserResponse> getAllUsers();
-    UserResponse resetPassword(Long id, String newPassword);
 
+    /**
+     * Reset password using old password (authenticated user).
+     * @param id User ID
+     * @param oldPassword Current password
+     * @param newPassword New password
+     * @return UserResponse
+     */
+    UserResponse resetPassword(Long id, String oldPassword, String newPassword);
+
+    /**
+     * Send a 6-digit verification code to the user's email.
+     * @param username Username of the user requesting the reset
+     */
+    void forgotPassword(String username);
+
+    /**
+     * Verify the reset code sent by email.
+     * @param username Username of the user
+     * @param code     6-digit code to verify
+     * @return true if the code is valid and not expired, false otherwise
+     */
+    boolean verifyCode(String username, String code);
+
+    /**
+     * Reset password after successful code verification.
+     * @param username    Username of the user
+     * @param newPassword New password to set
+     */
+    void resetPasswordByCode(String username, String newPassword);
 }
