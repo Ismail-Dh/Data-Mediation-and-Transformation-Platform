@@ -29,4 +29,7 @@ export class UserService {
   updateRole(id: number, role: string): Observable<User> {
     return this.http.put<User>(`${this.apiUrl}/${id}/role`, { role });
   }
+  resetPassword(id: number, newPassword: string): Observable<User> {
+  return this.http.patch<User>(`${this.apiUrl}/${id}/reset-password`, { newPassword });
+  }
 }

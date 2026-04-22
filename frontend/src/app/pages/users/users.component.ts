@@ -30,7 +30,7 @@ import { User, CreateUserRequest ,UpdateUserRequest} from '../../models/user';
   styleUrl: './users.component.scss'
 })
 export class UsersComponent implements OnInit {
-  private fb          = inject(FormBuilder);
+  private fb           = inject(FormBuilder);
   private userService = inject(UserService);
   private snack       = inject(MatSnackBar);
 
@@ -39,11 +39,16 @@ export class UsersComponent implements OnInit {
   showForm         = signal(false);
   editingUser      = signal<User | null>(null);
   displayedColumns = ['id', 'username', 'role', 'actions'];
+  showResetForm = signal<User | null>(null);
+
 
   form = this.fb.group({
     username: ['', [Validators.required, Validators.minLength(3)]],
     password: ['', [Validators.required, Validators.minLength(6)]],
     role:     ['DEVELOPER', Validators.required]
+  });
+  resetForm = this.fb.group({
+  newPassword: ['', [Validators.required, Validators.minLength(8)]]
   });
 
   ngOnInit() { this.loadUsers(); }
@@ -52,7 +57,7 @@ export class UsersComponent implements OnInit {
     this.loading.set(true);
     this.userService.getUsers().subscribe({
       next:  (data) => { this.users.set(data); this.loading.set(false); },
-      error: ()     => { this.loading.set(false); this.notify('Erreur chargement'); }
+      error: ()     => { this.loading.set(false); this.notify('Error loading users'); }
     });
   }
 
@@ -83,21 +88,21 @@ save() {
       role: val.role as any
     };
     this.userService.updateUser(editing.id, updateData).subscribe({
-      next: () => { this.notify('Utilisateur modifié '); this.showForm.set(false); this.loadUsers(); },
+      next: () => { this.notify('User updated successfully'); this.showForm.set(false); this.loadUsers(); },
       error: (err) => this.handleError(err)
     });
   } else {
     this.userService.createUser(val as CreateUserRequest).subscribe({
-      next: () => { this.notify('Utilisateur créé '); this.showForm.set(false); this.loadUsers(); },
+      next: () => { this.notify('User created successfully'); this.showForm.set(false); this.loadUsers(); },
       error: (err) => this.handleError(err)
     });
   }
 }
 
   delete(user: User) {
-  if (!confirm(`Supprimer "${user.username}" ?`)) return;
+  if (!confirm(`Delete "${user.username}"?`)) return;
   this.userService.deleteUser(user.id).subscribe({
-    next: () => { this.notify('Utilisateur supprimé ✅'); this.loadUsers(); },
+    next: () => { this.notify('User deleted'); this.loadUsers(); },
     error: (err) => this.handleError(err)
   });
   }
@@ -107,18 +112,17 @@ save() {
   const body   = err.error;
 
   if (status === 400) {
-    // Erreurs de validation par champ : { username: "...", password: "..." }
     const messages = Object.values(body).join(' | ');
-    this.notify(`Validation : ${messages}`, true);
+    this.notify(`Validation: ${messages}`, true);
 
   } else if (status === 404) {
-    this.notify(`Introuvable : ${body.error}`, true);
+    this.notify(`Not found: ${body.error}`, true);
 
   } else if (status === 409) {
-    this.notify(`Conflit : ce nom d'utilisateur existe déjà`, true);
+    this.notify(`Conflict: this username already exists`, true);
 
   } else {
-    this.notify('Erreur serveur interne', true);
+    this.notify('Internal server error', true);
   }
 }
 
@@ -128,6 +132,20 @@ save() {
   this.snack.open(msg, 'OK', {
     duration: 4000,
     panelClass: isError ? ['snack-error'] : ['snack-success']
+  });
+}
+openReset(user: User) {
+  this.showResetForm.set(user);
+  this.resetForm.reset();
+}
+
+resetPassword() {
+  if (this.resetForm.invalid) return;
+  const user = this.showResetForm();
+  if (!user) return;
+  this.userService.resetPassword(user.id, this.resetForm.value.newPassword!).subscribe({
+    next: () => { this.notify('password changed'); this.showResetForm.set(null); },
+    error: (err) => this.handleError(err)
   });
 }
 }
