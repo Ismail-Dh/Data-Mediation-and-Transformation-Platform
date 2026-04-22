@@ -1,0 +1,109 @@
+<div class="users-container">
+
+  <div class="users-header">
+    <h1>User Management</h1>
+    <button mat-raised-button color="primary" (click)="openCreate()">
+      <mat-icon>person_add</mat-icon> New User
+    </button>
+  </div>
+
+  <div class="spinner-wrapper" *ngIf="loading()">
+    <mat-spinner diameter="48" />
+  </div>
+
+  <mat-table [dataSource]="users()" *ngIf="!loading()" class="users-table">
+
+    <ng-container matColumnDef="id">
+      <mat-header-cell *matHeaderCellDef>ID</mat-header-cell>
+      <mat-cell *matCellDef="let u">{{ u.id }}</mat-cell>
+    </ng-container>
+
+    <ng-container matColumnDef="username">
+      <mat-header-cell *matHeaderCellDef>Username</mat-header-cell>
+      <mat-cell *matCellDef="let u">{{ u.username }}</mat-cell>
+    </ng-container>
+
+    <ng-container matColumnDef="role">
+      <mat-header-cell *matHeaderCellDef>Role</mat-header-cell>
+      <mat-cell *matCellDef="let u">
+        <span class="role-badge" [class.admin]="u.role === 'ADMIN'">{{ u.role }}</span>
+      </mat-cell>
+    </ng-container>
+
+    <ng-container matColumnDef="actions">
+      <mat-header-cell *matHeaderCellDef>Actions</mat-header-cell>
+      <mat-cell *matCellDef="let u">
+        <button mat-icon-button color="primary" matTooltip="Edit" (click)="openEdit(u)">
+          <mat-icon>edit</mat-icon>
+        </button>
+        <button mat-icon-button color="warn" matTooltip="Delete" (click)="delete(u)">
+          <mat-icon>delete</mat-icon>
+        </button>
+        <button mat-icon-button color="accent" matTooltip="Reset Password" (click)="openReset(u)">
+          <mat-icon>lock_reset</mat-icon>
+        </button>
+      </mat-cell>
+    </ng-container>
+
+    <mat-header-row *matHeaderRowDef="displayedColumns" />
+    <mat-row *matRowDef="let row; columns: displayedColumns;" />
+  </mat-table>
+
+  <div class="form-overlay" *ngIf="showForm()">
+    <div class="form-card">
+      <h2>{{ editingUser() ? 'Edit' : 'Create' }} User</h2>
+
+      <form [formGroup]="form">
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Username</mat-label>
+          <input matInput formControlName="username" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width" *ngIf="!editingUser()">
+          <mat-label>Password</mat-label>
+          <input matInput type="password" formControlName="password" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Role</mat-label>
+          <mat-select formControlName="role">
+            <mat-option value="ADMIN">ADMIN</mat-option>
+            <mat-option value="DEVELOPER">DEVELOPER</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <div class="form-actions">
+          <button mat-button (click)="cancel()">Cancel</button>
+          <button mat-raised-button color="primary" (click)="save()" [disabled]="form.invalid">
+            {{ editingUser() ? 'Update' : 'Create' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="form-overlay" *ngIf="showResetForm()">
+    <div class="form-card">
+      <h2>Reset Password</h2>
+      <p>User: <strong>{{ showResetForm()?.username }}</strong></p>
+      
+      <form [formGroup]="resetForm">
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>New Password</mat-label>
+          <input matInput type="password" formControlName="newPassword" />
+          <mat-error *ngIf="resetForm.get('newPassword')?.hasError('minlength')">
+            Minimum 8 characters required
+          </mat-error>
+        </mat-form-field>
+
+        <div class="form-actions">
+          <button mat-button (click)="showResetForm.set(null)">Cancel</button>
+          <button mat-raised-button color="accent" (click)="resetPassword()" [disabled]="resetForm.invalid">
+            Reset
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+</div>

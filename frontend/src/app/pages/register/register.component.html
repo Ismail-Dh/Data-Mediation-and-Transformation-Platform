@@ -1,0 +1,85 @@
+<div class="auth-layout">
+
+  <div class="auth-brand">
+    <div class="brand-logo">
+      <img 
+        src="nexus-logo.png" 
+        alt="Nexus Logo" 
+        class="logo-image"
+      />
+    </div>
+    <p class="brand-tagline">Data Mediation & Transformation Platform</p>
+  </div>
+
+  <div class="auth-card">
+    <div class="card-header">
+      <h1>Create an account</h1>
+      <p>Join the Nexus platform</p>
+    </div>
+
+    <form [formGroup]="registerForm" (ngSubmit)="onSubmit()" novalidate>
+
+      <div class="fields-row">
+        <div class="field-group">
+          <label for="username">Username</label>
+          <input
+            id="username"
+            type="text"
+            formControlName="username"
+            placeholder="Choose a username"
+            [class.invalid]="username.invalid && username.touched"
+            autocomplete="username"
+          />
+          <span class="field-error" *ngIf="username.invalid && username.touched">
+            Minimum 3 characters required
+          </span>
+        </div>
+
+        <div class="field-group">
+          <label for="role">Role</label>
+          <select id="role" formControlName="role">
+            <option value="DEVELOPER">Developer</option>
+            <option value="ADMIN">Admin</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label for="password">Password</label>
+        <div class="input-wrapper">
+          <input
+            id="password"
+            [type]="showPassword ? 'text' : 'password'"
+            formControlName="password"
+            placeholder="Minimum 6 characters"
+            [class.invalid]="password.invalid && password.touched"
+            autocomplete="new-password"
+          />
+          <button type="button" class="toggle-pw" (click)="togglePassword()" tabindex="-1">
+            <svg *ngIf="!showPassword" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            <svg *ngIf="showPassword" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+          </button>
+        </div>
+        <span class="field-error" *ngIf="password.invalid && password.touched">
+          Minimum 6 characters required
+        </span>
+      </div>
+
+      <div class="error-banner" *ngIf="errorMessage">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        {{ errorMessage }}
+      </div>
+
+      <button type="submit" class="btn-primary" [disabled]="isLoading">
+        <span *ngIf="!isLoading">Create my account</span>
+        <span *ngIf="isLoading" class="spinner"></span>
+      </button>
+
+    </form>
+
+    <p class="auth-switch">
+      Already have an account? <a routerLink="/login">Sign in</a>
+    </p>
+  </div>
+
+</div>
