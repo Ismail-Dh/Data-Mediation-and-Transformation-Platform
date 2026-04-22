@@ -26,8 +26,19 @@ public class JwtService {
 
     public String generateToken(UserDetails userDetails) {
         Date now = new Date();
+        String role = null;
+        // Si UserDetails est une instance de org.springframework.security.core.userdetails.User
+        if (userDetails instanceof org.springframework.security.core.userdetails.User) {
+            // Extraire le rôle à partir des autorités
+            role = userDetails.getAuthorities().stream()
+                    .findFirst()
+                    .map(auth -> auth.getAuthority())
+                    .orElse(null);
+        }
+        // Ajout du rôle dans les claims
         return Jwts.builder()
                 .subject(userDetails.getUsername())
+                .claim("role", role)
                 .issuedAt(now)
                 .expiration(new Date(now.getTime() + expiration))
                 .signWith(key)
