@@ -1,0 +1,29 @@
+<aside class="sidebar" [class.collapsed]="!sidebarOpen()">
+  <div class="sidebar-header">
+    <span class="logo" *ngIf="sidebarOpen()">Nexus</span>
+    <button mat-icon-button (click)="toggleSidebar()">
+      <mat-icon>{{ sidebarOpen() ? 'chevron_left' : 'chevron_right' }}</mat-icon>
+    </button>
+  </div>
+
+  <nav class="sidebar-nav">
+    <a *ngFor="let item of getVisibleItems()"
+       [routerLink]="item.route"
+       routerLinkActive="active"
+       class="nav-item"
+       [matTooltip]="!sidebarOpen() ? item.label : ''"
+       matTooltipPosition="right">
+      <mat-icon>{{ item.icon }}</mat-icon>
+      <span *ngIf="sidebarOpen()">{{ item.label }}</span>
+    </a>
+  </nav>
+
+  <div class="sidebar-footer">
+    <button class="nav-item logout" (click)="logout()"
+            [matTooltip]="!sidebarOpen() ? 'Déconnexion' : ''"
+            matTooltipPosition="right">
+      <mat-icon>logout</mat-icon>
+      <span *ngIf="sidebarOpen()">Logout</span>
+    </button>
+  </div>
+</aside>
