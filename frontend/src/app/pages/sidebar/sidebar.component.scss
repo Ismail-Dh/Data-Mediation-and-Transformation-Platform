@@ -1,0 +1,54 @@
+.sidebar {
+  width: 240px;
+  height: 100vh;
+  background: #1565C0;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  transition: width 0.3s ease;
+  flex-shrink: 0;
+
+  &.collapsed { width: 64px; }
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.15);
+  min-height: 64px;
+
+  .logo { font-size: 1.2rem; font-weight: 700; letter-spacing: 1px; }
+  button { color: white; }
+}
+
+.sidebar-nav { flex: 1; padding: 12px 0; }
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  color: rgba(255,255,255,0.8);
+  text-decoration: none;
+  cursor: pointer;
+  border: none;
+  background: none;
+  width: 100%;
+  font-size: 0.95rem;
+  transition: background 0.2s, color 0.2s;
+
+  mat-icon { flex-shrink: 0; }
+
+  &:hover { background: rgba(255,255,255,0.1); color: white; }
+  &.active { background: rgba(255,255,255,0.2); color: white; font-weight: 600; }
+  &.logout { color: rgba(255,255,255,0.7);
+    &:hover { background: rgba(255,0,0,0.2); color: white; }
+  }
+}
+
+.sidebar-footer {
+  border-top: 1px solid rgba(255,255,255,0.15);
+  padding: 8px 0;
+}
