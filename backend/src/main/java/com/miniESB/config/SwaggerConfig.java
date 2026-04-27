@@ -13,9 +13,9 @@ public class SwaggerConfig {
     public OpenAPI customOpenAPI() {
         return new OpenAPI()
             .info(new Info()
-                .title("miniESB API")
+                .title("API")
                 .version("1.0")
-                .description("Documentation de la plateforme Data Mediation & Transformation"))
+                .description("Documentation of the plateforme Data Mediation & Transformation"))
             .addSecurityItem(new SecurityRequirement().addList("Bearer Auth"))
             .components(new Components()
                 .addSecuritySchemes("Bearer Auth", new SecurityScheme()

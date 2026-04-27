@@ -5,6 +5,10 @@ import com.miniESB.dto.user.ResetPasswordRequest;
 import com.miniESB.dto.user.UpdateUserRequest;
 import com.miniESB.dto.user.UserResponse;
 import com.miniESB.service.UserService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -14,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@Tag(name = "Users", description = "User management")
 @RestController
 @RequestMapping("/api/users")
 public class UserController {
@@ -25,13 +30,23 @@ public class UserController {
         this.userService = userService;
     }
 
-    // ─── Existing endpoints ───────────────────────────────────────────────────
-
+    @Operation(summary = "Create a user", description = "Creates a new user. Publicly accessible.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "201", description = "User created successfully"),
+        @ApiResponse(responseCode = "409", description = "Username already exists"),
+        @ApiResponse(responseCode = "400", description = "Invalid data")
+    })
     @PostMapping("/add")
     public ResponseEntity<UserResponse> createUser(@Validated @RequestBody CreateUserRequest request) {
         return new ResponseEntity<>(userService.createUser(request), HttpStatus.CREATED);
     }
 
+    @Operation(summary = "Update a user", description = "Partial update of a user. ADMIN only.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "User updated successfully"),
+        @ApiResponse(responseCode = "404", description = "User not found"),
+        @ApiResponse(responseCode = "403", description = "Access denied")
+    })
     @PatchMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<UserResponse> updateUser(@PathVariable Long id,
@@ -39,6 +54,12 @@ public class UserController {
         return ResponseEntity.ok(userService.updateUser(id, request));
     }
 
+    @Operation(summary = "Delete a user", description = "Delete a user by ID. ADMIN only.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "204", description = "User deleted successfully"),
+        @ApiResponse(responseCode = "404", description = "User not found"),
+        @ApiResponse(responseCode = "403", description = "Access denied")
+    })
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
@@ -46,6 +67,12 @@ public class UserController {
         return ResponseEntity.noContent().build();
     }
 
+    @Operation(summary = "Assign a role", description = "Update a user's role. ADMIN only.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Role assigned successfully"),
+        @ApiResponse(responseCode = "404", description = "User not found"),
+        @ApiResponse(responseCode = "403", description = "Access denied")
+    })
     @PutMapping("/{id}/role")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<UserResponse> assignRole(@PathVariable Long id,
@@ -53,12 +80,23 @@ public class UserController {
         return ResponseEntity.ok(userService.assignRole(id, role));
     }
 
+    @Operation(summary = "List all users", description = "Returns the full list of users. ADMIN only.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "List returned successfully"),
+        @ApiResponse(responseCode = "403", description = "Access denied")
+    })
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<UserResponse>> getAllUsers() {
         return ResponseEntity.ok(userService.getAllUsers());
     }
 
+    @Operation(summary = "Reset password (Admin)", description = "Admin resets a user's password. ADMIN only.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Password reset successfully"),
+        @ApiResponse(responseCode = "404", description = "User not found"),
+        @ApiResponse(responseCode = "403", description = "Access denied")
+    })
     @PatchMapping("/{id}/reset-password")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<UserResponse> resetPassword(@PathVariable Long id,
@@ -66,41 +104,35 @@ public class UserController {
         return ResponseEntity.ok(userService.resetPassword(id, request.oldPassword(), request.newPassword()));
     }
 
-    // ─── Forgot-password flow (3 steps) ──────────────────────────────────────
-
-    /**
-     * Step 1 — Request a reset code.
-     * POST /api/users/forgot-password?username=john
-     *
-     * Always returns 200 OK to avoid leaking whether the username exists.
-     */
+    @Operation(summary = "Request reset code", description = "Sends a reset code to the associated email.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Code sent")
+    })
     @PostMapping("/forgot-password")
     public ResponseEntity<String> forgotPassword(@RequestParam String username) {
         userService.forgotPassword(username);
-        return ResponseEntity.ok("Code de réinitialisation envoyé à l'adresse email associée.");
+        return ResponseEntity.ok("Reset code sent to the associated email address.");
     }
 
-    /**
-     * Step 2 — Verify the 6-digit code.
-     * POST /api/users/verify-code?username=john&code=482910
-     *
-     * Returns 200 {"valid": true/false}.
-     */
+    @Operation(summary = "Verify reset code", description = "Checks if the 6-digit code is valid.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Verification result: true or false")
+    })
     @PostMapping("/verify-code")
     public ResponseEntity<Boolean> verifyCode(@RequestParam String username,
                                               @RequestParam String code) {
-        boolean valid = userService.verifyCode(username, code);
-        return ResponseEntity.ok(valid);
+        return ResponseEntity.ok(userService.verifyCode(username, code));
     }
 
-    /**
-     * Step 3 — Set the new password (only after code verification).
-     * POST /api/users/reset-password?username=john&newPassword=secret123
-     */
+    @Operation(summary = "Set new password via code", description = "Sets a new password after code validation.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Password updated successfully"),
+        @ApiResponse(responseCode = "400", description = "Invalid or expired code")
+    })
     @PostMapping("/reset-password")
     public ResponseEntity<String> resetPasswordByCode(@RequestParam String username,
                                                       @RequestParam String newPassword) {
         userService.resetPasswordByCode(username, newPassword);
-        return ResponseEntity.ok("Mot de passe modifié avec succès.");
+        return ResponseEntity.ok("Password updated successfully");
     }
 }
