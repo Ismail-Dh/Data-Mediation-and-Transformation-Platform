@@ -34,6 +34,6 @@ public class ValidationRule {
     private boolean global;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "pipeline_id", nullable = false)
+    @JoinColumn(name = "pipeline_id", nullable = true)
     private Pipeline pipeline;
 }
