@@ -29,58 +29,60 @@ public class PipelineServiceImpl implements PipelineService {
     private final UserRepository userRepository;
     private final ProviderRepository providerRepository;
 
+    // --- Constructor ---
     @Autowired
     public PipelineServiceImpl(PipelineRepository pipelineRepository,
-                                UserRepository userRepository,
-                                ProviderRepository providerRepository) {
+                               UserRepository userRepository,
+                               ProviderRepository providerRepository) {
         this.pipelineRepository = pipelineRepository;
         this.userRepository = userRepository;
         this.providerRepository = providerRepository;
     }
 
-   @Override
-@Transactional
-public PipelineResponse createPipeline(CreatePipelineRequest request, String username) {
-    User user = userRepository.findByUsername(username)
-        .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+    // --- Create Pipeline ---
+    @Override
+    @Transactional
+    public PipelineResponse createPipeline(CreatePipelineRequest request, String username) {
+        User user = userRepository.findByUsername(username)
+            .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-    Provider provider;
+        Provider provider;
 
-    if (request.providerId() != null) {
-        provider = providerRepository.findById(request.providerId())
-            .orElseThrow(() -> new ResourceNotFoundException("Provider not found"));
+        if (request.providerId() != null) {
+            provider = providerRepository.findById(request.providerId())
+                .orElseThrow(() -> new ResourceNotFoundException("Provider not found"));
 
-    } else if (request.providerName() != null && request.providerEndpoint() != null
-               && request.providerProtocol() != null && request.providerTimeout() != null) {
-        provider = Provider.builder()
-            .name(request.providerName())
-            .endpoint(request.providerEndpoint())
-            .protocol(request.providerProtocol())
-            .timeout(request.providerTimeout())
+        } else if (request.providerName() != null && request.providerEndpoint() != null
+                   && request.providerProtocol() != null && request.providerTimeout() != null) {
+            provider = Provider.builder()
+                .name(request.providerName())
+                .endpoint(request.providerEndpoint())
+                .protocol(request.providerProtocol())
+                .timeout(request.providerTimeout())
+                .build();
+            provider = providerRepository.save(provider);
+
+        } else {
+            throw new IllegalArgumentException(
+                "You must either provide a providerId or full provider details (name, endpoint, protocol, timeout)"
+            );
+        }
+
+        Pipeline pipeline = Pipeline.builder()
+            .name(request.name())
+            .version(request.version())
+            .inputFormat(DataFormat.valueOf(request.inputFormat()))
+            .outputFormat(DataFormat.valueOf(request.outputFormat()))
+            .status(PipelineStatus.DRAFT)
+            .createdAt(LocalDateTime.now())
+            .createdBy(user)
+            .provider(provider)
             .build();
-        provider = providerRepository.save(provider);
 
-    } else {
-        throw new IllegalArgumentException(
-            "You must either provide a providerId or full provider details (name, endpoint, protocol, timeout)"
-        );
+        return toResponse(pipelineRepository.save(pipeline));
     }
 
-    Pipeline pipeline = Pipeline.builder()
-        .name(request.name())
-        .providerUrl(request.providerUrl())
-        .version(request.version())
-        .inputFormat(DataFormat.valueOf(request.inputFormat()))
-        .outputFormat(DataFormat.valueOf(request.outputFormat()))
-        .status(PipelineStatus.DRAFT)
-        .createdAt(LocalDateTime.now())
-        .createdBy(user)
-        .provider(provider)
-        .build();
-
-    return toResponse(pipelineRepository.save(pipeline));
-}
-
+    // --- Update Pipeline ---
     @Override
     @Transactional
     public PipelineResponse updatePipeline(Long id, UpdatePipelineRequest request, String username) {
@@ -90,29 +92,30 @@ public PipelineResponse createPipeline(CreatePipelineRequest request, String use
         checkOwnership(pipeline, username);
 
         if (request.name() != null) pipeline.setName(request.name());
-        if (request.providerUrl() != null) pipeline.setProviderUrl(request.providerUrl());
         if (request.version() != null) pipeline.setVersion(request.version());
         if (request.inputFormat() != null) pipeline.setInputFormat(DataFormat.valueOf(request.inputFormat()));
         if (request.outputFormat() != null) pipeline.setOutputFormat(DataFormat.valueOf(request.outputFormat()));
+        
         if (request.providerId() != null) {
-    Provider provider = providerRepository.findById(request.providerId())
-        .orElseThrow(() -> new ResourceNotFoundException("Provider not found"));
-    pipeline.setProvider(provider);
+            Provider provider = providerRepository.findById(request.providerId())
+                .orElseThrow(() -> new ResourceNotFoundException("Provider not found"));
+            pipeline.setProvider(provider);
 
-} else if (request.providerName() != null && request.providerEndpoint() != null
-           && request.providerProtocol() != null && request.providerTimeout() != null) {
-    Provider provider = Provider.builder()
-        .name(request.providerName())
-        .endpoint(request.providerEndpoint())
-        .protocol(request.providerProtocol())
-        .timeout(request.providerTimeout())
-        .build();
-    pipeline.setProvider(providerRepository.save(provider));
-}
+        } else if (request.providerName() != null && request.providerEndpoint() != null
+                   && request.providerProtocol() != null && request.providerTimeout() != null) {
+            Provider provider = Provider.builder()
+                .name(request.providerName())
+                .endpoint(request.providerEndpoint())
+                .protocol(request.providerProtocol())
+                .timeout(request.providerTimeout())
+                .build();
+            pipeline.setProvider(providerRepository.save(provider));
+        }
 
         return toResponse(pipelineRepository.save(pipeline));
     }
 
+    // --- Delete Pipeline ---
     @Override
     @Transactional
     public void deletePipeline(Long id, String username) {
@@ -122,6 +125,7 @@ public PipelineResponse createPipeline(CreatePipelineRequest request, String use
         pipelineRepository.delete(pipeline);
     }
 
+    // --- Get Single Pipeline ---
     @Override
     @Transactional(readOnly = true)
     public PipelineResponse getPipelineById(Long id, String username) {
@@ -131,6 +135,7 @@ public PipelineResponse createPipeline(CreatePipelineRequest request, String use
         return toResponse(pipeline);
     }
 
+    // --- Get User's Pipelines ---
     @Override
     @Transactional(readOnly = true)
     public List<PipelineResponse> getMyPipelines(String username) {
@@ -140,6 +145,7 @@ public PipelineResponse createPipeline(CreatePipelineRequest request, String use
             .stream().map(this::toResponse).collect(Collectors.toList());
     }
 
+    // --- Get All Pipelines ---
     @Override
     @Transactional(readOnly = true)
     public List<PipelineResponse> getAllPipelines() {
@@ -147,6 +153,8 @@ public PipelineResponse createPipeline(CreatePipelineRequest request, String use
             .stream().map(this::toResponse).collect(Collectors.toList());
     }
 
+    // --- Helper Methods ---
+    
     private void checkOwnership(Pipeline pipeline, String username) {
         if (!pipeline.getCreatedBy().getUsername().equals(username)) {
             throw new AccessDeniedException("You are not the owner of this pipeline");
@@ -157,7 +165,6 @@ public PipelineResponse createPipeline(CreatePipelineRequest request, String use
         return new PipelineResponse(
             p.getId(),
             p.getName(),
-            p.getProviderUrl(),
             p.getVersion(),
             p.getCreatedAt(),
             p.getInputFormat().name(),
@@ -165,7 +172,8 @@ public PipelineResponse createPipeline(CreatePipelineRequest request, String use
             p.getStatus().name(),
             p.getCreatedBy().getUsername(),
             p.getProvider().getId(),
-            p.getProvider().getName()
+            p.getProvider().getName(),
+            p.getProvider().getEndpoint()
         );
     }
 }
