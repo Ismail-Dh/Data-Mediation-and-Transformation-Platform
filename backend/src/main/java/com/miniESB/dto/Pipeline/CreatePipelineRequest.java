@@ -5,7 +5,6 @@ import jakarta.validation.constraints.NotNull;
 
 public record CreatePipelineRequest(
     @NotBlank String name,
-    String providerUrl,
     String version,
     @NotNull String inputFormat,
     @NotNull String outputFormat,
