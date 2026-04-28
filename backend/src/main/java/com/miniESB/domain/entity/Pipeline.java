@@ -24,8 +24,6 @@ public class Pipeline {
     @Column(name = "name", nullable = false, length = 200)
     private String name;
 
-    @Column(name = "provider_url", length = 500)
-    private String providerUrl;
 
     @Column(name = "version", length = 50)
     private String version;

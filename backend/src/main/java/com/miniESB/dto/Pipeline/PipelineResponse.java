@@ -5,7 +5,6 @@ import java.time.LocalDateTime;
 public record PipelineResponse(
     Long id,
     String name,
-    String providerUrl,
     String version,
     LocalDateTime createdAt,
     String inputFormat,
@@ -13,5 +12,7 @@ public record PipelineResponse(
     String status,
     String createdBy,
     Long providerId,
-    String providerName
+    String providerName,
+    String providerEndpoint
+
 ) {}
