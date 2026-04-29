@@ -8,11 +8,5 @@ public record CreatePipelineRequest(
     String version,
     @NotNull String inputFormat,
     @NotNull String outputFormat,
-
-    Long providerId,
-
-    String providerName,
-    String providerEndpoint,
-    String providerProtocol,
-    Integer providerTimeout
+    Long providerId
 ) {}

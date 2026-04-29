@@ -5,9 +5,5 @@ public record UpdatePipelineRequest(
     String version,
     String inputFormat,
     String outputFormat,
-    Long providerId,
-    String providerName,
-    String providerEndpoint,
-    String providerProtocol,
-    Integer providerTimeout
+    Long providerId
 ) {}

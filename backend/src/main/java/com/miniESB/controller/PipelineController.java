@@ -39,7 +39,7 @@ public class PipelineController {
         @ApiResponse(responseCode = "404", description = "Provider not found")
     })
     @PostMapping
-    @PreAuthorize("hasRole('DEVELOPER')") 
+    @PreAuthorize("hasAnyRole('DEVELOPER','ADMIN')") 
     public ResponseEntity<PipelineResponse> createPipeline(
             @Validated @RequestBody CreatePipelineRequest request,
             Principal principal) {
@@ -54,7 +54,7 @@ public class PipelineController {
         @ApiResponse(responseCode = "404", description = "Pipeline not found")
     })
     @PatchMapping("/{id}")
-    @PreAuthorize("hasRole('DEVELOPER')") 
+    @PreAuthorize("hasAnyRole('DEVELOPER','ADMIN')")
     public ResponseEntity<PipelineResponse> updatePipeline(
             @PathVariable Long id,
             @RequestBody UpdatePipelineRequest request,
@@ -70,7 +70,7 @@ public class PipelineController {
         @ApiResponse(responseCode = "404", description = "Pipeline not found")
     })
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('DEVELOPER')") 
+    @PreAuthorize("hasAnyRole('DEVELOPER','ADMIN')") 
     public ResponseEntity<Void> deletePipeline(
             @PathVariable Long id,
             Principal principal) {
@@ -86,7 +86,7 @@ public class PipelineController {
         @ApiResponse(responseCode = "404", description = "Pipeline not found")
     })
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('DEVELOPER', 'ADMIN')") 
+    @PreAuthorize("hasAnyRole('DEVELOPER','ADMIN')") 
     public ResponseEntity<PipelineResponse> getPipelineById(
             @PathVariable Long id,
             Principal principal) {
@@ -99,7 +99,7 @@ public class PipelineController {
         @ApiResponse(responseCode = "200", description = "List returned successfully")
     })
     @GetMapping("/my")
-    @PreAuthorize("hasRole('DEVELOPER')") 
+    @PreAuthorize("hasAnyRole('DEVELOPER','ADMIN')")
     public ResponseEntity<List<PipelineResponse>> getMyPipelines(Principal principal) {
         return ResponseEntity.ok(pipelineService.getMyPipelines(principal.getName()));
     }

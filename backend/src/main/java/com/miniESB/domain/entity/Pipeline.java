@@ -50,7 +50,7 @@ public class Pipeline {
     private User createdBy;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "provider_id", nullable = false)
+    @JoinColumn(name = "provider_id", nullable = true)
     private Provider provider;
 
     @OneToMany(mappedBy = "pipeline", cascade = CascadeType.PERSIST, orphanRemoval = false)
