@@ -6,6 +6,7 @@ import { Dashboard } from './pages/dashboard/dashboard';
 import { adminGuard } from './guards/role.guard';
 import { UsersComponent } from './pages/users/users.component';
 import { ForgotPassword } from './pages/forgot-password/forgot-password';
+import { ValidationRulesComponent } from './pages/validation-rules/validation-rules.component';
 export const routes: Routes = [
   { path: 'login',     component: Login },
   { path: 'forgot-password', component: ForgotPassword },
@@ -13,4 +14,5 @@ export const routes: Routes = [
   { path: 'dashboard', component: Dashboard, canActivate: [authGuard] },
   { path: 'users',     component: UsersComponent,  canActivate: [authGuard, adminGuard] },
   { path: '',          redirectTo: 'login', pathMatch: 'full' },
+  { path: 'admin/rules', component: ValidationRulesComponent, canActivate: [authGuard, adminGuard] },
 ];
