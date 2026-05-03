@@ -1,112 +1,164 @@
-<div class="users-container">
+<div class="page">
 
-  <div class="users-header">
-    <h1>User Management</h1>
-    <button mat-icon-button routerLink="/dashboard" matTooltip="Back to dashboard">
-      <mat-icon>arrow_back</mat-icon>
-    </button>
-    <button mat-raised-button color="primary" (click)="openCreate()">
-      <mat-icon>person_add</mat-icon> New User
+  <!-- ===== HEADER ===== -->
+  <div class="page-header">
+    <div class="page-title">
+      <div class="title-row">
+        <h1>User Management</h1>
+        <span class="role-chip">ADMIN</span>
+      </div>
+      <span class="subtitle">Manage system users and their roles</span>
+    </div>
+    <button class="btn btn--primary" (click)="openCreate()">
+      <span class="btn-icon">+</span> New User
     </button>
   </div>
 
-  <div class="spinner-wrapper" *ngIf="loading()">
-    <mat-spinner diameter="48" />
-  </div>
-
-  <mat-table [dataSource]="users()" *ngIf="!loading()" class="users-table">
-
-    <ng-container matColumnDef="id">
-      <mat-header-cell *matHeaderCellDef>ID</mat-header-cell>
-      <mat-cell *matCellDef="let u">{{ u.id }}</mat-cell>
-    </ng-container>
-
-    <ng-container matColumnDef="username">
-      <mat-header-cell *matHeaderCellDef>Username</mat-header-cell>
-      <mat-cell *matCellDef="let u">{{ u.username }}</mat-cell>
-    </ng-container>
-
-    <ng-container matColumnDef="role">
-      <mat-header-cell *matHeaderCellDef>Role</mat-header-cell>
-      <mat-cell *matCellDef="let u">
-        <span class="role-badge" [class.admin]="u.role === 'ADMIN'">{{ u.role }}</span>
-      </mat-cell>
-    </ng-container>
-
-    <ng-container matColumnDef="actions">
-      <mat-header-cell *matHeaderCellDef>Actions</mat-header-cell>
-      <mat-cell *matCellDef="let u">
-        <button mat-icon-button color="primary" matTooltip="Edit" (click)="openEdit(u)">
-          <mat-icon>edit</mat-icon>
-        </button>
-        <button mat-icon-button color="warn" matTooltip="Delete" (click)="delete(u)">
-          <mat-icon>delete</mat-icon>
-        </button>
-        <button mat-icon-button color="accent" matTooltip="Reset Password" (click)="openReset(u)">
-          <mat-icon>lock_reset</mat-icon>
-        </button>
-      </mat-cell>
-    </ng-container>
-
-    <mat-header-row *matHeaderRowDef="displayedColumns" />
-    <mat-row *matRowDef="let row; columns: displayedColumns;" />
-  </mat-table>
-
-  <div class="form-overlay" *ngIf="showForm()">
-    <div class="form-card">
-      <h2>{{ editingUser() ? 'Edit' : 'Create' }} User</h2>
-
-      <form [formGroup]="form">
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Username</mat-label>
-          <input matInput formControlName="username" />
-        </mat-form-field>
-
-        <mat-form-field appearance="outline" class="full-width" *ngIf="!editingUser()">
-          <mat-label>Password</mat-label>
-          <input matInput type="password" formControlName="password" />
-        </mat-form-field>
-
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Role</mat-label>
-          <mat-select formControlName="role">
-            <mat-option value="ADMIN">ADMIN</mat-option>
-            <mat-option value="DEVELOPER">DEVELOPER</mat-option>
-          </mat-select>
-        </mat-form-field>
-
-        <div class="form-actions">
-          <button mat-button (click)="cancel()">Cancel</button>
-          <button mat-raised-button color="primary" (click)="save()" [disabled]="form.invalid">
-            {{ editingUser() ? 'Update' : 'Create' }}
-          </button>
-        </div>
-      </form>
+  <!-- ===== STATS ===== -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <span class="stat-num">{{ users().length }}</span>
+      <span class="stat-label">Total</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-num stat-num--admin">{{ countByRole('ADMIN') }}</span>
+      <span class="stat-label">Admins</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-num stat-num--developer">{{ countByRole('DEVELOPER') }}</span>
+      <span class="stat-label">Developers</span>
     </div>
   </div>
 
-  <div class="form-overlay" *ngIf="showResetForm()">
-    <div class="form-card">
+  <!-- ===== TOOLBAR ===== -->
+  <div class="toolbar">
+    <div class="search-wrap">
+      <svg class="search-icon" viewBox="0 0 20 20">
+        <circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" stroke-width="1.5" fill="none"/>
+        <line x1="13" y1="13" x2="18" y2="18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <input
+  type="text"
+  class="search-input"
+  placeholder="Search by username or role…"
+  [ngModel]="searchQuery()"
+  (ngModelChange)="applyFilter('search', $event)"
+/>
+    </div>
+    <select class="filter-select"
+  [ngModel]="filterRole()"
+  (ngModelChange)="applyFilter('role', $event)">
+  <option value="">All roles</option>
+  <option value="ADMIN">ADMIN</option>
+  <option value="DEVELOPER">DEVELOPER</option>
+</select>
+    <span class="count-badge">{{ filtered().length }} result{{ filtered().length !== 1 ? 's' : '' }}</span>
+  </div>
+
+  <!-- ===== SPINNER ===== -->
+  <div class="td-empty" *ngIf="loading()">Loading…</div>
+
+  <!-- ===== TABLE ===== -->
+  <div class="table-card" *ngIf="!loading()">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Username</th>
+          <th>Role</th>
+          <th class="th-actions">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let u of filtered()" class="tr-clickable">
+          <td class="td-mono">{{ u.id }}</td>
+          <td class="td-name">{{ u.username }}</td>
+          <td>
+            <span class="badge" [ngClass]="'badge--' + u.role.toLowerCase()">{{ u.role }}</span>
+          </td>
+          <td class="td-actions" >
+            <button class="icon-btn icon-btn--edit"   title="Edit"           (click)="openEdit(u)">
+              <svg viewBox="0 0 20 20"><path d="M14.85 2.15a2 2 0 0 1 2.83 2.83L6.5 16.17 2 18l1.83-4.5L14.85 2.15z" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <button class="icon-btn icon-btn--delete" title="Delete"         (click)="delete(u)">
+              <svg viewBox="0 0 20 20"><polyline points="3 6 5 6 17 6" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/><path d="M8 6V4h4v2" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/><path d="M6 6l1 11h6l1-11" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <button class="icon-btn icon-btn--reset"  title="Reset Password" (click)="openReset(u)">
+              <svg viewBox="0 0 20 20"><path d="M4 4v5h5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M4.07 9A7 7 0 1 0 5.5 5.3" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>
+            </button>
+          </td>
+        </tr>
+        <tr *ngIf="filtered().length === 0">
+          <td colspan="4" class="td-empty">No users match the current filters.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<!-- ===== CREATE / EDIT MODAL ===== -->
+<div class="modal-overlay" *ngIf="showForm()" (click)="cancel()">
+  <div class="modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>{{ editingUser() ? 'Edit User' : 'New User' }}</h2>
+      <button class="close-btn" (click)="cancel()">
+        <svg viewBox="0 0 20 20"><line x1="4" y1="4" x2="16" y2="16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="16" y1="4" x2="4" y2="16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+
+    <form [formGroup]="form" (ngSubmit)="save()" class="modal-form">
+      <div class="field">
+        <label>Username <span class="req">*</span></label>
+        <input type="text" formControlName="username" placeholder="e.g. john_doe" />
+        <span class="field-error" *ngIf="form.get('username')?.touched && form.get('username')?.invalid">Required (min 3 chars)</span>
+      </div>
+
+      <div class="field" *ngIf="!editingUser()">
+        <label>Password <span class="req">*</span></label>
+        <input type="password" formControlName="password" placeholder="Min. 6 characters" />
+        <span class="field-error" *ngIf="form.get('password')?.touched && form.get('password')?.invalid">Required (min 6 chars)</span>
+      </div>
+
+      <div class="field">
+        <label>Role <span class="req">*</span></label>
+        <select formControlName="role">
+          <option value="ADMIN">ADMIN</option>
+          <option value="DEVELOPER">DEVELOPER</option>
+        </select>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn--secondary" (click)="cancel()">Cancel</button>
+        <button type="submit" class="btn btn--primary" [disabled]="form.invalid">
+          {{ editingUser() ? 'Save changes' : 'Create user' }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ===== RESET PASSWORD MODAL ===== -->
+<div class="modal-overlay" *ngIf="showResetForm()" (click)="showResetForm.set(null)">
+  <div class="modal modal--sm" (click)="$event.stopPropagation()">
+    <div class="modal-header">
       <h2>Reset Password</h2>
-      <p>User: <strong>{{ showResetForm()?.username }}</strong></p>
-      
-      <form [formGroup]="resetForm">
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>New Password</mat-label>
-          <input matInput type="password" formControlName="newPassword" />
-          <mat-error *ngIf="resetForm.get('newPassword')?.hasError('minlength')">
-            Minimum 8 characters required
-          </mat-error>
-        </mat-form-field>
-
-        <div class="form-actions">
-          <button mat-button (click)="showResetForm.set(null)">Cancel</button>
-          <button mat-raised-button color="accent" (click)="resetPassword()" [disabled]="resetForm.invalid">
-            Reset
-          </button>
-        </div>
-      </form>
+      <button class="close-btn" (click)="showResetForm.set(null)">
+        <svg viewBox="0 0 20 20"><line x1="4" y1="4" x2="16" y2="16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="16" y1="4" x2="4" y2="16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
     </div>
-  </div>
+    <p class="confirm-text">User: <strong>{{ showResetForm()?.username }}</strong></p>
 
+    <form [formGroup]="resetForm" (ngSubmit)="resetPassword()" class="modal-form">
+      <div class="field">
+        <label>New Password <span class="req">*</span></label>
+        <input type="password" formControlName="newPassword" placeholder="Min. 8 characters" />
+        <span class="field-error" *ngIf="resetForm.get('newPassword')?.touched && resetForm.get('newPassword')?.invalid">Min 8 characters required</span>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn--secondary" (click)="showResetForm.set(null)">Cancel</button>
+        <button type="submit" class="btn btn--primary" [disabled]="resetForm.invalid">Reset</button>
+      </div>
+    </form>
+  </div>
 </div>
