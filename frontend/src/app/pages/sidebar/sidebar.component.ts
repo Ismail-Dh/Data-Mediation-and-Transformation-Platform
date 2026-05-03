@@ -20,6 +20,7 @@ export class SidebarComponent {
   navItems = [
     { label: 'Dashboard', icon: 'dashboard', route: '/dashboard', adminOnly: false },
     { label: 'Users', icon: 'people', route: '/users', adminOnly: true },
+    { label: 'Validation Rules', icon: 'rule',route: '/admin/rules',  adminOnly: true  },
   ];
 
   constructor(private authService: AuthService, private router: Router) {
