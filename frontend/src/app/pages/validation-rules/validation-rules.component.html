@@ -1,118 +1,176 @@
-<div class="rules-container">
+<div class="page">
 
-  <!-- Header -->
-  <div class="rules-header">
-    <div class="rules-header-left">
-      <button mat-icon-button routerLink="/dashboard" matTooltip="Back to dashboard">
-        <mat-icon>arrow_back</mat-icon>
-      </button>
-      <h1>Validation Rules</h1>
+  <!-- ===== HEADER ===== -->
+  <div class="page-header">
+    <div class="page-title">
+      <div class="title-row">
+        <h1>Validation Rules</h1>
+        <span class="role-chip">ADMIN</span>
+      </div>
+      <span class="subtitle">Manage field validation rules across pipelines</span>
     </div>
-    <button mat-raised-button color="primary" (click)="openCreate()">
-      <mat-icon>add</mat-icon> New Rule
+    <button class="btn btn--primary" (click)="openCreate()">
+      <span class="btn-icon">+</span> New Rule
     </button>
   </div>
 
-  <!-- Spinner -->
-  <div class="spinner-wrapper" *ngIf="loading()">
-    <mat-spinner diameter="48" />
-  </div>
-
-  <!-- Table -->
-  <mat-table [dataSource]="rules()" *ngIf="!loading()" class="rules-table">
-
-    <ng-container matColumnDef="id">
-      <mat-header-cell *matHeaderCellDef>#</mat-header-cell>
-      <mat-cell *matCellDef="let r">{{ r.id }}</mat-cell>
-    </ng-container>
-
-    <ng-container matColumnDef="fieldName">
-      <mat-header-cell *matHeaderCellDef>Field Name</mat-header-cell>
-      <mat-cell *matCellDef="let r">{{ r.fieldName }}</mat-cell>
-    </ng-container>
-
-    <ng-container matColumnDef="ruleType">
-      <mat-header-cell *matHeaderCellDef>Rule Type</mat-header-cell>
-      <mat-cell *matCellDef="let r">
-        <span class="rule-badge">{{ r.ruleType }}</span>
-      </mat-cell>
-    </ng-container>
-
-    <ng-container matColumnDef="pattern">
-      <mat-header-cell *matHeaderCellDef>Pattern</mat-header-cell>
-      <mat-cell *matCellDef="let r">{{ r.pattern ?? '—' }}</mat-cell>
-    </ng-container>
-
-    <ng-container matColumnDef="active">
-      <mat-header-cell *matHeaderCellDef>Active</mat-header-cell>
-      <mat-cell *matCellDef="let r">
-        <span class="status-badge" [class.active]="r.active" [class.inactive]="!r.active">
-          {{ r.active ? 'Active' : 'Inactive' }}
-        </span>
-      </mat-cell>
-    </ng-container>
-
-    <ng-container matColumnDef="global">
-      <mat-header-cell *matHeaderCellDef>Global</mat-header-cell>
-      <mat-cell *matCellDef="let r">{{ r.global ? 'Yes' : 'No' }}</mat-cell>
-    </ng-container>
-
-    <ng-container matColumnDef="actions">
-      <mat-header-cell *matHeaderCellDef>Actions</mat-header-cell>
-      <mat-cell *matCellDef="let r">
-        <button mat-icon-button color="primary" matTooltip="Edit" (click)="openEdit(r)">
-          <mat-icon>edit</mat-icon>
-        </button>
-        <button mat-icon-button color="accent" matTooltip="Deactivate" (click)="deactivate(r)" [disabled]="!r.active">
-          <mat-icon>block</mat-icon>
-        </button>
-        <button mat-icon-button color="warn" matTooltip="Delete" (click)="delete(r)">
-          <mat-icon>delete</mat-icon>
-        </button>
-      </mat-cell>
-    </ng-container>
-
-    <mat-header-row *matHeaderRowDef="displayedColumns" />
-    <mat-row *matRowDef="let row; columns: displayedColumns;" />
-  </mat-table>
-
-  <!-- Form Modal -->
-  <div class="form-overlay" *ngIf="showForm()">
-    <div class="form-card">
-      <h2>{{ editingRule() ? 'Edit Rule' : 'New Rule' }}</h2>
-
-      <form [formGroup]="form">
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Field Name</mat-label>
-          <input matInput formControlName="fieldName" />
-          <mat-error *ngIf="form.get('fieldName')?.hasError('required')">Field name is required</mat-error>
-        </mat-form-field>
-
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Rule Type</mat-label>
-          <mat-select formControlName="ruleType">
-            <mat-option *ngFor="let type of ruleTypes" [value]="type">{{ type }}</mat-option>
-          </mat-select>
-          <mat-error *ngIf="form.get('ruleType')?.hasError('required')">Rule type is required</mat-error>
-        </mat-form-field>
-
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Pattern (optional)</mat-label>
-          <input matInput formControlName="pattern" placeholder="e.g. 3,30 for MIN_MAX_LENGTH" />
-        </mat-form-field>
-
-        <div class="toggle-row">
-          <mat-slide-toggle formControlName="active" color="primary">Active</mat-slide-toggle>
-        </div>
-
-        <div class="form-actions">
-          <button mat-button (click)="cancel()">Cancel</button>
-          <button mat-raised-button color="primary" (click)="save()" [disabled]="form.invalid">
-            {{ editingRule() ? 'Update' : 'Create' }}
-          </button>
-        </div>
-      </form>
+  <!-- ===== STATS ===== -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <span class="stat-num">{{ rules().length }}</span>
+      <span class="stat-label">Total</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-num stat-num--active">{{ countByStatus(true) }}</span>
+      <span class="stat-label">Active</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-num stat-num--inactive">{{ countByStatus(false) }}</span>
+      <span class="stat-label">Inactive</span>
     </div>
   </div>
 
+  <!-- ===== TOOLBAR ===== -->
+  <div class="toolbar">
+    <div class="search-wrap">
+      <svg class="search-icon" viewBox="0 0 20 20">
+        <circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" stroke-width="1.5" fill="none"/>
+        <line x1="13" y1="13" x2="18" y2="18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <input
+        type="text"
+        class="search-input"
+        placeholder="Search by field name or pattern…"
+        [ngModel]="searchQuery()"
+        (ngModelChange)="applyFilter('search', $event)"
+      />
+    </div>
+    <select class="filter-select"
+      [ngModel]="filterType()"
+      (ngModelChange)="applyFilter('type', $event)">
+      <option value="">All types</option>
+      <option *ngFor="let t of ruleTypes" [value]="t">{{ t }}</option>
+    </select>
+    <select class="filter-select"
+      [ngModel]="filterActive()"
+      (ngModelChange)="applyFilter('active', $event)">
+      <option value="">All statuses</option>
+      <option value="true">Active</option>
+      <option value="false">Inactive</option>
+    </select>
+    <span class="count-badge">{{ filtered().length }} result{{ filtered().length !== 1 ? 's' : '' }}</span>
+  </div>
+
+  <!-- ===== SPINNER ===== -->
+  <div class="td-empty" *ngIf="loading()">Loading…</div>
+
+  <!-- ===== TABLE ===== -->
+  <div class="table-card" *ngIf="!loading()">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Field Name</th>
+          <th>Rule Type</th>
+          <th>Pattern</th>
+          <th>Status</th>
+          <th>Global</th>
+          <th class="th-actions">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let r of filtered()" class="tr-row">
+          <td class="td-mono">{{ r.id }}</td>
+          <td class="td-name">{{ r.fieldName }}</td>
+          <td><span class="rule-type-tag">{{ r.ruleType }}</span></td>
+          <td class="td-mono">{{ r.pattern ?? '—' }}</td>
+          <td>
+            <span class="badge" [ngClass]="r.active ? 'badge--active' : 'badge--inactive'">
+              {{ r.active ? 'Active' : 'Inactive' }}
+            </span>
+          </td>
+          <td>
+            <span class="global-tag" *ngIf="r.global">Yes</span>
+            <span *ngIf="!r.global" style="color:#ccc">No</span>
+          </td>
+          <td class="td-actions">
+            <button class="icon-btn icon-btn--edit"       title="Edit"       (click)="openEdit(r)">
+              <svg viewBox="0 0 20 20"><path d="M14.85 2.15a2 2 0 0 1 2.83 2.83L6.5 16.17 2 18l1.83-4.5L14.85 2.15z" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <button class="icon-btn icon-btn--deactivate" title="Deactivate" (click)="deactivate(r)" [disabled]="!r.active">
+              <svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="1.5" fill="none"/><line x1="5" y1="5" x2="15" y2="15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            </button>
+            <button class="icon-btn icon-btn--delete"     title="Delete"     (click)="delete(r)">
+              <svg viewBox="0 0 20 20"><polyline points="3 6 5 6 17 6" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/><path d="M8 6V4h4v2" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/><path d="M6 6l1 11h6l1-11" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </td>
+        </tr>
+        <tr *ngIf="filtered().length === 0">
+          <td colspan="7" class="td-empty">No rules match the current filters.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<!-- ===== CREATE / EDIT MODAL ===== -->
+<div class="modal-overlay" *ngIf="showForm()" (click)="cancel()">
+  <div class="modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>{{ editingRule() ? 'Edit Rule' : 'New Rule' }}</h2>
+      <button class="close-btn" (click)="cancel()">
+        <svg viewBox="0 0 20 20"><line x1="4" y1="4" x2="16" y2="16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="16" y1="4" x2="4" y2="16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+
+    <form [formGroup]="form" (ngSubmit)="save()" class="modal-form">
+      <div class="field">
+        <label>Field Name <span class="req">*</span></label>
+        <input type="text" formControlName="fieldName" placeholder="e.g. email" />
+        <span class="field-error" *ngIf="form.get('fieldName')?.touched && form.get('fieldName')?.invalid">Required</span>
+      </div>
+
+      <div class="field">
+        <label>Rule Type <span class="req">*</span></label>
+        <select formControlName="ruleType">
+          <option value="">Select…</option>
+          <option *ngFor="let t of ruleTypes" [value]="t">{{ t }}</option>
+        </select>
+        <span class="field-error" *ngIf="form.get('ruleType')?.touched && form.get('ruleType')?.invalid">Required</span>
+      </div>
+
+      <div class="field">
+        <label>Pattern <span style="color:#aaa;font-weight:400">(optional)</span></label>
+        <input type="text" formControlName="pattern" placeholder="e.g. 3,30 for MIN_MAX_LENGTH" />
+      </div>
+
+      <div class="toggle-row">
+        <input type="checkbox" id="activeToggle" class="toggle-input" formControlName="active" />
+        <label for="activeToggle">Active</label>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn--secondary" (click)="cancel()">Cancel</button>
+        <button type="submit" class="btn btn--primary" [disabled]="form.invalid">
+          {{ editingRule() ? 'Save changes' : 'Create rule' }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ===== DELETE CONFIRM ===== -->
+<div class="modal-overlay" *ngIf="deletingRule()" (click)="cancelDelete()">
+  <div class="modal modal--sm" (click)="$event.stopPropagation()">
+    <div class="modal-header"><h2>Delete rule</h2></div>
+    <p style="font-size:0.9rem;color:#888;margin-bottom:0.5rem">
+      Delete <strong style="color:#1a1a2e">{{ deletingRule()?.fieldName }}</strong>?
+      This action cannot be undone.
+    </p>
+    <div class="modal-footer">
+      <button class="btn btn--secondary" (click)="cancelDelete()">Cancel</button>
+      <button class="btn btn--danger"    (click)="confirmDelete()">Delete</button>
+    </div>
+  </div>
 </div>

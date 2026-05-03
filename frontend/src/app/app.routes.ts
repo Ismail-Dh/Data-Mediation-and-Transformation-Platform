@@ -10,6 +10,7 @@ import { PipelineAdminComponent } from './pages/pipeline-admin-component/pipelin
 import { PipelineDeveloperComponent } from './pages/pipeline-developer-component/pipeline-developer-component';
 import { ProviderListComponent } from './pages/provider-list-component/provider-list-component';
 import { DashboardContent } from './pages/dashboard-content/dashboard-content';
+import { ValidationRulesComponent } from './pages/validation-rules/validation-rules.component';
 
 export const routes: Routes = [
   { path: 'login',          component: Login },
@@ -23,6 +24,7 @@ export const routes: Routes = [
       { path: 'dashboard',           component: DashboardContent,            canActivate: [authGuard] },
       { path: 'users',               component: UsersComponent,            canActivate: [adminGuard] },
       { path: 'admin/pipelines',     component: PipelineAdminComponent,    canActivate: [adminGuard] },
+      {path:'validationRules',       component: ValidationRulesComponent, canActivate: [adminGuard]},
       { path: 'developer/pipelines', component: PipelineDeveloperComponent,  canActivate: [authGuard] },
       { path: 'provider',            component: ProviderListComponent , canActivate: [authGuard] },
       { path: '',                    redirectTo: 'dashboard', pathMatch: 'full' },

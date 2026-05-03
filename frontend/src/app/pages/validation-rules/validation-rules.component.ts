@@ -1,17 +1,7 @@
-import { Component, OnInit, signal, inject } from '@angular/core';
+import { Component, OnInit, signal, inject, computed, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
-import { RouterModule } from '@angular/router';
-import { MatTableModule } from '@angular/material/table';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
+import { ReactiveFormsModule, FormsModule, FormBuilder, Validators } from '@angular/forms';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 
 import { ValidationRuleService } from '../../services/validation/validation-rule.service';
 import { ValidationRule, CreateValidationRuleRequest, UpdateValidationRuleRequest, RuleType } from '../../models/validation-rule';
@@ -19,13 +9,7 @@ import { ValidationRule, CreateValidationRuleRequest, UpdateValidationRuleReques
 @Component({
   selector: 'app-validation-rules',
   standalone: true,
-  imports: [
-    CommonModule, ReactiveFormsModule, RouterModule,
-    MatTableModule, MatButtonModule, MatIconModule,
-    MatFormFieldModule, MatInputModule, MatSelectModule,
-    MatSnackBarModule, MatProgressSpinnerModule,
-    MatTooltipModule, MatSlideToggleModule
-  ],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, MatSnackBarModule],
   templateUrl: './validation-rules.component.html',
   styleUrl:    './validation-rules.component.scss'
 })
@@ -33,12 +17,31 @@ export class ValidationRulesComponent implements OnInit {
   private fb      = inject(FormBuilder);
   private service = inject(ValidationRuleService);
   private snack   = inject(MatSnackBar);
+  private cdr     = inject(ChangeDetectorRef);
 
-  rules            = signal<ValidationRule[]>([]);
-  loading          = signal(true);
-  showForm         = signal(false);
-  editingRule      = signal<ValidationRule | null>(null);
-  displayedColumns = ['id', 'fieldName', 'ruleType', 'pattern', 'active', 'global', 'actions'];
+  rules         = signal<ValidationRule[]>([]);
+  loading       = signal(true);
+  showForm      = signal(false);
+  editingRule   = signal<ValidationRule | null>(null);
+  deletingRule  = signal<ValidationRule | null>(null);
+
+  // ── Filtres (signals) ────────────────────────────────────────────────────
+  searchQuery  = signal('');
+  filterType   = signal('');
+  filterActive = signal('');
+
+  filtered = computed(() => {
+    const q      = this.searchQuery().trim().toLowerCase();
+    const type   = this.filterType();
+    const active = this.filterActive();
+
+    return this.rules().filter(r => {
+      const matchQ      = !q || r.fieldName.toLowerCase().includes(q) || (r.pattern ?? '').toLowerCase().includes(q);
+      const matchType   = !type   || r.ruleType === type;
+      const matchActive = active === '' || String(r.active) === active;
+      return matchQ && matchType && matchActive;
+    });
+  });
 
   ruleTypes: RuleType[] = [
     'NOT_NULL', 'TYPE_NUMBER', 'TYPE_DATE',
@@ -54,11 +57,30 @@ export class ValidationRulesComponent implements OnInit {
 
   ngOnInit() { this.loadRules(); }
 
+  applyFilter(field: 'search' | 'type' | 'active', value: string) {
+    if (field === 'search') this.searchQuery.set(value);
+    if (field === 'type')   this.filterType.set(value);
+    if (field === 'active') this.filterActive.set(value);
+    this.cdr.detectChanges();
+  }
+
+  countByStatus(active: boolean): number {
+    return this.rules().filter(r => r.active === active).length;
+  }
+
   loadRules() {
     this.loading.set(true);
     this.service.getRules().subscribe({
-      next:  (data) => { this.rules.set(data); this.loading.set(false); },
-      error: ()     => { this.loading.set(false); this.notify('Error loading rules', true); }
+      next: data => {
+        this.rules.set(data);
+        this.loading.set(false);
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.loading.set(false);
+        this.notify('Error loading rules', true);
+        this.cdr.detectChanges();
+      }
     });
   }
 
@@ -66,6 +88,7 @@ export class ValidationRulesComponent implements OnInit {
     this.editingRule.set(null);
     this.form.reset({ active: true });
     this.showForm.set(true);
+    this.cdr.detectChanges();
   }
 
   openEdit(rule: ValidationRule) {
@@ -77,6 +100,7 @@ export class ValidationRulesComponent implements OnInit {
       active:    rule.active
     });
     this.showForm.set(true);
+    this.cdr.detectChanges();
   }
 
   save() {
@@ -93,13 +117,23 @@ export class ValidationRulesComponent implements OnInit {
 
     if (editing) {
       this.service.updateRule(editing.id, payload as UpdateValidationRuleRequest).subscribe({
-        next:  () => { this.notify('Rule updated ✅'); this.showForm.set(false); this.loadRules(); },
-        error: (err) => this.handleError(err)
+        next: () => {
+          this.notify('Rule updated');
+          this.showForm.set(false);
+          this.loadRules();
+          this.cdr.detectChanges();
+        },
+        error: err => this.handleError(err)
       });
     } else {
       this.service.createRule(payload as CreateValidationRuleRequest).subscribe({
-        next:  () => { this.notify('Rule created ✅'); this.showForm.set(false); this.loadRules(); },
-        error: (err) => this.handleError(err)
+        next: () => {
+          this.notify('Rule created');
+          this.showForm.set(false);
+          this.loadRules();
+          this.cdr.detectChanges();
+        },
+        error: err => this.handleError(err)
       });
     }
   }
@@ -107,28 +141,48 @@ export class ValidationRulesComponent implements OnInit {
   deactivate(rule: ValidationRule) {
     if (!confirm(`Deactivate rule "${rule.fieldName}"?`)) return;
     this.service.deactivateRule(rule.id).subscribe({
-      next:  () => { this.notify('Rule deactivated'); this.loadRules(); },
-      error: (err) => this.handleError(err)
+      next: () => { this.notify('Rule deactivated'); this.loadRules(); this.cdr.detectChanges(); },
+      error: err => this.handleError(err)
     });
   }
 
   delete(rule: ValidationRule) {
-    if (!confirm(`Permanently delete rule "${rule.fieldName}"?`)) return;
+    this.deletingRule.set(rule);
+    this.cdr.detectChanges();
+  }
+
+  cancelDelete() {
+    this.deletingRule.set(null);
+    this.cdr.detectChanges();
+  }
+
+  confirmDelete() {
+    const rule = this.deletingRule();
+    if (!rule) return;
     this.service.deleteRule(rule.id).subscribe({
-      next:  () => { this.notify('Rule deleted'); this.loadRules(); },
-      error: (err) => this.handleError(err)
+      next: () => {
+        this.notify('Rule deleted');
+        this.deletingRule.set(null);
+        this.loadRules();
+        this.cdr.detectChanges();
+      },
+      error: err => this.handleError(err)
     });
   }
 
-  cancel() { this.showForm.set(false); }
+  cancel() {
+    this.showForm.set(false);
+    this.cdr.detectChanges();
+  }
 
   private handleError(err: any) {
     const status = err.status;
     const body   = err.error;
-    if (status === 400)      this.notify(`Validation: ${Object.values(body).join(' | ')}`, true);
+    if      (status === 400) this.notify(`Validation: ${Object.values(body).join(' | ')}`, true);
     else if (status === 404) this.notify(`Not found: ${body.error}`, true);
-    else if (status === 409) this.notify('Cannot delete: rule is still used by a pipeline', true);
+    else if (status === 409) this.notify('Cannot delete: rule still used by a pipeline', true);
     else                     this.notify('Internal server error', true);
+    this.cdr.detectChanges();
   }
 
   private notify(msg: string, isError = false) {
