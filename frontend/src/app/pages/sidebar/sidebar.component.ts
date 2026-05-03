@@ -22,6 +22,7 @@ export class SidebarComponent {
     { label: 'Dashboard',    icon: 'dashboard',   route: '/dashboard',           adminOnly: false, developerOnly: false },
     { label: 'Users',        icon: 'people',       route: '/users',               adminOnly: true,  developerOnly: false },
     { label: 'Providers',    icon: 'inventory_2',  route: '/provider',            adminOnly: true,  developerOnly: false },
+    {label: 'Validation Rules', icon: 'rule',     route: '/validationRules',     adminOnly: true,  developerOnly: false },
     { label: 'Pipelines',    icon: 'build',        route: '/admin/pipelines',     adminOnly: true,  developerOnly: false },
     { label: 'My Pipelines', icon: 'build',        route: '/developer/pipelines', adminOnly: false, developerOnly: true  },
   ];
