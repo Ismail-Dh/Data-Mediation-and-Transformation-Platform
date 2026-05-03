@@ -14,13 +14,16 @@ import { MatTooltipModule } from '@angular/material/tooltip';
   styleUrl: './sidebar.component.scss'
 })
 export class SidebarComponent {
-  isAdmin = signal(false);
+  isAdmin     = signal(false);
+  isDeveloper = signal(false);
   sidebarOpen = signal(true);
 
   navItems = [
-    { label: 'Dashboard', icon: 'dashboard', route: '/dashboard', adminOnly: false },
-    { label: 'Users', icon: 'people', route: '/users', adminOnly: true },
-    { label: 'Validation Rules', icon: 'rule',route: '/admin/rules',  adminOnly: true  },
+    { label: 'Dashboard',    icon: 'dashboard',   route: '/dashboard',           adminOnly: false, developerOnly: false },
+    { label: 'Users',        icon: 'people',       route: '/users',               adminOnly: true,  developerOnly: false },
+    { label: 'Providers',    icon: 'inventory_2',  route: '/provider',            adminOnly: true,  developerOnly: false },
+    { label: 'Pipelines',    icon: 'build',        route: '/admin/pipelines',     adminOnly: true,  developerOnly: false },
+    { label: 'My Pipelines', icon: 'build',        route: '/developer/pipelines', adminOnly: false, developerOnly: true  },
   ];
 
   constructor(private authService: AuthService, private router: Router) {
@@ -28,11 +31,16 @@ export class SidebarComponent {
     if (token) {
       const payload = JSON.parse(atob(token.split('.')[1]));
       this.isAdmin.set(payload.role === 'ROLE_ADMIN');
+      this.isDeveloper.set(payload.role === 'ROLE_DEVELOPER');
     }
   }
 
   getVisibleItems() {
-    return this.navItems.filter(item => !item.adminOnly || this.isAdmin());
+    return this.navItems.filter(item => {
+      if (item.adminOnly     && !this.isAdmin())     return false;
+      if (item.developerOnly && !this.isDeveloper())  return false;
+      return true;
+    });
   }
 
   toggleSidebar() {

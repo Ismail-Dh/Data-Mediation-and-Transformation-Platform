@@ -6,13 +6,27 @@ import { Dashboard } from './pages/dashboard/dashboard';
 import { adminGuard } from './guards/role.guard';
 import { UsersComponent } from './pages/users/users.component';
 import { ForgotPassword } from './pages/forgot-password/forgot-password';
-import { ValidationRulesComponent } from './pages/validation-rules/validation-rules.component';
+import { PipelineAdminComponent } from './pages/pipeline-admin-component/pipeline-admin-component';
+import { PipelineDeveloperComponent } from './pages/pipeline-developer-component/pipeline-developer-component';
+import { ProviderListComponent } from './pages/provider-list-component/provider-list-component';
+import { DashboardContent } from './pages/dashboard-content/dashboard-content';
+
 export const routes: Routes = [
-  { path: 'login',     component: Login },
+  { path: 'login',          component: Login },
   { path: 'forgot-password', component: ForgotPassword },
-  { path: 'register',  component: Register },
-  { path: 'dashboard', component: Dashboard, canActivate: [authGuard] },
-  { path: 'users',     component: UsersComponent,  canActivate: [authGuard, adminGuard] },
-  { path: '',          redirectTo: 'login', pathMatch: 'full' },
-  { path: 'admin/rules', component: ValidationRulesComponent, canActivate: [authGuard, adminGuard] },
+  { path: 'register',       component: Register },
+  {
+    path: '',
+    component: Dashboard,
+    canActivate: [authGuard],
+    children: [
+      { path: 'dashboard',           component: DashboardContent,            canActivate: [authGuard] },
+      { path: 'users',               component: UsersComponent,            canActivate: [adminGuard] },
+      { path: 'admin/pipelines',     component: PipelineAdminComponent,    canActivate: [adminGuard] },
+      { path: 'developer/pipelines', component: PipelineDeveloperComponent,  canActivate: [authGuard] },
+      { path: 'provider',            component: ProviderListComponent , canActivate: [authGuard] },
+      { path: '',                    redirectTo: 'dashboard', pathMatch: 'full' },
+    ]
+  },
+  { path: '**', redirectTo: 'login' },
 ];
