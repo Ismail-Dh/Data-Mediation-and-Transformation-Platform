@@ -23,5 +23,9 @@ public record GlobalValidationRuleResponseDTO(
         boolean active,
 
         @Schema(description = "Whether this rule is global (always true for admin-managed rules)", example = "true")
-        boolean global
+        boolean global,
+
+        @Schema(description = "")
+        String description
+
 ) {}
