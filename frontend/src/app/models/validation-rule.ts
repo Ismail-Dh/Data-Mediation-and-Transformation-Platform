@@ -11,6 +11,7 @@ export interface ValidationRule {
   fieldName: string;
   ruleType: RuleType;
   pattern: string | null;
+  description: string | null;
   active: boolean;
   global: boolean;
 }
@@ -19,6 +20,7 @@ export interface CreateValidationRuleRequest {
   fieldName: string;
   ruleType: RuleType;
   pattern: string | null;
+  description: string | null;
   active: boolean;
 }
 
@@ -26,5 +28,6 @@ export interface UpdateValidationRuleRequest {
   fieldName: string;
   ruleType: RuleType;
   pattern: string | null;
+  description: string | null;
   active: boolean;
 }

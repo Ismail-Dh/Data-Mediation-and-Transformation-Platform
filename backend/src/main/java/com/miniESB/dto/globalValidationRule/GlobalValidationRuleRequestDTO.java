@@ -24,5 +24,10 @@ public record GlobalValidationRuleRequestDTO(
         String pattern,
 
         @Schema(description = "Whether the rule is active", example = "true")
-        boolean active
+        boolean active,
+
+        @Schema(description = "" )
+        @Size(max=500)
+        String description
+
 ) {}

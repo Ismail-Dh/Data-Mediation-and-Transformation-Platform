@@ -39,6 +39,7 @@ public class GlobalValidationRuleServiceImpl implements GlobalValidationRuleServ
                 .active(request.active())
                 .global(true)          // Admin-created rules are always global
                 .pipeline(null)        // Global rules are not bound to a pipeline
+                .description(request.description())
                 .build();
 
         ValidationRule saved = validationRuleRepository.save(rule);
@@ -91,6 +92,7 @@ public class GlobalValidationRuleServiceImpl implements GlobalValidationRuleServ
         rule.setRuleType(request.ruleType());
         rule.setPattern(request.pattern());
         rule.setActive(request.active());
+        rule.setDescription(request.description());
         // global flag stays true — never changed via this method
 
         ValidationRule updated = validationRuleRepository.save(rule);
@@ -158,7 +160,8 @@ public class GlobalValidationRuleServiceImpl implements GlobalValidationRuleServ
                 rule.getRuleType(),
                 rule.getPattern(),
                 rule.isActive(),
-                rule.isGlobal()
+                rule.isGlobal(),
+                rule.getDescription()
         );
     }
 }
