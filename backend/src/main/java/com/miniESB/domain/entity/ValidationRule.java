@@ -27,6 +27,10 @@ public class ValidationRule {
     @Column(name = "pattern", length = 500)
     private String pattern;
 
+
+    @Column(name = "description", length = 500)
+    private String description;
+
     @Column(name = "active", nullable = false)
     private boolean active;
 

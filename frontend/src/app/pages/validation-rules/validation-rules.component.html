@@ -73,6 +73,7 @@
           <th>Field Name</th>
           <th>Rule Type</th>
           <th>Pattern</th>
+          <th>Description</th>
           <th>Status</th>
           <th>Global</th>
           <th class="th-actions">Actions</th>
@@ -84,6 +85,7 @@
           <td class="td-name">{{ r.fieldName }}</td>
           <td><span class="rule-type-tag">{{ r.ruleType }}</span></td>
           <td class="td-mono">{{ r.pattern ?? '—' }}</td>
+          <td>{{ r.description ?? '—' }}</td>
           <td>
             <span class="badge" [ngClass]="r.active ? 'badge--active' : 'badge--inactive'">
               {{ r.active ? 'Active' : 'Inactive' }}
@@ -143,6 +145,10 @@
       <div class="field">
         <label>Pattern <span style="color:#aaa;font-weight:400">(optional)</span></label>
         <input type="text" formControlName="pattern" placeholder="e.g. 3,30 for MIN_MAX_LENGTH" />
+      </div>
+      <div class="field">
+        <label>Description <span style="color:#aaa;font-weight:400">(optional)</span></label>
+        <input type="text" formControlName="description" placeholder="Describe the validation rule..." />
       </div>
 
       <div class="toggle-row">

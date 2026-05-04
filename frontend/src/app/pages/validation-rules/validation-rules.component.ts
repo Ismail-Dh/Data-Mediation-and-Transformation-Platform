@@ -52,6 +52,7 @@ export class ValidationRulesComponent implements OnInit {
     fieldName: ['', [Validators.required, Validators.maxLength(150)]],
     ruleType:  [null as RuleType | null, Validators.required],
     pattern:   [null as string | null],
+    description: [null as string | null, Validators.maxLength(500)],
     active:    [true]
   });
 
@@ -97,6 +98,7 @@ export class ValidationRulesComponent implements OnInit {
       fieldName: rule.fieldName,
       ruleType:  rule.ruleType,
       pattern:   rule.pattern,
+      description: rule.description,
       active:    rule.active
     });
     this.showForm.set(true);
@@ -112,6 +114,7 @@ export class ValidationRulesComponent implements OnInit {
       fieldName: val.fieldName!,
       ruleType:  val.ruleType!,
       pattern:   val.pattern || null,
+      description: val.description || null,
       active:    val.active ?? true
     };
 
