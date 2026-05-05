@@ -65,6 +65,7 @@
         <tr>
           <th>ID</th>
           <th>Username</th>
+          <th>Email</th>
           <th>Role</th>
           <th class="th-actions">Actions</th>
         </tr>
@@ -73,6 +74,7 @@
         <tr *ngFor="let u of filtered()" class="tr-clickable">
           <td class="td-mono">{{ u.id }}</td>
           <td class="td-name">{{ u.username }}</td>
+          <td class="td-email">{{ u.email }}</td>
           <td>
             <span class="badge" [ngClass]="'badge--' + u.role.toLowerCase()">{{ u.role }}</span>
           </td>
@@ -116,8 +118,14 @@
 
       <div class="field" *ngIf="!editingUser()">
         <label>Password <span class="req">*</span></label>
-        <input type="password" formControlName="password" placeholder="Min. 6 characters" />
-        <span class="field-error" *ngIf="form.get('password')?.touched && form.get('password')?.invalid">Required (min 6 chars)</span>
+        <input type="password" formControlName="password" placeholder="Min. 8 characters" />
+        <span class="field-error" *ngIf="form.get('password')?.touched && form.get('password')?.invalid">Required (min 8 chars)</span>
+      </div>
+
+      <div class="field">
+        <label>Email <span class="req">*</span></label>
+        <input type="email" formControlName="email" placeholder="e.g. john.doe@example.com" />
+        <span class="field-error" *ngIf="form.get('email')?.touched && form.get('email')?.invalid">Valid email required</span>
       </div>
 
       <div class="field">

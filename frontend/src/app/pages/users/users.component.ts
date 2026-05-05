@@ -39,7 +39,8 @@ export class UsersComponent implements OnInit {
 
   form = this.fb.group({
     username: ['', [Validators.required, Validators.minLength(3)]],
-    password: ['', [Validators.required, Validators.minLength(6)]],
+    email:    ['', [Validators.required, Validators.email]],
+    password: ['', [Validators.required, Validators.minLength(8)]],
     role:     ['DEVELOPER', Validators.required]
   });
 
@@ -79,7 +80,7 @@ export class UsersComponent implements OnInit {
   openCreate() {
     this.editingUser.set(null);
     this.form.reset({ role: 'DEVELOPER' });
-    this.form.get('password')?.setValidators([Validators.required, Validators.minLength(6)]);
+    this.form.get('password')?.setValidators([Validators.required, Validators.minLength(8)]);
     this.form.get('password')?.updateValueAndValidity();
     this.showForm.set(true);
     this.cdr.detectChanges();
@@ -87,7 +88,7 @@ export class UsersComponent implements OnInit {
 
   openEdit(user: User) {
     this.editingUser.set(user);
-    this.form.patchValue({ username: user.username, role: user.role, password: '' });
+    this.form.patchValue({ username: user.username, email: user.email, role: user.role, password: '' });
     this.form.get('password')?.clearValidators();
     this.form.get('password')?.updateValueAndValidity();
     this.showForm.set(true);
