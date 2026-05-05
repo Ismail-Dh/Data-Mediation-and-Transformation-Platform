@@ -1,5 +1,6 @@
 package com.miniESB.controller;
 
+import com.miniESB.audit.Auditable;
 import com.miniESB.dto.user.CreateUserRequest;
 import com.miniESB.dto.user.ResetPasswordRequest;
 import com.miniESB.dto.user.UpdateUserRequest;
@@ -37,6 +38,7 @@ public class UserController {
         @ApiResponse(responseCode = "400", description = "Invalid data")
     })
     @PostMapping("/add")
+    @Auditable(action = "CREATE_USER", targetEntity = "User")
     public ResponseEntity<UserResponse> createUser(@Validated @RequestBody CreateUserRequest request) {
         return new ResponseEntity<>(userService.createUser(request), HttpStatus.CREATED);
     }
@@ -49,6 +51,7 @@ public class UserController {
     })
     @PatchMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
+    @Auditable(action = "UPDATE_USER", targetEntity = "User")
     public ResponseEntity<UserResponse> updateUser(@PathVariable Long id,
                                                    @RequestBody UpdateUserRequest request) {
         return ResponseEntity.ok(userService.updateUser(id, request));
@@ -62,6 +65,7 @@ public class UserController {
     })
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
+    @Auditable(action = "DELETE_USER", targetEntity = "User")
     public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
         userService.deleteUser(id);
         return ResponseEntity.noContent().build();
@@ -75,6 +79,7 @@ public class UserController {
     })
     @PutMapping("/{id}/role")
     @PreAuthorize("hasRole('ADMIN')")
+    @Auditable(action = "ASSIGN_ROLE", targetEntity = "User")
     public ResponseEntity<UserResponse> assignRole(@PathVariable Long id,
                                                    @RequestParam String role) {
         return ResponseEntity.ok(userService.assignRole(id, role));
