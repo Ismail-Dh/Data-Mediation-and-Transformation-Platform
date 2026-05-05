@@ -1,5 +1,6 @@
 package com.miniESB.controller;
 
+import com.miniESB.audit.Auditable;
 import com.miniESB.domain.enums.TemplateType;
 import com.miniESB.dto.template.TemplateRequest;
 import com.miniESB.dto.template.TemplateResponse;
@@ -93,6 +94,7 @@ public class AdminTemplateController {
             @ApiResponse(responseCode = "403", description = "Forbidden — ADMIN role required")
     })
     @PostMapping
+    @Auditable(action = "CREATE_TEMPLATE", targetEntity = "Template")
     public ResponseEntity<TemplateResponse> create(
             @Valid @RequestBody TemplateRequest request,
             Authentication auth) {
@@ -114,6 +116,7 @@ public class AdminTemplateController {
             @ApiResponse(responseCode = "403", description = "Forbidden — ADMIN role required")
     })
     @GetMapping
+    @Auditable(action = "LIST_TEMPLATES", targetEntity = "Template")
     public ResponseEntity<List<TemplateResponse>> findAll(
             @RequestParam TemplateType type) {
 
@@ -134,6 +137,7 @@ public class AdminTemplateController {
             @ApiResponse(responseCode = "404", description = "Template not found")
     })
     @GetMapping("/{id}")
+    @Auditable(action = "GET_TEMPLATE", targetEntity = "Template")
     public ResponseEntity<TemplateResponse> findById(
             @PathVariable Long id,
             @RequestParam TemplateType type) {
@@ -161,6 +165,7 @@ public class AdminTemplateController {
             @ApiResponse(responseCode = "404", description = "Template not found")
     })
     @PutMapping("/{id}")
+    @Auditable(action = "UPDATE_TEMPLATE", targetEntity = "Template")
     public ResponseEntity<TemplateResponse> update(
             @PathVariable Long id,
             @RequestParam TemplateType type,
@@ -185,6 +190,7 @@ public class AdminTemplateController {
             @ApiResponse(responseCode = "404", description = "Template not found")
     })
     @PutMapping("/{id}/publish")
+    @Auditable(action = "PUBLISH_TEMPLATE", targetEntity = "Template")
     public ResponseEntity<TemplateResponse> publish(
             @PathVariable Long id,
             @RequestParam TemplateType type) {
@@ -207,6 +213,7 @@ public class AdminTemplateController {
             @ApiResponse(responseCode = "404", description = "Template not found")
     })
     @PutMapping("/{id}/disable")
+    @Auditable(action = "DISABLE_TEMPLATE", targetEntity = "Template")
     public ResponseEntity<TemplateResponse> disable(
             @PathVariable Long id,
             @RequestParam TemplateType type) {
