@@ -1,5 +1,6 @@
 package com.miniESB.controller;
 
+import com.miniESB.audit.Auditable;
 import com.miniESB.dto.provider.CreateProviderRequest;
 import com.miniESB.dto.provider.ProviderResponse;
 import com.miniESB.dto.provider.UpdateProviderRequest;
@@ -33,6 +34,7 @@ public class ProviderController {
     })
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
+    @Auditable(action = "CREATE", targetEntity = "Provider")
     public ResponseEntity<ProviderResponse> createProvider(
             @Validated @RequestBody CreateProviderRequest request) {
         return new ResponseEntity<>(providerService.createProvider(request), HttpStatus.CREATED);
@@ -46,6 +48,7 @@ public class ProviderController {
     })
     @PatchMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
+    @Auditable(action = "UPDATE", targetEntity = "Provider")
     public ResponseEntity<ProviderResponse> updateProvider(
             @PathVariable Long id,
             @RequestBody UpdateProviderRequest request) {
@@ -60,6 +63,7 @@ public class ProviderController {
     })
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
+    @Auditable(action = "DELETE", targetEntity = "Provider")
     public ResponseEntity<Void> deleteProvider(@PathVariable Long id) {
         providerService.deleteProvider(id);
         return ResponseEntity.noContent().build();
