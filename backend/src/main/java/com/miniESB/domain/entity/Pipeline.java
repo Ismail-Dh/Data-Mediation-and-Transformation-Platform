@@ -71,4 +71,26 @@ public class Pipeline {
 
     @OneToOne(mappedBy = "pipeline", cascade = CascadeType.ALL, orphanRemoval = true)
     private DockerImage dockerImage;
+
+    // --- Nouvelles liaisons vers les templates (nullable — optionnels) ---
+
+    /**
+     * Template de validation attaché à ce pipeline (optionnel).
+     * Seuls les templates PUBLISHED sont attachables.
+     * Au runtime, ses règles sont appliquées EN PREMIER sur le payload entrant,
+     * avant les GlobalValidationRules et les ValidationRules privées.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "validation_template_id", nullable = true)
+    private ValidationTemplate validationTemplate;
+
+    /**
+     * Template de mapping attaché à ce pipeline (optionnel).
+     * Seuls les templates PUBLISHED sont attachables.
+     * Au runtime, ses mappings sont appliqués EN PREMIER sur le payload validé,
+     * avant les MappingRules privées du pipeline.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "mapping_template_id", nullable = true)
+    private MappingTemplate mappingTemplate;
 }
