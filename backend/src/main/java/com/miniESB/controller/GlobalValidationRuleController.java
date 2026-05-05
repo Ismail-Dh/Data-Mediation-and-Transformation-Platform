@@ -2,6 +2,7 @@ package com.miniESB.controller;
 
 
 
+import com.miniESB.audit.Auditable;
 import com.miniESB.dto.globalValidationRule.GlobalValidationRuleRequestDTO;
 import com.miniESB.dto.globalValidationRule.GlobalValidationRuleResponseDTO;
 import com.miniESB.service.GlobalValidationRuleService;
@@ -102,6 +103,7 @@ public class GlobalValidationRuleController {
             @ApiResponse(responseCode = "403", description = "Forbidden — ADMIN role required")
     })
     @PostMapping
+    @Auditable(action = "CREATE", targetEntity = "Validation Rule")
     public ResponseEntity<GlobalValidationRuleResponseDTO> createRule(
             @Valid @RequestBody GlobalValidationRuleRequestDTO request) {
         GlobalValidationRuleResponseDTO created = globalValidationRuleService.createRule(request);
@@ -158,6 +160,7 @@ public class GlobalValidationRuleController {
             @ApiResponse(responseCode = "404", description = "Rule not found")
     })
     @PutMapping("/{id}")
+    @Auditable(action = "UPDATE", targetEntity = "Validation Rule")
     public ResponseEntity<GlobalValidationRuleResponseDTO> updateRule(
             @PathVariable Long id,
             @Valid @RequestBody GlobalValidationRuleRequestDTO request) {
@@ -178,6 +181,7 @@ public class GlobalValidationRuleController {
             @ApiResponse(responseCode = "404", description = "Rule not found")
     })
     @PatchMapping("/{id}/deactivate")
+    @Auditable(action = "DEACTIVATE", targetEntity = "Validation Rule")
     public ResponseEntity<Void> deactivateRule(@PathVariable Long id) {
         globalValidationRuleService.deactivateRule(id);
         return ResponseEntity.noContent().build();
@@ -200,6 +204,7 @@ public class GlobalValidationRuleController {
             @ApiResponse(responseCode = "409", description = "Rule is still used by a pipeline and cannot be deleted")
     })
     @DeleteMapping("/{id}")
+    @Auditable(action = "DELETE", targetEntity = "Validation Rule")
     public ResponseEntity<Void> deleteRule(@PathVariable Long id) {
         globalValidationRuleService.deleteRule(id);
         return ResponseEntity.noContent().build();

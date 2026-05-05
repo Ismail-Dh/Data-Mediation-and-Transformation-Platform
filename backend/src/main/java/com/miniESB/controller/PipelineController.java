@@ -1,5 +1,6 @@
 package com.miniESB.controller;
 
+import com.miniESB.audit.Auditable;
 import com.miniESB.dto.Pipeline.CreatePipelineRequest;
 import com.miniESB.dto.Pipeline.PipelineResponse;
 import com.miniESB.dto.Pipeline.UpdatePipelineRequest;
@@ -40,6 +41,7 @@ public class PipelineController {
     })
     @PostMapping
     @PreAuthorize("hasAnyRole('DEVELOPER','ADMIN')") 
+    @Auditable(action = "CREATE", targetEntity = "Pipeline")
     public ResponseEntity<PipelineResponse> createPipeline(
             @Validated @RequestBody CreatePipelineRequest request,
             Principal principal) {
@@ -55,6 +57,7 @@ public class PipelineController {
     })
     @PatchMapping("/{id}")
     @PreAuthorize("hasAnyRole('DEVELOPER','ADMIN')")
+    @Auditable(action = "UPDATE", targetEntity = "Pipeline")
     public ResponseEntity<PipelineResponse> updatePipeline(
             @PathVariable Long id,
             @RequestBody UpdatePipelineRequest request,
@@ -70,7 +73,8 @@ public class PipelineController {
         @ApiResponse(responseCode = "404", description = "Pipeline not found")
     })
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('DEVELOPER','ADMIN')") 
+    @PreAuthorize("hasAnyRole('DEVELOPER','ADMIN')")
+    @Auditable(action = "DELETE", targetEntity = "Pipeline") 
     public ResponseEntity<Void> deletePipeline(
             @PathVariable Long id,
             Principal principal) {
@@ -87,6 +91,7 @@ public class PipelineController {
     })
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('DEVELOPER','ADMIN')") 
+    @Auditable(action = "READ", targetEntity = "Pipeline")
     public ResponseEntity<PipelineResponse> getPipelineById(
             @PathVariable Long id,
             Principal principal) {
