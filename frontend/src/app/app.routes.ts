@@ -11,6 +11,8 @@ import { PipelineDeveloperComponent } from './pages/pipeline-developer-component
 import { ProviderListComponent } from './pages/provider-list-component/provider-list-component';
 import { DashboardContent } from './pages/dashboard-content/dashboard-content';
 import { ValidationRulesComponent } from './pages/validation-rules/validation-rules.component';
+import { AdminTemplate } from './pages/admin-template/admin-template';
+import { DeveloperTemplate } from './pages/developer-template/developer-template';
 
 export const routes: Routes = [
   { path: 'login',          component: Login },
@@ -27,6 +29,9 @@ export const routes: Routes = [
       {path:'validationRules',       component: ValidationRulesComponent, canActivate: [adminGuard]},
       { path: 'developer/pipelines', component: PipelineDeveloperComponent,  canActivate: [authGuard] },
       { path: 'provider',            component: ProviderListComponent , canActivate: [authGuard] },
+      { path: 'admin/templates',     component: AdminTemplate,     canActivate: [adminGuard] },
+      { path: 'developer/templates', component: DeveloperTemplate, canActivate: [authGuard] },
+
       { path: '',                    redirectTo: 'dashboard', pathMatch: 'full' },
     ]
   },
