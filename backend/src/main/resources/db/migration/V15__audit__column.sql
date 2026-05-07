@@ -1,0 +1,3 @@
+ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS http_status   INT;
+ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS error_message VARCHAR(500);
+ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS error_code    VARCHAR(100);
