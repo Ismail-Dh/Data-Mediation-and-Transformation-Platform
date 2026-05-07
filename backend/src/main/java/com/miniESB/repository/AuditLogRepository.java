@@ -1,12 +1,26 @@
 package com.miniESB.repository;
 
 import com.miniESB.domain.entity.AuditLog;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
+import java.time.Instant;
 import java.util.List;
 
-import org.springframework.data.jpa.repository.JpaRepository;
-
 public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
-    List<AuditLog> findByPerformedBy(String performedBy);
-    List<AuditLog> findByPerformedByRole(String performedByRole);
+
+    @Query("SELECT a FROM AuditLog a WHERE " +
+           "(:username IS NULL OR a.performedBy = :username) AND " +
+           "(:role IS NULL OR a.performedByRole = :role) AND " +
+           "(:action IS NULL OR a.action = :action) AND " +
+           "(:httpStatus IS NULL OR a.httpStatus = :httpStatus)")
+    List<AuditLog> findByFilters(
+            @Param("username")   String username,
+            @Param("role")       String role,
+            @Param("action")     String action,
+            @Param("httpStatus") Integer httpStatus
+    );
+
+    void deleteByTimestampBefore(Instant limit);
 }
