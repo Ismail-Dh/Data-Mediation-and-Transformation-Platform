@@ -175,28 +175,88 @@ td {
 .btn-icon { font-size: 1.1rem; }
 
 // ── Modal ─────────────────────────────────────────────────────────────────────
+
+
 .modal-overlay {
-  position: fixed; inset: 0; background: rgba(0,0,0,0.35);
-  display: flex; align-items: center; justify-content: center;
-  z-index: 200; backdrop-filter: blur(2px);
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;        // centrage vertical
+  justify-content: center;
+  padding: 24px;              // marge de sécurité sur petits écrans
+  overflow-y: auto;           // si l'écran est vraiment trop petit
 }
 
 .modal {
-  background: $bg-card; border-radius: $radius-lg; padding: 2rem;
-  width: 520px; max-width: 95vw; box-shadow: 0 20px 60px rgba(0,0,0,0.18);
-  animation: slideUp 0.18s ease;
-  &--lg { width: 680px; }
+  display: flex;
+  flex-direction: column;     // header / body / footer empilés
+  max-height: 90vh;           // ← clé du fix : jamais plus grand que la fenêtre
+  width: 100%;
+  max-width: 760px;           // ajustez selon votre breakpoint --lg
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.18);
+  overflow: hidden;           // les coins arrondis ne débordent pas
 }
+
+// 3. Le header est FIXE en haut (ne scroll pas)
+.modal-header {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+// 4. La zone de contenu (formulaire + règles) scroll
+.modal-form,
+.content-section {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 20px 24px;
+}
+
+// Ou si vous préférez un seul conteneur scrollable, enveloppez-les :
+// Ajoutez dans le HTML un <div class="modal-body"> autour de .modal-form et .content-section
+// et appliquez :
+.modal-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+// 5. Le footer est FIXE en bas (ne scroll pas)
+.modal-footer {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 24px;
+  border-top: 1px solid #e5e7eb;
+  background: #fff;           // couvre le contenu qui défile dessous
+}
+
+// 6. (Bonus) Scroll élégant dans la liste dynamique si elle est très longue
+.dynamic-list {
+  max-height: 340px;          // environ 4-5 lignes ; ajustez selon vos besoins
+  overflow-y: auto;
+  padding-right: 4px;         // évite que la scrollbar cache le contenu
+}
+
 
 @keyframes slideUp {
   from { opacity: 0; transform: translateY(14px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
-.modal-header {
-  display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;
-  h2 { font-size: 1.15rem; font-weight: 600; margin: 0; }
-}
+
 
 .close-btn {
   width: 30px; height: 30px; background: #f5f5f5; border: none;
@@ -206,12 +266,7 @@ td {
   &:hover { background: #ebebeb; color: $text-main; }
 }
 
-.modal-footer {
-  display: flex; justify-content: flex-end; gap: 0.75rem;
-  margin-top: 1.75rem; padding-top: 1rem; border-top: 1px solid #f0f0f0;
-}
 
-.modal-form { display: flex; flex-direction: column; }
 
 .field {
   display: flex; flex-direction: column; gap: 5px; margin-bottom: 1rem;
@@ -268,4 +323,78 @@ td {
 .drawer-actions {
   display: flex; gap: 0.75rem; justify-content: flex-end;
   margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #f0f0f0;
+}
+
+
+// ── Content section (rules / mappings) ───────────────────────────────────────
+.content-section {
+  margin-top: 1rem;
+  border: 1px solid $border;
+  border-radius: $radius-md;
+  overflow: hidden;
+}
+
+.content-section-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 0.75rem 1rem;
+  background: #f8f8f8; border-bottom: 1px solid $border;
+}
+
+.section-title {
+  font-size: 0.8rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.07em; color: $text-sub;
+}
+
+.dynamic-list { padding: 0.75rem 1rem; display: flex; flex-direction: column; gap: 0.75rem; }
+
+.dynamic-row {
+  display: flex; align-items: flex-end; gap: 0.6rem;
+  padding: 0.75rem; background: #fafafa;
+  border: 1px solid $border; border-radius: $radius-sm;
+}
+
+.row-index {
+  width: 22px; height: 22px; border-radius: 50%;
+  background: $accent; color: #fff;
+  font-size: 0.7rem; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; margin-bottom: 4px;
+}
+
+.row-remove { flex-shrink: 0; margin-bottom: 4px; }
+
+.field--sm {
+  flex: 1; min-width: 100px;
+  label { font-size: 0.75rem; }
+  input, select { padding: 0.45rem 0.7rem; font-size: 0.84rem; }
+}
+
+.hint { color: #aaa; font-weight: 400; font-size: 0.72rem; }
+
+.empty-list {
+  text-align: center; color: #bbb; font-size: 0.85rem; padding: 1rem;
+}
+
+.btn--add {
+  background: #f0f4ff; color: $accent; border: 1px dashed $accent;
+  padding: 0.35rem 0.9rem; font-size: 0.82rem;
+  &:hover { background: #dbe4ff; }
+}
+
+.json-preview-box {
+  margin: 0; padding: 0.75rem 1rem;
+  border-top: 1px solid $border; background: #f8f8f8;
+}
+
+.json-label {
+  display: block; font-size: 0.7rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.07em;
+  color: $text-sub; margin-bottom: 6px;
+}
+
+.json-preview {
+  background: #fff; border: 1px solid $border; border-radius: $radius-sm;
+  padding: 0.75rem; font-size: 0.75rem; color: #333;
+  overflow-x: auto; max-height: 180px; white-space: pre-wrap;
+  word-break: break-all; margin: 0;
 }
