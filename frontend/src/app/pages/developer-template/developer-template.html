@@ -1,0 +1,130 @@
+<div class="page">
+
+  <!-- ===== HEADER ===== -->
+  <div class="page-header">
+    <div class="page-title">
+      <div class="title-row">
+        <h1>Templates</h1>
+        <span class="role-chip role-chip--dev">DEVELOPER</span>
+      </div>
+      <span class="subtitle">Browse published templates available for your pipelines</span>
+    </div>
+  </div>
+
+  <!-- ===== TYPE TABS ===== -->
+  <div class="tabs">
+    <button class="tab" [class.tab--active]="activeType() === 'VALIDATION'" (click)="switchType('VALIDATION')">
+      Validation
+    </button>
+    <button class="tab" [class.tab--active]="activeType() === 'MAPPING'" (click)="switchType('MAPPING')">
+      Mapping
+    </button>
+  </div>
+
+  <!-- ===== STATS ===== -->
+  <div class="stats-row stats-row--2">
+    <div class="stat-card">
+      <span class="stat-num">{{ templates().length }}</span>
+      <span class="stat-label">Published</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-num stat-num--published">{{ filtered().length }}</span>
+      <span class="stat-label">Matching</span>
+    </div>
+  </div>
+
+  <!-- ===== TOOLBAR ===== -->
+  <div class="toolbar">
+    <div class="search-wrap">
+      <svg class="search-icon" viewBox="0 0 20 20">
+        <circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" stroke-width="1.5" fill="none"/>
+        <line x1="13" y1="13" x2="18" y2="18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <input type="text" class="search-input" placeholder="Search by name or description…"
+        [ngModel]="searchQuery()" (ngModelChange)="applyFilter($event)" />
+    </div>
+    <span class="count-badge">{{ filtered().length }} result{{ filtered().length !== 1 ? 's' : '' }}</span>
+  </div>
+
+  <!-- ===== SPINNER ===== -->
+  <div class="td-empty" *ngIf="loading()">Loading…</div>
+
+  <!-- ===== TABLE ===== -->
+  <div class="table-card" *ngIf="!loading()">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Name</th>
+          <th>Version</th>
+          <th>Owner</th>
+          <th>Updated</th>
+          <th>Content preview</th>
+          <th class="th-actions">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let t of filtered()" (click)="openDetail(t)" class="tr-clickable">
+          <td class="td-mono">{{ t.id }}</td>
+          <td class="td-name">{{ t.name }}</td>
+          <td class="td-mono">v{{ t.version }}</td>
+          <td class="td-owner">{{ t.createdBy }}</td>
+          <td class="td-date">{{ t.updatedAt | date:'dd/MM/yy' }}</td>
+          <td class="td-preview">{{ contentPreview(t) }}</td>
+          <td class="td-actions" (click)="$event.stopPropagation()">
+            <button class="icon-btn icon-btn--view" title="View details" (click)="openDetail(t)">
+              <svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="3.5" stroke="currentColor" stroke-width="1.5" fill="none"/><path d="M2 10c2-5 12-5 16 0-2 5-12 5-16 0z" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linejoin="round"/></svg>
+            </button>
+          </td>
+        </tr>
+        <tr *ngIf="filtered().length === 0">
+          <td colspan="7" class="td-empty">No published templates found.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ===== DETAIL DRAWER ===== -->
+<div class="modal-overlay" *ngIf="detailTpl()" (click)="closeDetail()">
+  <div class="drawer" (click)="$event.stopPropagation()">
+    <div class="drawer-header">
+      <div>
+        <h2>{{ detailTpl()!.name }}</h2>
+        <span class="badge badge--published">PUBLISHED</span>
+      </div>
+      <button class="close-btn" (click)="closeDetail()">
+        <svg viewBox="0 0 20 20"><line x1="4" y1="4" x2="16" y2="16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="16" y1="4" x2="4" y2="16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="detail-grid">
+      <div class="detail-item">
+        <span class="detail-label">Type</span>
+        <span class="rule-type-tag">{{ detailTpl()!.type }}</span>
+      </div>
+      <div class="detail-item">
+        <span class="detail-label">Version</span>
+        <span class="detail-value">v{{ detailTpl()!.version }}</span>
+      </div>
+      <div class="detail-item">
+        <span class="detail-label">Owner</span>
+        <span class="detail-value">{{ detailTpl()!.createdBy }}</span>
+      </div>
+      <div class="detail-item">
+        <span class="detail-label">Updated</span>
+        <span class="detail-value">{{ detailTpl()!.updatedAt | date:'dd MMM yyyy, HH:mm' }}</span>
+      </div>
+      <div class="detail-item full">
+        <span class="detail-label">Description</span>
+        <span class="detail-value">{{ detailTpl()!.description || '—' }}</span>
+      </div>
+      <div class="detail-item full">
+        <span class="detail-label">Content (JSON)</span>
+        <pre class="json-preview">{{ detailTpl()!.content | json }}</pre>
+      </div>
+    </div>
+    <div class="drawer-actions">
+      <button class="btn btn--secondary" (click)="closeDetail()">Close</button>
+    </div>
+  </div>
+</div>
