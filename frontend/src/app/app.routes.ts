@@ -13,7 +13,8 @@ import { DashboardContent } from './pages/dashboard-content/dashboard-content';
 import { ValidationRulesComponent } from './pages/validation-rules/validation-rules.component';
 import { AdminTemplate } from './pages/admin-template/admin-template';
 import { DeveloperTemplate } from './pages/developer-template/developer-template';
-
+import { AuditLogAdminComponent } from './pages/audit-log-admin/audit-log-admin.component';
+import { AuditLogMeComponent } from './pages/audit-log-me/audit-log-me.component';
 export const routes: Routes = [
   { path: 'login',          component: Login },
   { path: 'forgot-password', component: ForgotPassword },
@@ -30,6 +31,9 @@ export const routes: Routes = [
       { path: 'developer/pipelines', component: PipelineDeveloperComponent,  canActivate: [authGuard] },
       { path: 'provider',            component: ProviderListComponent , canActivate: [authGuard] },
       { path: 'admin/templates',     component: AdminTemplate,     canActivate: [adminGuard] },
+      { path: 'admin/audit-logs',      component: AuditLogAdminComponent,       canActivate: [adminGuard] },
+      { path: 'my-logs',               component: AuditLogMeComponent,          canActivate: [authGuard]  },
+
       { path: 'developer/templates', component: DeveloperTemplate, canActivate: [authGuard] },
 
       { path: '',                    redirectTo: 'dashboard', pathMatch: 'full' },

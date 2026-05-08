@@ -27,6 +27,8 @@ export class SidebarComponent {
     { label: 'Templates',    icon: 'description', route: '/developer/templates', adminOnly: false, developerOnly: true  },
     { label: 'Pipelines',    icon: 'build',        route: '/admin/pipelines',     adminOnly: true,  developerOnly: false },
     { label: 'My Pipelines', icon: 'build',        route: '/developer/pipelines', adminOnly: false, developerOnly: true  },
+    { label: 'Audit Logs',        icon: 'manage_search', route: '/admin/audit-logs',    adminOnly: true,  developerOnly: false },
+    { label: 'My Activity',       icon: 'history',       route: '/my-logs',             adminOnly: false, developerOnly: true  },
 
   ];
 
