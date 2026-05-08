@@ -13,6 +13,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
+import java.lang.reflect.Field;
 
 import java.util.Arrays;
 
@@ -119,11 +120,40 @@ public class AuditAspect {
     }
 
     private String buildDetails(Object[] args) {
-        if (args == null || args.length == 0) return null;
-        return Arrays.stream(args)
-                .filter(arg -> arg != null && !(arg instanceof Authentication))
-                .map(Object::toString)
-                .reduce((a, b) -> a + " | " + b)
-                .orElse(null);
+    if (args == null || args.length == 0) return null;
+    return Arrays.stream(args)
+            .filter(arg -> arg != null && !(arg instanceof Authentication))
+            .map(this::sanitize)
+            .reduce((a, b) -> a + " | " + b)
+            .orElse(null);
+}
+
+private String sanitize(Object arg) {
+    // Types primitifs et String — pas de champs à masquer
+    if (arg instanceof String || arg instanceof Number) {
+        return arg.toString();
     }
+
+    StringBuilder sb = new StringBuilder(arg.getClass().getSimpleName()).append("{");
+    Field[] fields = arg.getClass().getDeclaredFields();
+
+    for (Field field : fields) {
+        field.setAccessible(true);
+        try {
+            String value = field.isAnnotationPresent(Sensitive.class)
+                    ? "***"
+                    : String.valueOf(field.get(arg));
+            sb.append(field.getName()).append("=").append(value).append(", ");
+        } catch (IllegalAccessException e) {
+            sb.append(field.getName()).append("=??, ");
+        }
+    }
+
+    // Supprimer la dernière virgule
+    if (sb.toString().endsWith(", ")) {
+        sb.setLength(sb.length() - 2);
+    }
+
+    return sb.append("}").toString();
+}
 }

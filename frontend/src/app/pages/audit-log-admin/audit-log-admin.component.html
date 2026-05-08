@@ -1,0 +1,157 @@
+<div class="audit-container">
+
+  <div class="audit-header">
+    <h2>Audit Logs</h2>
+    <span class="total">{{ logs.length }} entrées</span>
+  </div>
+
+  <!-- Filtres -->
+  <div class="filters">
+    <input
+      type="text"
+      placeholder="Rechercher par utilisateur..."
+      [(ngModel)]="filter.username"
+      (ngModelChange)="load()"
+    />
+
+    <select [(ngModel)]="filter.role" (ngModelChange)="load()">
+      <option value="">Tous les rôles</option>
+      <option *ngFor="let r of ROLES" [value]="r">{{ r }}</option>
+    </select>
+
+    <select [(ngModel)]="filter.action" (ngModelChange)="load()">
+      <option value="">Toutes les actions</option>
+      <option *ngFor="let a of ACTIONS" [value]="a">{{ a }}</option>
+    </select>
+
+    <select [(ngModel)]="filter.httpStatus" (ngModelChange)="load()">
+      <option [ngValue]="undefined">Tous les statuts</option>
+      <option *ngFor="let s of STATUSES" [ngValue]="s">{{ s }}</option>
+    </select>
+
+    <button class="btn-reset" (click)="resetFilters()">Réinitialiser</button>
+  </div>
+
+  <!-- Loader -->
+  <div *ngIf="loading" class="loading">Chargement...</div>
+
+  <!-- Table -->
+  <div *ngIf="!loading" class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Utilisateur</th>
+          <th>Rôle</th>
+          <th>Action</th>
+          <th>Entité</th>
+          <th>ID cible</th>
+          <th>Statut HTTP</th>
+          <th>Erreur</th>
+          <th>Date</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngIf="logs.length === 0">
+          <td colspan="9" class="empty">Aucun log trouvé</td>
+        </tr>
+        <tr *ngFor="let log of logs">
+          <td>{{ log.performedBy }}</td>
+          <td><span class="badge badge-role">{{ log.performedByRole }}</span></td>
+          <td><span class="badge badge-action">{{ log.action }}</span></td>
+          <td>{{ log.targetEntity }}</td>
+          <td>{{ log.targetId ?? '—' }}</td>
+          <td>
+            <span *ngIf="log.httpStatus" [class]="'badge ' + getStatusClass(log.httpStatus)">
+              {{ log.httpStatus }}
+            </span>
+            <span *ngIf="!log.httpStatus">—</span>
+          </td>
+          <td>
+            <span *ngIf="log.errorMessage" class="error-msg">
+              {{ log.errorMessage }}
+            </span>
+            <span *ngIf="!log.errorMessage">—</span>
+          </td>
+          <td>{{ log.timestamp | date:'dd/MM/yyyy HH:mm:ss' }}</td>
+          <td>
+            <button class="btn-detail" (click)="openDetail(log)">Détails</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Modal détails -->
+  <div class="modal-overlay" *ngIf="selectedLog" (click)="closeDetail()">
+    <div class="modal-box" (click)="$event.stopPropagation()">
+
+      <div class="modal-header">
+        <h3>Détails du log #{{ selectedLog.id }}</h3>
+        <button class="btn-close" (click)="closeDetail()">✕</button>
+      </div>
+
+      <div class="modal-body">
+
+        <div class="detail-row">
+          <span class="detail-label">Utilisateur</span>
+          <span class="detail-value">{{ selectedLog.performedBy }}</span>
+        </div>
+
+        <div class="detail-row">
+          <span class="detail-label">Rôle</span>
+          <span class="detail-value">
+            <span class="badge badge-role">{{ selectedLog.performedByRole }}</span>
+          </span>
+        </div>
+
+        <div class="detail-row">
+          <span class="detail-label">Action</span>
+          <span class="detail-value">
+            <span class="badge badge-action">{{ selectedLog.action }}</span>
+          </span>
+        </div>
+
+        <div class="detail-row">
+          <span class="detail-label">Entité</span>
+          <span class="detail-value">{{ selectedLog.targetEntity }}</span>
+        </div>
+
+        <div class="detail-row">
+          <span class="detail-label">ID cible</span>
+          <span class="detail-value">{{ selectedLog.targetId ?? '—' }}</span>
+        </div>
+
+        <div class="detail-row">
+          <span class="detail-label">Statut HTTP</span>
+          <span class="detail-value">
+            <span [class]="'badge ' + getStatusClass(selectedLog.httpStatus)">
+              {{ selectedLog.httpStatus ?? '—' }}
+            </span>
+          </span>
+        </div>
+
+        <div class="detail-row">
+          <span class="detail-label">Date</span>
+          <span class="detail-value">
+            {{ selectedLog.timestamp | date:'dd/MM/yyyy HH:mm:ss' }}
+          </span>
+        </div>
+
+        <div class="detail-row" *ngIf="selectedLog.details">
+          <span class="detail-label">Détails</span>
+          <span class="detail-value detail-code">{{ selectedLog.details }}</span>
+        </div>
+
+        <div class="detail-error" *ngIf="selectedLog.errorMessage">
+          <div class="error-title">
+            <span class="badge badge-error">{{ selectedLog.errorCode }}</span>
+          </div>
+          <p class="error-text">{{ selectedLog.errorMessage }}</p>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</div>
