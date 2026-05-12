@@ -43,5 +43,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Object> handleIllegalArgument(IllegalArgumentException ex) {
     return new ResponseEntity<>(Map.of("error", ex.getMessage()), HttpStatus.BAD_REQUEST);
     }
+    @ExceptionHandler(PayloadValidationException.class)
+    public ResponseEntity<Object> handlePayloadValidation(PayloadValidationException ex) {
+    Map<String, Object> body = new HashMap<>();
+    body.put("error", "Payload validation failed");
+    body.put("violations", ex.getViolations());
+    return new ResponseEntity<>(body, HttpStatus.UNPROCESSABLE_ENTITY); // 422
+   }
 
 }
