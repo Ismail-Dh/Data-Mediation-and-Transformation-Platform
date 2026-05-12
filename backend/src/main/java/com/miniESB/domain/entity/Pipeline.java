@@ -93,4 +93,7 @@ public class Pipeline {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "mapping_template_id", nullable = true)
     private MappingTemplate mappingTemplate;
+    @OneToMany(mappedBy = "pipeline", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<PipelineField> fields = new ArrayList<>();
 }
