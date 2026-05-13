@@ -45,7 +45,7 @@ export class ValidationRulesComponent implements OnInit {
 
   ruleTypes: RuleType[] = [
     'NOT_NULL', 'TYPE_NUMBER', 'TYPE_DATE',
-    'REGEX_EMAIL', 'REGEX_PHONE', 'MIN_MAX_LENGTH'
+    'REGEX_EMAIL', 'REGEX_PASSWORD', 'REGEX_PHONE', 'MIN_MAX_LENGTH'
   ];
 
   form = this.fb.group({
