@@ -27,7 +27,7 @@ public class StructuralValidatorService {
     public void validate(String rawContent, List<PipelineField> fields) {
         List<FieldViolation> violations = new ArrayList<>();
 
-        // 1 — JSON parseable ?
+        // 1 — JSON 
         JsonNode root;
         try {
             root = objectMapper.readTree(rawContent);

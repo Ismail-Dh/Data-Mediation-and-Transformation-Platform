@@ -9,9 +9,7 @@ import java.util.List;
 @Repository
 public interface PipelineFieldRepository extends JpaRepository<PipelineField, Long> {
 
-    // tous les champs d'une pipeline
+    
     List<PipelineField> findAllByPipelineId(Long pipelineId);
-
-    // vérifier si un fieldPath existe déjà sur cette pipeline (éviter les doublons)
     boolean existsByPipelineIdAndFieldPath(Long pipelineId, String fieldPath);
 }

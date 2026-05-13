@@ -43,14 +43,13 @@ public class PayloadServiceImpl implements PayloadService {
         List<PipelineField> fields = pipelineFieldRepository.findAllByPipelineId(pipelineId);
 
         // 3 — validation structurelle (lance PayloadValidationException si violations)
-        // si aucun champ défini → on ne bloque pas, on laisse passer
         if (!fields.isEmpty()) {
             structuralValidatorService.validate(request.rawContent(), fields);
         } else {
             log.warn("Pipeline id={} has no PipelineField defined — skipping structural validation", pipelineId);
         }
 
-        // 4 — tout est OK → on sauvegarde
+        // 4 — tout est OK on sauvegarde
         Payload payload = Payload.builder()
                 .rawContent(request.rawContent())
                 .format(DataFormat.valueOf(request.format().toUpperCase()))
@@ -65,7 +64,6 @@ public class PayloadServiceImpl implements PayloadService {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public List<PayloadResponse> getPayloadsByPipeline(Long pipelineId) {
         pipelineRepository.findById(pipelineId)
                 .orElseThrow(() -> new ResourceNotFoundException(
@@ -77,7 +75,6 @@ public class PayloadServiceImpl implements PayloadService {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public PayloadResponse getPayloadById(Long id) {
         Payload payload = payloadRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(

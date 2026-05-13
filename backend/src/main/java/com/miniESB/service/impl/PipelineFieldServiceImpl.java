@@ -28,7 +28,7 @@ public class PipelineFieldServiceImpl implements PipelineFieldService {
     public PipelineFieldResponse addField(Long pipelineId, PipelineFieldRequest request) {
         Pipeline pipeline = findPipelineOrThrow(pipelineId);
 
-        // éviter les doublons sur le même fieldPath
+        // eviter les doublons sur le même fieldPath
         if (pipelineFieldRepository.existsByPipelineIdAndFieldPath(pipelineId, request.fieldPath())) {
             throw new IllegalArgumentException(
                 "Field path '" + request.fieldPath() + "' already exists on this pipeline");
@@ -48,7 +48,6 @@ public class PipelineFieldServiceImpl implements PipelineFieldService {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public List<PipelineFieldResponse> getFields(Long pipelineId) {
         findPipelineOrThrow(pipelineId);
         return pipelineFieldRepository.findAllByPipelineId(pipelineId)
@@ -62,7 +61,7 @@ public class PipelineFieldServiceImpl implements PipelineFieldService {
     public PipelineFieldResponse updateField(Long pipelineId, Long fieldId, PipelineFieldRequest request) {
         PipelineField field = findFieldOrThrow(pipelineId, fieldId);
 
-        // si le fieldPath change, vérifier qu'il n'existe pas déjà
+        // si le fieldPath change, on verifie qu'il n'existe pas deja//handle from db 
         if (!field.getFieldPath().equals(request.fieldPath()) &&
             pipelineFieldRepository.existsByPipelineIdAndFieldPath(pipelineId, request.fieldPath())) {
             throw new IllegalArgumentException(
