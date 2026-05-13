@@ -5,6 +5,7 @@ public enum RuleType {
     TYPE_NUMBER,
     TYPE_DATE,
     REGEX_EMAIL,
+    REGEX_PASSWORD,
     REGEX_PHONE,
     MIN_MAX_LENGTH
 }
