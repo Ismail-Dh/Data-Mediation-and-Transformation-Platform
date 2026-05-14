@@ -65,12 +65,11 @@ public class GlobalValidationRuleServiceImpl implements GlobalValidationRuleServ
     @Transactional(readOnly = true)
     public List<GlobalValidationRuleResponseDTO> getActiveRules() {
         log.debug("Fetching active global validation rules (Developer view)");
-        return validationRuleRepository.findAllByGlobalTrueAndActiveTrue()
+        return validationRuleRepository.findAllActiveGlobalRulesOnly()  // Changed this line
                 .stream()
                 .map(this::toResponse)
                 .toList();
     }
-
     @Override
     @Transactional(readOnly = true)
     public GlobalValidationRuleResponseDTO getRuleById(Long id) {

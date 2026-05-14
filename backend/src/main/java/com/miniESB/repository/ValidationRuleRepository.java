@@ -11,44 +11,39 @@ import java.util.List;
 @Repository
 public interface ValidationRuleRepository extends JpaRepository<ValidationRule, Long> {
 
-    // ── Global rules (Admin-managed) ─────────────────────────────────────────
+    // ── Global rules (Admin-managed) ──────────────────────────────────────────
 
-    /** All global rules (admin-managed, not attached to a specific pipeline). */
+    /** All global rules — Admin view (active + inactive). */
     List<ValidationRule> findAllByGlobalTrue();
 
-    /** All active global rules (exposed to Developers). */
+    /** Active global rules only — Developer read-only view. */
     List<ValidationRule> findAllByGlobalTrueAndActiveTrue();
 
     /**
+     * Active global rules (pipeline IS NULL) — Correct developer view.
+     * Excludes copies attached to pipelines.
+     */
+    @Query("SELECT vr FROM ValidationRule vr WHERE vr.global = true AND vr.active = true AND vr.pipeline IS NULL")
+    List<ValidationRule> findAllActiveGlobalRulesOnly();
+
+    /**
      * Checks whether a given global rule is referenced by at least one pipeline.
-     * Used to block deletion of a rule that is still in use (→ 409).
+     * Used to block hard-delete when the rule is still in use (→ 409).
      */
     @Query("SELECT COUNT(vr) > 0 FROM ValidationRule vr WHERE vr.id = :id AND vr.global = true AND vr.pipeline IS NOT NULL")
     boolean isGlobalRuleUsedByPipeline(@Param("id") Long id);
 
-    // ── Pipeline-scoped rules (Developer-managed) ─────────────────────────────
+    // ── Pipeline-scoped private rules (Developer-managed) ────────────────────
 
-    /** All private rules for a pipeline (global=false). */
-    List<ValidationRule> findAllByPipelineIdAndGlobalFalse(Long pipelineId);
+    /** All rules (active + inactive) attached to a specific pipeline. */
+    List<ValidationRule> findAllByPipelineId(Long pipelineId);
 
-    /** All active private rules for a pipeline (global=false, active=true). */
-    List<ValidationRule> findAllByPipelineIdAndActiveTrueAndGlobalFalse(Long pipelineId);
+    /** Active private rules attached to a specific pipeline (used at runtime). */
+    List<ValidationRule> findAllByPipelineIdAndActiveTrue(Long pipelineId);
 
-    // ── Semantic validation at runtime ────────────────────────────────────────
-
-    /**
-     * Fetches all active rules to apply at runtime for a given pipeline:
-     *   - active global rules (from Admin)
-     *   - active pipeline-scoped rules (from Developer)
-     */
-    @Query("""
-        SELECT vr FROM ValidationRule vr
-        WHERE vr.active = true
-          AND (
-               vr.global = true
-            OR (vr.global = false AND vr.pipeline.id = :pipelineId)
-          )
-        ORDER BY vr.global DESC, vr.id ASC
-    """)
-    List<ValidationRule> findAllActiveRulesForPipeline(@Param("pipelineId") Long pipelineId);
+    /** Check for duplicate (fieldName + ruleType) on the same pipeline. */
+    boolean existsByPipelineIdAndFieldNameAndRuleType(
+            Long pipelineId,
+            String fieldName,
+            com.miniESB.domain.enums.RuleType ruleType);
 }

@@ -26,7 +26,7 @@ import java.util.List;
         description = "CRUD operations on reusable global validation rules (ADMIN only)")
 @RestController
 @RequestMapping("/api/admin/rules")
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAnyRole('DEVELOPER','ADMIN')")
 @RequiredArgsConstructor
 public class GlobalValidationRuleController {
 
@@ -125,6 +125,23 @@ public class GlobalValidationRuleController {
     @GetMapping
     public ResponseEntity<List<GlobalValidationRuleResponseDTO>> getAllRules() {
         return ResponseEntity.ok(globalValidationRuleService.getAllRules());
+    }
+
+    // -------------------------------------------------------------------------
+    // GET /api/admin/rules/active
+    // -------------------------------------------------------------------------
+
+    @Operation(
+            summary = "Get all global validation rules",
+            description = "Returns all global rules active. Developer view only."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "List of global rules"),
+            @ApiResponse(responseCode = "403", description = "Forbidden — ADMIN role required")
+    })
+    @GetMapping("/active")
+    public ResponseEntity<List<GlobalValidationRuleResponseDTO>> getAllRulesActives() {
+        return ResponseEntity.ok(globalValidationRuleService.getActiveRules());
     }
 
     // -------------------------------------------------------------------------
