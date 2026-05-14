@@ -115,7 +115,7 @@ class GlobalValidationRuleServiceImplTest {
         @Test
         @DisplayName("returns only active global rules")
         void getActiveRules_returnsActive() {
-            when(validationRuleRepository.findAllByGlobalTrueAndActiveTrue()).thenReturn(List.of(globalRule));
+            when(validationRuleRepository.findAllActiveGlobalRulesOnly()).thenReturn(List.of(globalRule));
 
             List<GlobalValidationRuleResponseDTO> result = service.getActiveRules();
 
