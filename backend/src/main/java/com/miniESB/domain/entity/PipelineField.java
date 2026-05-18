@@ -18,17 +18,17 @@ public class PipelineField {
     private Long id;
 
     @Column(name = "field_path", nullable = false, length = 200)
-    private String fieldPath;         // ex: "customer.email", "items[].qty"
+    private String fieldPath;         
 
     @Enumerated(EnumType.STRING)
     @Column(name = "field_type", nullable = false, length = 30)
-    private FieldType fieldType;      // STRING, INTEGER, BOOLEAN, OBJECT, ARRAY
+    private FieldType fieldType;     
 
     @Column(name = "required", nullable = false)
-    private boolean required;         // champ obligatoire ?
+    private boolean required;        
 
     @Column(name = "nullable", nullable = false)
-    private boolean nullable;         // null autorisé ?
+    private boolean nullable;        
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "pipeline_id", nullable = false)

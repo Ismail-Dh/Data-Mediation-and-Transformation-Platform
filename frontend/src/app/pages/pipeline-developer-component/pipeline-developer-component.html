@@ -13,7 +13,7 @@
     </button>
   </div>
 
-  <!-- ===== FILTERS ===== -->
+  <!-- FILTERS -->
   <div class="toolbar">
     <div class="search-wrap">
       <svg class="search-icon" viewBox="0 0 20 20"><circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" stroke-width="1.5" fill="none"/><line x1="13" y1="13" x2="18" y2="18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
@@ -26,7 +26,7 @@
     <span class="count-badge">{{ filtered.length }} pipeline{{ filtered.length !== 1 ? 's' : '' }}</span>
   </div>
 
-  <!-- ===== CARD GRID ===== -->
+  <!-- CARD GRID -->
   <div class="card-grid" *ngIf="filtered.length > 0">
     <div class="pipeline-card" *ngFor="let p of filtered; trackBy: trackById" (click)="openDetail(p)">
       <div class="card-head">
@@ -43,9 +43,14 @@
       </div>
       <div class="card-provider" *ngIf="p.providerName">
         <svg class="prov-icon" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5" fill="none"/><path d="M8 5v3l2 2" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>
-        <div class="prov-info"><span class="prov-name">{{ p.providerName }}</span><span class="prov-ep">{{ p.providerEndpoint }}</span></div>
+        <div class="prov-info">
+          <span class="prov-name">{{ p.providerName }}</span>
+          <span class="prov-ep">{{ p.providerEndpoint }}</span>
+        </div>
       </div>
-      <div class="card-provider card-provider--empty" *ngIf="!p.providerName"><span class="prov-empty">No provider linked</span></div>
+      <div class="card-provider card-provider--empty" *ngIf="!p.providerName">
+        <span class="prov-empty">No provider linked</span>
+      </div>
       <div class="card-footer">
         <span class="card-date">{{ p.createdAt | date:'MMM dd, yyyy' }}</span>
         <div class="card-actions" (click)="$event.stopPropagation()">
@@ -60,18 +65,18 @@
     </div>
   </div>
 
-  <!-- ===== EMPTY STATE ===== -->
+  <!-- EMPTY STATE -->
   <div class="empty-state" *ngIf="filtered.length === 0">
     <svg class="empty-icon" viewBox="0 0 48 48"><rect x="6" y="12" width="36" height="28" rx="4" stroke="currentColor" stroke-width="2" fill="none"/><path d="M16 12V9a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3" stroke="currentColor" stroke-width="2" fill="none"/><line x1="16" y1="24" x2="32" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="16" y1="30" x2="26" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
     <p class="empty-title" *ngIf="!searchQuery && !filterStatus">No pipelines yet</p>
     <p class="empty-title" *ngIf="searchQuery || filterStatus">No results found</p>
-    <p class="empty-sub" *ngIf="!searchQuery && !filterStatus">Create your first pipeline to start building data flows.</p>
-    <p class="empty-sub" *ngIf="searchQuery || filterStatus">Try a different search term or filter.</p>
+    <p class="empty-sub"   *ngIf="!searchQuery && !filterStatus">Create your first pipeline to start building data flows.</p>
+    <p class="empty-sub"   *ngIf="searchQuery || filterStatus">Try a different search term or filter.</p>
     <button class="btn btn--primary" (click)="openCreate()" *ngIf="!searchQuery && !filterStatus">Create Pipeline</button>
   </div>
 </div>
 
-<!-- ===== CREATE / EDIT MODAL ===== -->
+<!-- CREATE / EDIT MODAL -->
 <div class="modal-overlay" *ngIf="showModal" (click)="closeModal()">
   <div class="modal" (click)="$event.stopPropagation()">
     <div class="modal-header">
@@ -79,13 +84,34 @@
       <button class="close-btn" (click)="closeModal()"><svg viewBox="0 0 20 20"><line x1="4" y1="4" x2="16" y2="16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="16" y1="4" x2="4" y2="16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
     </div>
     <form [formGroup]="form" (ngSubmit)="save()" class="modal-form">
-      <div class="field"><label>Name <span class="req">*</span></label><input type="text" formControlName="name" placeholder="e.g. CustomerDataTransform" /><span class="field-error" *ngIf="form.get('name')?.touched && form.get('name')?.invalid">Name is required</span></div>
-      <div class="field"><label>Version</label><input type="text" formControlName="version" placeholder="e.g. 1.0.0" /></div>
-      <div class="field-row">
-        <div class="field"><label>Input Format <span class="req">*</span></label><select formControlName="inputFormat"><option value="">Select…</option><option *ngFor="let f of FORMATS" [value]="f">{{ f }}</option></select><span class="field-error" *ngIf="form.get('inputFormat')?.touched && form.get('inputFormat')?.invalid">Required</span></div>
-        <div class="field"><label>Output Format <span class="req">*</span></label><select formControlName="outputFormat"><option value="">Select…</option><option *ngFor="let f of FORMATS" [value]="f">{{ f }}</option></select><span class="field-error" *ngIf="form.get('outputFormat')?.touched && form.get('outputFormat')?.invalid">Required</span></div>
+      <div class="field">
+        <label>Name <span class="req">*</span></label>
+        <input type="text" formControlName="name" placeholder="e.g. CustomerDataTransform" />
+        <span class="field-error" *ngIf="form.get('name')?.touched && form.get('name')?.invalid">Name is required</span>
       </div>
-      <div class="field"><label>Provider <span class="optional">(optional)</span></label><select formControlName="providerId"><option [ngValue]="null">No provider</option><option *ngFor="let pv of providers" [ngValue]="pv.id">{{ pv.name }} &mdash; {{ pv.protocol }} &mdash; {{ pv.endpoint }}</option></select></div>
+      <div class="field">
+        <label>Version</label>
+        <input type="text" formControlName="version" placeholder="e.g. 1.0.0" />
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Input Format <span class="req">*</span></label>
+          <select formControlName="inputFormat"><option value="">Select…</option><option *ngFor="let f of FORMATS" [value]="f">{{ f }}</option></select>
+          <span class="field-error" *ngIf="form.get('inputFormat')?.touched && form.get('inputFormat')?.invalid">Required</span>
+        </div>
+        <div class="field">
+          <label>Output Format <span class="req">*</span></label>
+          <select formControlName="outputFormat"><option value="">Select…</option><option *ngFor="let f of FORMATS" [value]="f">{{ f }}</option></select>
+          <span class="field-error" *ngIf="form.get('outputFormat')?.touched && form.get('outputFormat')?.invalid">Required</span>
+        </div>
+      </div>
+      <div class="field">
+        <label>Provider <span class="optional">(optional)</span></label>
+        <select formControlName="providerId">
+          <option [ngValue]="null">No provider</option>
+          <option *ngFor="let pv of providers" [ngValue]="pv.id">{{ pv.name }} — {{ pv.protocol }} — {{ pv.endpoint }}</option>
+        </select>
+      </div>
       <div class="modal-footer">
         <button type="button" class="btn btn--secondary" (click)="closeModal()">Cancel</button>
         <button type="submit" class="btn btn--primary" [disabled]="form.invalid">{{ editingId !== null ? 'Save changes' : 'Create pipeline' }}</button>
@@ -94,19 +120,19 @@
   </div>
 </div>
 
-<!-- ===== DELETE CONFIRM ===== -->
+<!-- DELETE CONFIRM -->
 <div class="modal-overlay" *ngIf="deletingPipeline" (click)="cancelDelete()">
   <div class="modal modal--sm" (click)="$event.stopPropagation()">
     <div class="modal-header"><h2>Delete pipeline</h2></div>
     <p class="confirm-text">Delete <strong>{{ deletingPipeline.name }}</strong>? All payloads and exchange logs will be permanently removed.</p>
     <div class="modal-footer">
       <button class="btn btn--secondary" (click)="cancelDelete()">Cancel</button>
-      <button class="btn btn--danger" (click)="confirmDelete()">Delete</button>
+      <button class="btn btn--danger"    (click)="confirmDelete()">Delete</button>
     </div>
   </div>
 </div>
 
-<!-- ===== DETAIL MODAL ===== -->
+<!-- DETAIL MODAL -->
 <div class="modal-overlay" *ngIf="detailPipeline" (click)="closeDetail()">
   <div class="modal modal--detail modal--wide" (click)="$event.stopPropagation()">
 
@@ -121,116 +147,68 @@
     <div class="detail-info-row">
       <div class="detail-kv"><span class="detail-label">Version</span><span class="detail-val">{{ detailPipeline.version || '—' }}</span></div>
       <div class="detail-kv"><span class="detail-label">Created</span><span class="detail-val">{{ detailPipeline.createdAt | date:'dd MMM yyyy' }}</span></div>
-      <div class="detail-kv"><span class="detail-label">Format</span><span class="detail-val fmt-inline"><span class="fmt-tag">{{ detailPipeline.inputFormat }}</span><span class="fmt-arrow-sm">→</span><span class="fmt-tag">{{ detailPipeline.outputFormat }}</span></span></div>
-      <div class="detail-kv" *ngIf="detailPipeline.providerName"><span class="detail-label">Provider</span><span class="detail-val">{{ detailPipeline.providerName }}</span></div>
+      <div class="detail-kv">
+        <span class="detail-label">Format</span>
+        <span class="detail-val fmt-inline">
+          <span class="fmt-tag">{{ detailPipeline.inputFormat }}</span>
+          <span class="fmt-arrow-sm">→</span>
+          <span class="fmt-tag">{{ detailPipeline.outputFormat }}</span>
+        </span>
+      </div>
+      <div class="detail-kv" *ngIf="detailPipeline.providerName">
+        <span class="detail-label">Provider</span>
+        <span class="detail-val">{{ detailPipeline.providerName }}</span>
+      </div>
     </div>
 
+    <!-- TABS -->
     <div class="detail-tabs">
-      <button class="tab-btn" [class.tab-btn--active]="detailTab === 'info'" (click)="setDetailTab('info')">Overview</button>
-      <button class="tab-btn" [class.tab-btn--active]="detailTab === 'fields'" (click)="setDetailTab('fields')">
-        Schema Fields <span class="tab-count" *ngIf="pipelineFields.length > 0">{{ pipelineFields.length }}</span>
-      </button>
-      <button class="tab-btn" [class.tab-btn--active]="detailTab === 'payloads'" (click)="setDetailTab('payloads')">
-        Payloads <span class="tab-count" *ngIf="payloads.length > 0">{{ payloads.length }}</span>
-      </button>
+      <button class="tab-btn" [class.tab-btn--active]="detailTab === 'info'"     (click)="setDetailTab('info')">Overview</button>
+      <button class="tab-btn" [class.tab-btn--active]="detailTab === 'fields'"   (click)="setDetailTab('fields')">Schema Fields</button>
+      <button class="tab-btn" [class.tab-btn--active]="detailTab === 'payloads'" (click)="setDetailTab('payloads')">Payloads</button>
+      <button class="tab-btn" [class.tab-btn--active]="detailTab === 'rules'"    (click)="setDetailTab('rules')">Validation Rules</button>
     </div>
 
-    <!-- ── TAB: Overview ── -->
+    <!-- TAB: Overview -->
     <div class="tab-panel" *ngIf="detailTab === 'info'">
       <div class="detail-body">
         <div class="detail-row"><span class="detail-label">Version</span><span class="detail-val">{{ detailPipeline.version || '—' }}</span></div>
         <div class="detail-row"><span class="detail-label">Created</span><span class="detail-val">{{ detailPipeline.createdAt | date:'dd MMM yyyy, HH:mm' }}</span></div>
-        <div class="detail-row"><span class="detail-label">Input → Output</span><span class="detail-val fmt-inline"><span class="fmt-tag">{{ detailPipeline.inputFormat }}</span><span class="fmt-arrow-sm">→</span><span class="fmt-tag">{{ detailPipeline.outputFormat }}</span></span></div>
-        <div class="detail-row" *ngIf="detailPipeline.providerName"><span class="detail-label">Provider</span><div class="detail-val"><span class="prov-name-detail">{{ detailPipeline.providerName }}</span><span class="prov-ep-detail">{{ detailPipeline.providerEndpoint }}</span></div></div>
+        <div class="detail-row">
+          <span class="detail-label">Input → Output</span>
+          <span class="detail-val fmt-inline">
+            <span class="fmt-tag">{{ detailPipeline.inputFormat }}</span>
+            <span class="fmt-arrow-sm">→</span>
+            <span class="fmt-tag">{{ detailPipeline.outputFormat }}</span>
+          </span>
+        </div>
+        <div class="detail-row" *ngIf="detailPipeline.providerName">
+          <span class="detail-label">Provider</span>
+          <div class="detail-val">
+            <span class="prov-name-detail">{{ detailPipeline.providerName }}</span>
+            <span class="prov-ep-detail">{{ detailPipeline.providerEndpoint }}</span>
+          </div>
+        </div>
       </div>
     </div>
 
-    <!-- ── TAB: Schema Fields ── -->
-    <div class="tab-panel" *ngIf="detailTab === 'fields'">
-      <form [formGroup]="fieldForm" (ngSubmit)="saveField()" class="inline-form">
-        <div class="inline-form-fields">
-          <div class="field field--inline"><label>Field Path <span class="req">*</span></label><input type="text" formControlName="fieldPath" placeholder="e.g. customer.email" /><span class="field-error" *ngIf="fieldForm.get('fieldPath')?.touched && fieldForm.get('fieldPath')?.invalid">Required</span></div>
-          <div class="field field--inline"><label>Type <span class="req">*</span></label><select formControlName="fieldType"><option value="">Select…</option><option *ngFor="let t of FIELD_TYPES" [value]="t">{{ t }}</option></select><span class="field-error" *ngIf="fieldForm.get('fieldType')?.touched && fieldForm.get('fieldType')?.invalid">Required</span></div>
-          <div class="field field--toggle"><label>Required</label><label class="toggle"><input type="checkbox" formControlName="required" /><span class="toggle-slider"></span></label></div>
-          <div class="field field--toggle"><label>Nullable</label><label class="toggle"><input type="checkbox" formControlName="nullable" /><span class="toggle-slider"></span></label></div>
-        </div>
-        <div class="inline-form-actions">
-          <button type="button" class="btn btn--secondary btn--sm" *ngIf="editingFieldId !== null" (click)="cancelEditField()">Cancel</button>
-          <button type="submit" class="btn btn--primary btn--sm" [disabled]="fieldForm.invalid">{{ editingFieldId !== null ? 'Update Field' : '+ Add Field' }}</button>
-        </div>
-      </form>
+    <!-- TAB: Schema Fields -->
+    <app-pipeline-fields-tab
+      *ngIf="detailTab === 'fields'"
+      [pipelineId]="detailPipeline!.id">
+    </app-pipeline-fields-tab>
 
-      <div class="fields-list" *ngIf="pipelineFields.length > 0">
-        <table class="fields-table">
-          <thead><tr><th>Field Path</th><th>Type</th><th>Required</th><th>Nullable</th><th></th></tr></thead>
-          <tbody>
-            <tr *ngFor="let f of pipelineFields" [class.row--editing]="editingFieldId === f.id">
-              <td class="field-path-cell"><code>{{ f.fieldPath }}</code></td>
-              <td><span class="type-chip type-chip--{{ f.fieldType.toLowerCase() }}">{{ f.fieldType }}</span></td>
-              <td><span class="bool-badge bool-badge--yes" *ngIf="f.required">Yes</span><span class="bool-badge bool-badge--no" *ngIf="!f.required">No</span></td>
-              <td><span class="bool-badge bool-badge--yes" *ngIf="f.nullable">Yes</span><span class="bool-badge bool-badge--no" *ngIf="!f.nullable">No</span></td>
-              <td class="field-actions-cell">
-                <button class="icon-btn icon-btn--edit" (click)="openEditField(f)"><svg viewBox="0 0 20 20"><path d="M14.85 2.15a2 2 0 0 1 2.83 2.83L6.5 16.17 2 18l1.83-4.5L14.85 2.15z" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-                <button class="icon-btn icon-btn--delete" (click)="deleteField(f.id)"><svg viewBox="0 0 20 20"><polyline points="3 6 5 6 17 6" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/><path d="M8 6V4h4v2" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/><path d="M6 6l1 11h6l1-11" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      <div class="tab-empty" *ngIf="pipelineFields.length === 0 && !fieldsLoading"><svg viewBox="0 0 24 24" class="tab-empty-icon"><rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" stroke-width="1.5" fill="none"/><line x1="7" y1="8" x2="17" y2="8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="7" y1="12" x2="13" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><span>No fields defined yet. Add one above.</span></div>
-      <div class="tab-loading" *ngIf="fieldsLoading">Loading fields…</div>
-    </div>
+    <!-- TAB: Payloads -->
+    <app-pipeline-payloads-tab
+      *ngIf="detailTab === 'payloads'"
+      [pipelineId]="detailPipeline!.id">
+    </app-pipeline-payloads-tab>
 
-    <!-- ── TAB: Payloads ── -->
-    <div class="tab-panel" *ngIf="detailTab === 'payloads'">
-
-      <!-- ── PREVIEW (dry-run) panel ── -->
-      <div class="preview-panel">
-        <div class="preview-panel-header">
-          <svg viewBox="0 0 16 16" class="preview-icon"><path d="M1 8s3-5 7-5 7 5 7 5-3 5-7 5-7-5-7-5z" stroke="currentColor" stroke-width="1.3" fill="none"/><circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.3" fill="none"/></svg>
-          <span class="preview-panel-title">Dry-run preview</span>
-          <span class="preview-panel-sub">Test your payload against the schema without submitting</span>
-        </div>
-        <form [formGroup]="previewForm" (ngSubmit)="runPreview()" class="preview-form">
-          <div class="preview-form-row">
-            <textarea formControlName="rawContent" rows="3" placeholder='{"orderId": 42, "customer": {"email": "test@example.com"}}' class="payload-textarea preview-textarea"></textarea>
-            <div class="preview-form-side">
-              <select formControlName="format" class="preview-select">
-                <option *ngFor="let f of FORMATS" [value]="f">{{ f }}</option>
-              </select>
-              <button type="submit" class="btn btn--secondary btn--sm preview-btn" [disabled]="previewForm.invalid || previewLoading">
-                <svg viewBox="0 0 16 16" style="width:12px;height:12px"><path d="M1 8s3-5 7-5 7 5 7 5-3 5-7 5-7-5-7-5z" stroke="currentColor" stroke-width="1.4" fill="none"/><circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.4" fill="none"/></svg>
-                {{ previewLoading ? 'Testing…' : 'Test' }}
-              </button>
-              <button type="button" class="btn btn--ghost btn--sm" *ngIf="previewResult" (click)="clearPreview()">Clear</button>
-            </div>
-          </div>
-        </form>
-
-        <!-- Preview result -->
-        <div class="preview-result preview-result--ok" *ngIf="previewResult?.valid">
-          <svg viewBox="0 0 16 16" style="width:13px;height:13px;flex-shrink:0"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.4" fill="none"/><polyline points="5 8 7.5 10.5 11.5 6" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          <span>Valid — {{ previewResult!.fieldsChecked }} field{{ previewResult!.fieldsChecked !== 1 ? 's' : '' }} checked, no violations found.</span>
-        </div>
-        <div class="preview-result preview-result--fail" *ngIf="previewResult && !previewResult.valid">
-          <div class="preview-result-header">
-            <svg viewBox="0 0 16 16" style="width:13px;height:13px;flex-shrink:0"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.4" fill="none"/><line x1="8" y1="5" x2="8" y2="8.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="8" cy="11" r=".7" fill="currentColor"/></svg>
-            <span>{{ previewResult!.violationCount }} violation{{ previewResult!.violationCount !== 1 ? 's' : '' }} found on {{ previewResult!.fieldsChecked }} fields</span>
-          </div>
-          <div class="violations-list">
-            <div class="violation-row" *ngFor="let v of previewResult!.violations">
-              <span class="violation-type violation-type--{{ v.errorType.toLowerCase() }}">{{ violationLabel(v.errorType) }}</span>
-              <code class="violation-path">{{ v.fieldPath }}</code>
-              <span class="violation-msg">{{ v.message }}</span>
-            </div>
-          </div>
-        </div>
-        <div class="preview-no-schema" *ngIf="previewResult?.valid && previewResult!.fieldsChecked === 0">
-          <em>No schema defined for this pipeline — all payloads pass by default.</em>
-        </div>
-      </div>
-
-     
+    <!-- TAB: Validation Rules -->
+    <app-pipeline-rules-tab
+      *ngIf="detailTab === 'rules'"
+      [pipelineId]="detailPipeline!.id">
+    </app-pipeline-rules-tab>
 
     <!-- Footer -->
     <div class="modal-footer">

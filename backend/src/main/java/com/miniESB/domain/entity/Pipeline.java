@@ -53,7 +53,7 @@ public class Pipeline {
     @JoinColumn(name = "provider_id", nullable = true)
     private Provider provider;
 
-    @OneToMany(mappedBy = "pipeline", cascade = CascadeType.PERSIST, orphanRemoval = false)
+    @OneToMany(mappedBy = "pipeline",cascade = CascadeType.ALL,orphanRemoval = true)
     @Builder.Default
     private List<ValidationRule> validationRules = new ArrayList<>();
 

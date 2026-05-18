@@ -1,0 +1,63 @@
+<div class="tab-panel">
+  <form [formGroup]="fieldForm" (ngSubmit)="saveField()" class="inline-form">
+    <div class="inline-form-fields">
+      <div class="field field--inline">
+        <label>Field Path <span class="req">*</span></label>
+        <input type="text" formControlName="fieldPath" placeholder="e.g. customer.email" />
+        <span class="field-error" *ngIf="fieldForm.get('fieldPath')?.touched && fieldForm.get('fieldPath')?.invalid">Required</span>
+      </div>
+      <div class="field field--inline">
+        <label>Type <span class="req">*</span></label>
+        <select formControlName="fieldType">
+          <option value="">Select…</option>
+          <option *ngFor="let t of FIELD_TYPES" [value]="t">{{ t }}</option>
+        </select>
+        <span class="field-error" *ngIf="fieldForm.get('fieldType')?.touched && fieldForm.get('fieldType')?.invalid">Required</span>
+      </div>
+      <div class="field field--toggle">
+        <label>Required</label>
+        <label class="toggle"><input type="checkbox" formControlName="required" /><span class="toggle-slider"></span></label>
+      </div>
+      <div class="field field--toggle">
+        <label>Nullable</label>
+        <label class="toggle"><input type="checkbox" formControlName="nullable" /><span class="toggle-slider"></span></label>
+      </div>
+    </div>
+    <div class="inline-form-actions">
+      <button type="button" class="btn btn--secondary btn--sm" *ngIf="editingFieldId !== null" (click)="cancelEdit()">Cancel</button>
+      <button type="submit" class="btn btn--primary btn--sm" [disabled]="fieldForm.invalid">
+        {{ editingFieldId !== null ? 'Update Field' : '+ Add Field' }}
+      </button>
+    </div>
+  </form>
+
+  <div class="fields-list" *ngIf="fields.length > 0">
+    <table class="fields-table">
+      <thead>
+        <tr><th>Field Path</th><th>Type</th><th>Required</th><th>Nullable</th><th></th></tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let f of fields" [class.row--editing]="editingFieldId === f.id">
+          <td class="field-path-cell"><code>{{ f.fieldPath }}</code></td>
+          <td><span class="type-chip type-chip--{{ f.fieldType.toLowerCase() }}">{{ f.fieldType }}</span></td>
+          <td><span class="bool-badge bool-badge--yes" *ngIf="f.required">Yes</span><span class="bool-badge bool-badge--no" *ngIf="!f.required">No</span></td>
+          <td><span class="bool-badge bool-badge--yes" *ngIf="f.nullable">Yes</span><span class="bool-badge bool-badge--no" *ngIf="!f.nullable">No</span></td>
+          <td class="field-actions-cell">
+            <button class="icon-btn icon-btn--edit" (click)="openEdit(f)">
+              <svg viewBox="0 0 20 20"><path d="M14.85 2.15a2 2 0 0 1 2.83 2.83L6.5 16.17 2 18l1.83-4.5L14.85 2.15z" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <button class="icon-btn icon-btn--delete" (click)="deleteField(f.id)">
+              <svg viewBox="0 0 20 20"><polyline points="3 6 5 6 17 6" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/><path d="M8 6V4h4v2" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/><path d="M6 6l1 11h6l1-11" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="tab-empty" *ngIf="fields.length === 0 && !loading">
+    <svg viewBox="0 0 24 24" class="tab-empty-icon"><rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" stroke-width="1.5" fill="none"/><line x1="7" y1="8" x2="17" y2="8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="7" y1="12" x2="13" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    <span>No fields defined yet. Add one above.</span>
+  </div>
+  <div class="tab-loading" *ngIf="loading">Loading fields…</div>
+</div>
