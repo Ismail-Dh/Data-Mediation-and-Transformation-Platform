@@ -61,9 +61,11 @@ export interface ValidationPreviewRequest {
 }
 
 export interface ValidationPreviewResponse {
-  valid:          boolean;
-  structuralOk:   boolean;
-  fieldsChecked:  number;
+  valid: boolean;
+  structuralOk: boolean;   // niveau 1
+  businessOk: boolean;     // niveau 2
+  fieldsChecked: number;
+  rulesChecked: number;    // nombre de règles métier vérifiées
   violationCount: number;
-  violations:     FieldViolation[];
+  violations: FieldViolation[];
 }

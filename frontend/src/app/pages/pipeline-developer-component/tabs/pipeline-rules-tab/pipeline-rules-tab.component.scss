@@ -1,0 +1,350 @@
+// ── Variables ─────────────────────────────────────────────────────────────────
+$primary:   #1565C0;
+$primary-h: #16213e;
+$accent:    #3b5bdb;
+$danger:    #e03131;
+$border:    #e8e8e8;
+$text-main: #1a1a2e;
+$text-sub:  #888;
+$radius-sm: 6px;
+$radius-md: 10px;
+
+// ── Tab panel ─────────────────────────────────────────────────────────────────
+.tab-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+// ── Rules sections ────────────────────────────────────────────────────────────
+.rules-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.rules-section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.rules-section-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: $text-main;
+}
+
+.rules-section-sub {
+  font-size: 0.75rem;
+  color: #aaa;
+  font-style: italic;
+}
+
+// ── Attach row ────────────────────────────────────────────────────────────────
+.attach-row {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.filter-select {
+  padding: 0.6rem 0.85rem;
+  border: 1px solid $border;
+  border-radius: $radius-md;
+  font-size: 0.88rem;
+  background: #fff;
+  color: $text-main;
+  cursor: pointer;
+  font-family: inherit;
+  flex: 1;
+  min-width: 160px;
+  &:focus { outline: none; border-color: $accent; }
+}
+
+// ── Inline form ───────────────────────────────────────────────────────────────
+.inline-form {
+  background: #f8f9fb;
+  border: 1px solid #eef0f4;
+  border-radius: $radius-md;
+  padding: 1rem;
+}
+
+.inline-form-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  align-items: flex-start;
+  margin-bottom: 0.75rem;
+}
+
+.inline-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+// ── Fields ────────────────────────────────────────────────────────────────────
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+
+  label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #555;
+  }
+
+  input, select {
+    padding: 0.58rem 0.85rem;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    font-size: 0.9rem;
+    font-family: inherit;
+    background: #fff;
+    color: $text-main;
+    box-sizing: border-box;
+    transition: border-color 0.15s;
+
+    &::placeholder { color: #bbb; }
+    &:focus {
+      outline: none;
+      border-color: $accent;
+      box-shadow: 0 0 0 3px rgba(59, 91, 219, 0.08);
+    }
+  }
+
+  &--inline { flex: 1; min-width: 140px; }
+}
+
+.req      { color: $danger; }
+.optional { font-size: 0.75rem; color: #bbb; font-weight: 400; }
+
+// ── Pattern suggestions ───────────────────────────────────────────────────────
+.pattern-suggestions {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+  margin-top: 3px;
+}
+
+.suggestions-label {
+  font-size: 0.7rem;
+  color: #aaa;
+}
+
+.suggestion-chip {
+  padding: 2px 8px;
+  border-radius: 20px;
+  border: 1px solid #d0d7ff;
+  background: #f0f4ff;
+  color: $accent;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.12s;
+
+  &:hover { background: #dbe4ff; }
+}
+
+// ── Buttons ───────────────────────────────────────────────────────────────────
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0.58rem 1.2rem;
+  border-radius: $radius-md;
+  font-size: 0.88rem;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  font-family: inherit;
+
+  &--primary {
+    background: $primary;
+    color: #fff;
+    &:hover { background: $primary-h; }
+    &:disabled { opacity: 0.5; cursor: not-allowed; }
+  }
+
+  &--secondary {
+    background: #f0f0f0;
+    color: $text-main;
+    border: 1px solid $border;
+    &:hover { background: #e4e4e4; }
+  }
+
+  &--sm { padding: 0.44rem 0.9rem; font-size: 0.82rem; }
+}
+
+// ── Fields list & table ───────────────────────────────────────────────────────
+.fields-list {
+  border: 1px solid $border;
+  border-radius: $radius-md;
+  overflow: hidden;
+}
+
+.fields-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+
+  thead tr {
+    background: #f8f9fb;
+    border-bottom: 1px solid $border;
+
+    th {
+      padding: 0.55rem 0.85rem;
+      text-align: left;
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: $text-sub;
+    }
+  }
+
+  tbody tr {
+    border-bottom: 1px solid #f5f5f5;
+    transition: background 0.12s;
+
+    &:last-child { border-bottom: none; }
+    &:hover { background: #fafbff; }
+    &.row--editing { background: #f0f4ff; }
+
+    td {
+      padding: 0.6rem 0.85rem;
+      color: $text-main;
+      vertical-align: middle;
+
+      code {
+        font-family: monospace;
+        font-size: 0.82rem;
+        background: #f0f0f0;
+        padding: 2px 6px;
+        border-radius: 4px;
+        color: $primary-h;
+      }
+    }
+  }
+}
+
+.field-actions-cell {
+  display: flex;
+  gap: 4px;
+  justify-content: flex-end;
+}
+
+.text-muted { color: #ccc; font-size: 0.82rem; }
+
+// ── Type chips ────────────────────────────────────────────────────────────────
+.type-chip {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  font-weight: 600;
+
+  &--not_null       { background: #e3f2fd; color: #1565c0; }
+  &--type_number    { background: #fff3e0; color: #e65100; }
+  &--type_date      { background: #f3e5f5; color: #6a1b9a; }
+  &--regex_email    { background: #e8f5e9; color: #2e7d32; }
+  &--regex_phone    { background: #e8f5e9; color: #1b5e20; }
+  &--regex          { background: #fce4ec; color: #ad1457; }
+  &--min_max_length { background: #fff8e1; color: #f57f17; }
+}
+
+// ── Bool badges ───────────────────────────────────────────────────────────────
+.bool-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  font-weight: 600;
+
+  &--yes { background: #e8f5e9; color: #2e7d32; }
+  &--no  { background: #f5f5f5; color: #999; }
+}
+
+// ── Toggle ────────────────────────────────────────────────────────────────────
+.toggle {
+  position: relative;
+  display: inline-block;
+  width: 34px;
+  height: 20px;
+  flex-shrink: 0;
+  cursor: pointer;
+
+  input { opacity: 0; width: 0; height: 0; }
+
+  .toggle-slider {
+    position: absolute;
+    inset: 0;
+    background: #ddd;
+    border-radius: 20px;
+    transition: background 0.2s;
+
+    &::before {
+      content: '';
+      position: absolute;
+      width: 14px; height: 14px;
+      left: 3px; top: 3px;
+      background: #fff;
+      border-radius: 50%;
+      transition: transform 0.2s;
+    }
+  }
+
+  input:checked + .toggle-slider {
+    background: $accent;
+    &::before { transform: translateX(14px); }
+  }
+}
+
+// ── Icon buttons ──────────────────────────────────────────────────────────────
+.icon-btn {
+  width: 30px; height: 30px;
+  border: none;
+  border-radius: $radius-sm;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  svg { width: 14px; height: 14px; }
+
+  &--edit {
+    background: #f0f4ff;
+    color: $accent;
+    &:hover { background: #dbe4ff; }
+    &:disabled { opacity: 0.4; cursor: not-allowed; }
+  }
+
+  &--delete { background: #fff0f0; color: $danger; &:hover { background: #ffe0e0; } }
+}
+
+// ── Empty & loading ───────────────────────────────────────────────────────────
+.tab-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 2.5rem 1rem;
+  color: #bbb;
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.tab-empty-icon { width: 32px; height: 32px; color: #ddd; }
+
+.tab-loading {
+  padding: 2rem;
+  text-align: center;
+  font-size: 0.85rem;
+  color: $text-sub;
+}
