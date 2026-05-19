@@ -9,8 +9,9 @@ import { Provider } from '../../models/provider';
 import { PipelineFieldsTabComponent } from './tabs/pipeline-fields-tab/pipeline-fields-tab.component';
 import { PipelinePayloadsTabComponent } from './tabs/pipeline-payloads-tab/pipeline-payloads-tab.component';
 import { PipelineRulesTabComponent } from './tabs/pipeline-rules-tab/pipeline-rules-tab.component';
+import { PipelineMappingTabComponent } from './tabs/pipeline-mapping-tab-component/pipeline-mapping-tab-component';
 
-type DetailTab = 'info' | 'fields' | 'payloads' | 'rules';
+type DetailTab = 'info' | 'fields' | 'payloads' | 'rules' | 'mapping';
 
 @Component({
   selector: 'app-pipeline-developer',
@@ -21,7 +22,8 @@ type DetailTab = 'info' | 'fields' | 'payloads' | 'rules';
     FormsModule,
     PipelineFieldsTabComponent,
     PipelinePayloadsTabComponent,
-    PipelineRulesTabComponent
+    PipelineRulesTabComponent,
+    PipelineMappingTabComponent
   ],
   templateUrl: './pipeline-developer-component.html',
   styleUrls: ['./pipeline-developer-component.scss']
