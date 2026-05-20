@@ -33,7 +33,7 @@ class AuditLogControllerTest {
 
     private final AuditLogResponse sampleLog = new AuditLogResponse(
             1L, "admin", "ADMIN", "CREATE", "Pipeline",
-            "42L", "details", 201, null, null, Instant.now());
+            "42L", "details", 201, null, null, Instant.now(),null);
 
     @Nested @DisplayName("getAllLogs()")
     class GetAllLogs {

@@ -9,5 +9,6 @@ public record AuditEntry(
         String details,
         Integer httpStatus,
         String errorMessage,
-        String errorCode
+        String errorCode,
+        Long    durationMs
 ) {}

@@ -46,4 +46,7 @@ public class AuditLog {
 
     @Column(name = "timestamp", nullable = false)
     private Instant timestamp;
+
+    @Column(name = "duration_ms")
+    private Long durationMs;
 }
