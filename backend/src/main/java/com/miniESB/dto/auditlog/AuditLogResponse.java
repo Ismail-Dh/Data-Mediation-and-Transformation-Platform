@@ -13,5 +13,6 @@ public record AuditLogResponse(
         Integer httpStatus,
         String errorMessage,
         String errorCode,
-        Instant timestamp
+        Instant timestamp,
+        Long    durationMs
 ) {}

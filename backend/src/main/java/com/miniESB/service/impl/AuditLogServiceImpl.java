@@ -35,6 +35,7 @@ public class AuditLogServiceImpl implements AuditLogService {
                 .httpStatus(entry.httpStatus())
                 .errorMessage(entry.errorMessage())
                 .errorCode(entry.errorCode())
+                .durationMs(entry.durationMs())   // ← nouveau champ
                 .timestamp(Instant.now())
                 .build();
         auditLogRepository.save(auditLog);
@@ -49,16 +50,15 @@ public class AuditLogServiceImpl implements AuditLogService {
                 .map(this::toResponse)
                 .toList();
     }
+
     @Override
     public List<AuditLogResponse> getMyLogs(String username) {
-       return auditLogRepository
-            .findByFilters(username, null, null, null)
-            .stream()
-            .map(this::toResponse)
-            .toList();
+        return auditLogRepository
+                .findByFilters(username, null, null, null)
+                .stream()
+                .map(this::toResponse)
+                .toList();
     }
-
-    // ─── Purge automatique tous les jours à 2h ────────────────────────────────
 
     @Scheduled(cron = "0 0 2 * * *")
     @Transactional
@@ -67,8 +67,6 @@ public class AuditLogServiceImpl implements AuditLogService {
         auditLogRepository.deleteByTimestampBefore(limit);
         log.info("[AUDIT] Logs purged before {}", limit);
     }
-
-    // ─── Mapping ──────────────────────────────────────────────────────────────
 
     private AuditLogResponse toResponse(AuditLog log) {
         return new AuditLogResponse(
@@ -82,7 +80,8 @@ public class AuditLogServiceImpl implements AuditLogService {
                 log.getHttpStatus(),
                 log.getErrorMessage(),
                 log.getErrorCode(),
-                log.getTimestamp()
+                log.getTimestamp(),
+                log.getDurationMs()    // ← nouveau champ
         );
     }
 }
