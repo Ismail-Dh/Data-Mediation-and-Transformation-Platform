@@ -167,6 +167,8 @@
       <button class="tab-btn" [class.tab-btn--active]="detailTab === 'fields'"   (click)="setDetailTab('fields')">Schema Fields</button>
       <button class="tab-btn" [class.tab-btn--active]="detailTab === 'payloads'" (click)="setDetailTab('payloads')">Payloads</button>
       <button class="tab-btn" [class.tab-btn--active]="detailTab === 'rules'"    (click)="setDetailTab('rules')">Validation Rules</button>
+      <button class="tab-btn" [class.tab-btn--active]="detailTab === 'mapping'" (click)="setDetailTab('mapping')">Mapping Rules</button>
+
     </div>
 
     <!-- TAB: Overview -->
@@ -209,6 +211,12 @@
       *ngIf="detailTab === 'rules'"
       [pipelineId]="detailPipeline!.id">
     </app-pipeline-rules-tab>
+
+     <!-- TAB: Mapping Rules -->
+   <app-pipeline-mapping-tab
+     *ngIf="detailTab === 'mapping'"
+     [pipelineId]="detailPipeline!.id">
+   </app-pipeline-mapping-tab>
 
     <!-- Footer -->
     <div class="modal-footer">
