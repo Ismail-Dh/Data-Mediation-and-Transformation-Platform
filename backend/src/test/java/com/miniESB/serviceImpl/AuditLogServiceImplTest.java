@@ -65,7 +65,7 @@ class AuditLogServiceImplTest {
         void save_persistsAuditLog() {
             AuditEntry entry = new AuditEntry(
                     "admin", "ADMIN", "CREATE", "Pipeline",
-                    "42L", "some details", 201, null, null);
+                    "42L", "some details", 201, null,null, null);
 
             auditLogService.save(entry);
 
