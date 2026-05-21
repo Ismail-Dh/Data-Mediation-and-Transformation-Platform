@@ -97,20 +97,14 @@ export class PipelineRulesTabComponent implements OnInit, OnDestroy {
   }
 
   attachGlobalRule(): void {
-    if (!this.selectedGlobalRuleId || !this.selectedFieldPath) return;
-    const globalRule = this.globalRules.find(r => r.id === this.selectedGlobalRuleId);
-    if (!globalRule) return;
+    if (!this.selectedGlobalRuleId) return;
+
     this.rulesService.addRule(this.pipelineId, {
-      globalRuleId: this.selectedGlobalRuleId,
-      fieldName:    this.selectedFieldPath,
-      ruleType:     globalRule.ruleType,
-      pattern:      globalRule.pattern,
-      active:       true
-    }).subscribe(() => {
-      this.selectedGlobalRuleId = null;
-      this.selectedFieldPath    = null;
-      this.loadAll();
-    });
+      globalRuleId: this.selectedGlobalRuleId
+   }).subscribe(() => {
+    this.selectedGlobalRuleId = null;
+    this.loadAll();
+   });
   }
 
   savePrivateRule(): void {
