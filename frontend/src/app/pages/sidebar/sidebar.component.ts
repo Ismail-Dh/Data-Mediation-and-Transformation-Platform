@@ -29,6 +29,9 @@ export class SidebarComponent {
     { label: 'My Pipelines', icon: 'build',        route: '/developer/pipelines', adminOnly: false, developerOnly: true  },
     { label: 'Audit Logs',        icon: 'manage_search', route: '/admin/audit-logs',    adminOnly: true,  developerOnly: false },
     { label: 'My Activity',       icon: 'history',       route: '/my-logs',             adminOnly: false, developerOnly: true  },
+    { label: 'Monitoring', icon: 'monitor_heart', route: '/admin/monitoring', adminOnly: true, developerOnly: false },
+
+
 
   ];
 

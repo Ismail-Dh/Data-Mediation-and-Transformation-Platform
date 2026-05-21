@@ -15,6 +15,7 @@ import { AdminTemplate } from './pages/admin-template/admin-template';
 import { DeveloperTemplate } from './pages/developer-template/developer-template';
 import { AuditLogAdminComponent } from './pages/audit-log-admin/audit-log-admin.component';
 import { AuditLogMeComponent } from './pages/audit-log-me/audit-log-me.component';
+import { MonitoringComponent } from './pages/monitoring/monitoring.component';
 export const routes: Routes = [
   { path: 'login',          component: Login },
   { path: 'forgot-password', component: ForgotPassword },
@@ -35,8 +36,11 @@ export const routes: Routes = [
       { path: 'my-logs',               component: AuditLogMeComponent,          canActivate: [authGuard]  },
 
       { path: 'developer/templates', component: DeveloperTemplate, canActivate: [authGuard] },
+      { path: 'admin/monitoring', component: MonitoringComponent, canActivate: [adminGuard] },
+
 
       { path: '',                    redirectTo: 'dashboard', pathMatch: 'full' },
+
     ]
   },
   { path: '**', redirectTo: 'login' },
