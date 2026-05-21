@@ -1,0 +1,203 @@
+<div class="mon-container">
+
+  <!-- ── Header ───────────────────────────────────────────────────────────── -->
+  <div class="mon-header">
+    <div class="mon-header__left">
+      <h2>Monitoring</h2>
+      <span class="mon-header__subtitle">Tableau de bord en temps réel</span>
+    </div>
+    <button class="btn-refresh" (click)="load()" [disabled]="loading()">
+      <span class="refresh-icon" [class.spinning]="loading()">↻</span>
+      Actualiser
+    </button>
+  </div>
+
+  <!-- ── Error ─────────────────────────────────────────────────────────────── -->
+  <div *ngIf="error()" class="mon-error">
+    ⚠ {{ error() }}
+  </div>
+
+  <!-- ── Loader ────────────────────────────────────────────────────────────── -->
+  <div *ngIf="loading() && !stats()" class="mon-loading">
+    <div class="spinner"></div>
+    <span>Chargement des statistiques…</span>
+  </div>
+
+  <ng-container *ngIf="stats() as s">
+
+    <!-- ══════════════════════════════════════════════════════════════════════
+         ROW 1 — Global KPI cards
+    ═══════════════════════════════════════════════════════════════════════ -->
+    <div class="kpi-grid">
+
+      <div class="kpi-card kpi-blue">
+        <div class="kpi-card__icon">⚡</div>
+        <div class="kpi-card__body">
+          <span class="kpi-card__value">{{ s.totalRequests | number }}</span>
+          <span class="kpi-card__label">Requêtes totales</span>
+        </div>
+      </div>
+
+      <div class="kpi-card kpi-red">
+        <div class="kpi-card__icon">✕</div>
+        <div class="kpi-card__body">
+          <span class="kpi-card__value">{{ s.totalErrors | number }}</span>
+          <span class="kpi-card__label">Erreurs totales</span>
+        </div>
+        <div class="kpi-card__rate">{{ s.errorRatePct }}%</div>
+      </div>
+
+      <div class="kpi-card kpi-green">
+        <div class="kpi-card__icon">⏱</div>
+        <div class="kpi-card__body">
+          <span class="kpi-card__value">
+            {{ s.avgDurationMs !== null ? (s.avgDurationMs | number:'1.0-0') + ' ms' : '—' }}
+          </span>
+          <span class="kpi-card__label">Durée moy.</span>
+        </div>
+      </div>
+
+      <div class="kpi-card kpi-purple">
+        <div class="kpi-card__icon">⚙</div>
+        <div class="kpi-card__body">
+          <span class="kpi-card__value">{{ s.configuredPipelines }} / {{ s.totalPipelines }}</span>
+          <span class="kpi-card__label">Pipelines actifs</span>
+        </div>
+        <div class="kpi-card__rate">{{ pipelineUsageRate() }}%</div>
+      </div>
+
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════════════════
+         ROW 2 — Payloads breakdown + gauge
+    ═══════════════════════════════════════════════════════════════════════ -->
+    <div class="section-grid">
+
+      <!-- Payloads card -->
+      <div class="section-card">
+        <div class="section-card__header">
+          <h3>Payloads</h3>
+          <span class="badge badge-total">{{ s.totalPayloads }} total</span>
+        </div>
+        <div class="payload-stats">
+          <div class="payload-stat payload-stat--success">
+            <span class="payload-stat__value">{{ s.successfulPayloads }}</span>
+            <span class="payload-stat__label">Envoyés</span>
+          </div>
+          <div class="payload-stat payload-stat--failed">
+            <span class="payload-stat__value">{{ s.failedPayloads }}</span>
+            <span class="payload-stat__label">Échoués</span>
+          </div>
+          <div class="payload-stat payload-stat--pending">
+            <span class="payload-stat__value">{{ s.totalPayloads - s.successfulPayloads - s.failedPayloads }}</span>
+            <span class="payload-stat__label">En cours</span>
+          </div>
+        </div>
+        <!-- Progress bar -->
+        <div class="progress-bar-wrap">
+          <div class="progress-bar">
+            <div class="progress-bar__fill progress-bar__fill--success"
+                 [style.width.%]="s.totalPayloads > 0 ? (s.successfulPayloads / s.totalPayloads * 100) : 0"></div>
+            <div class="progress-bar__fill progress-bar__fill--failed"
+                 [style.width.%]="s.totalPayloads > 0 ? (s.failedPayloads / s.totalPayloads * 100) : 0"></div>
+          </div>
+          <span class="progress-bar__label">{{ payloadSuccessRate() }}% de succès</span>
+        </div>
+      </div>
+
+      <!-- Per-action table -->
+      <div class="section-card">
+        <div class="section-card__header">
+          <h3>Par action</h3>
+        </div>
+        <div class="action-table-wrap">
+          <table class="action-table">
+            <thead>
+              <tr>
+                <th>Action</th>
+                <th>Total</th>
+                <th>Erreurs</th>
+                <th>Taux</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngIf="s.requestsByAction.length === 0">
+                <td colspan="4" class="empty-cell">Aucune donnée</td>
+              </tr>
+              <tr *ngFor="let a of s.requestsByAction; trackBy: trackByAction"
+                  [class]="getActionClass(a)">
+                <td><span class="badge badge-action">{{ a.action }}</span></td>
+                <td class="num">{{ a.total }}</td>
+                <td class="num">{{ a.errors }}</td>
+                <td>
+                  <div class="rate-bar">
+                    <div class="rate-bar__fill" [style.width.%]="getActionErrorRate(a)"></div>
+                    <span class="rate-bar__label">{{ getActionErrorRate(a) }}%</span>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════════════════
+         ROW 3 — Time-series charts (last 24 h)
+    ═══════════════════════════════════════════════════════════════════════ -->
+    <div class="charts-grid">
+
+      <!-- Requests by hour -->
+      <div class="section-card chart-card">
+        <div class="section-card__header">
+          <h3>Requêtes / heure <span class="chart-period">— 24 dernières heures</span></h3>
+        </div>
+        <div class="bar-chart" *ngIf="s.requestsByHour.length > 0; else noData">
+          <div class="bar-chart__bars">
+            <div class="bar-chart__col"
+                 *ngFor="let b of s.requestsByHour; trackBy: trackByHour">
+              <div class="bar-chart__tooltip">
+                {{ b.count }} req<br>{{ formatHour(b.hour) }}
+              </div>
+              <div class="bar-chart__bar bar-chart__bar--blue"
+                   [style.height.%]="barHeight(b.count, requestsChartMax())">
+              </div>
+              <span class="bar-chart__label">{{ formatHour(b.hour) }}</span>
+            </div>
+          </div>
+        </div>
+        <ng-template #noData>
+          <div class="chart-empty">Aucune donnée sur les 24 dernières heures</div>
+        </ng-template>
+      </div>
+
+      <!-- Errors by hour -->
+      <div class="section-card chart-card">
+        <div class="section-card__header">
+          <h3>Erreurs / heure <span class="chart-period">— 24 dernières heures</span></h3>
+        </div>
+        <div class="bar-chart" *ngIf="s.errorsByHour.length > 0; else noErrorData">
+          <div class="bar-chart__bars">
+            <div class="bar-chart__col"
+                 *ngFor="let b of s.errorsByHour; trackBy: trackByHour">
+              <div class="bar-chart__tooltip">
+                {{ b.count }} err<br>{{ formatHour(b.hour) }}
+              </div>
+              <div class="bar-chart__bar bar-chart__bar--red"
+                   [style.height.%]="barHeight(b.count, errorsChartMax())">
+              </div>
+              <span class="bar-chart__label">{{ formatHour(b.hour) }}</span>
+            </div>
+          </div>
+        </div>
+        <ng-template #noErrorData>
+          <div class="chart-empty">Aucune erreur sur les 24 dernières heures 🎉</div>
+        </ng-template>
+      </div>
+
+    </div>
+
+  </ng-container>
+
+</div>

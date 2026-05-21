@@ -1,23 +1,19 @@
 <div class="tab-panel">
 
   <!-- Attacher une règle globale -->
-  <div class="rules-section">
-    <div class="rules-section-title">
-      <span class="rules-section-label">Attach a global rule</span>
-      <span class="rules-section-sub">Rules created by Admin — read only</span>
-    </div>
-    <div class="attach-row">
-      <select class="filter-select" [(ngModel)]="selectedFieldPath">
-        <option [ngValue]="null">Select a field…</option>
-        <option *ngFor="let f of pipelineFields" [ngValue]="f.fieldPath">{{ f.fieldPath }} ({{ f.fieldType }})</option>
-      </select>
-      <select class="filter-select" [(ngModel)]="selectedGlobalRuleId">
-        <option [ngValue]="null">Select a rule…</option>
-        <option *ngFor="let r of globalRules" [ngValue]="r.id">{{ ruleTypeLabel(r.ruleType) }}<span *ngIf="r.description"> — {{ r.description }}</span></option>
-      </select>
-      <button class="btn btn--primary btn--sm" [disabled]="!selectedGlobalRuleId || !selectedFieldPath" (click)="attachGlobalRule()">+ Attach</button>
-    </div>
-  </div>
+ <div class="attach-row">
+  <select class="filter-select" [(ngModel)]="selectedGlobalRuleId">
+    <option [ngValue]="null">Select a global rule…</option>
+    <option *ngFor="let r of globalRules" [ngValue]="r.id">
+      {{ r.fieldName }}
+    </option>
+  </select>
+  <button class="btn btn--primary btn--sm"
+          [disabled]="!selectedGlobalRuleId"
+          (click)="attachGlobalRule()">
+    + Attach
+  </button>
+</div>
 
   <!-- Créer une règle privée -->
   <div class="rules-section">
