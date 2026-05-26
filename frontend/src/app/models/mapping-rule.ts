@@ -4,6 +4,7 @@ export interface MappingRuleResponse {
   sourceField: string;
   targetField: string;
   mappingType: MappingType;
+  expression:  string;
   active:      boolean;
   pipelineId:  number;
 }
@@ -13,6 +14,7 @@ export interface MappingRuleRequest {
   sourceField: string;
   targetField: string;
   mappingType: MappingType;
+  expression:  string;
 }
 
 // Mirrors MappingType.java enum
