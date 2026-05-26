@@ -8,5 +8,7 @@ import jakarta.validation.constraints.NotNull;
 public record MappingRuleRequest(
     @NotBlank String sourceField,
     @NotBlank String targetField,
-    @NotNull  MappingType mappingType
+    @NotNull  MappingType mappingType,
+    String expression
+
 ) {}

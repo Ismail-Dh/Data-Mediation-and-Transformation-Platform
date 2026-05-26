@@ -14,12 +14,16 @@ import com.miniESB.repository.PipelineRepository;
 import com.miniESB.service.MappingService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.objecthunter.exp4j.Expression;
+import net.objecthunter.exp4j.ExpressionBuilder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Slf4j
 @Service
@@ -45,6 +49,7 @@ public class MappingServiceImpl implements MappingService {
                 .sourceField(request.sourceField())
                 .targetField(request.targetField())
                 .mappingType(request.mappingType())
+                .expression(request.expression())
                 .active(true)
                 .pipeline(pipeline)
                 .build();
@@ -146,19 +151,622 @@ public class MappingServiceImpl implements MappingService {
 
         for (MappingRule rule : rules) {
             if (rule.getMappingType() == MappingType.FIELD_PLACEMENT) {
-                Object value = input.get(rule.getSourceField());
-                if (value == null) {
-                    log.warn("MappingRule id={} — sourceField '{}' not found in input",
-                            rule.getId(), rule.getSourceField());
-                    continue;
-                }
-                output.remove(rule.getSourceField()); // remove old field name
-                output.put(rule.getTargetField(), value); // insert new field name
-                log.debug("Mapped '{}' → '{}'", rule.getSourceField(), rule.getTargetField());
+                applyFieldPlacement(rule, input, output);
+            }
+            if(rule.getMappingType()==MappingType.VALUE_TRANSFORM){
+                applyValueTransform(rule, input, output);
+            }
+            if(rule.getMappingType()== MappingType.RESTRUCTURING){
+                applyRestructuring(rule, input, output);
+            }
+            if(rule.getMappingType()==MappingType.FORMAT_CHANGE){
+                applyFormatChange(rule, input, output);
+            }
+            if(rule.getMappingType()==MappingType.CALCULATED_FIELD){
+                applyCalculatedField(rule, input, output);
             }
         }
 
         return output;
+    }
+
+
+
+
+    private void applyFieldPlacement(MappingRule rule,
+                                     Map<String, Object> input,
+                                     Map<String, Object> output) {
+        String src = rule.getSourceField();
+        String tgt = rule.getTargetField();
+
+        // ── Cas 1 : array  "items[].id" ────────────────────────────────────────
+        if (src.contains("[].")) {
+            processArrayField(rule, input, output);
+            return;
+        }
+
+        // ── Cas 2 : dot-notation  "client.email" ───────────────────────────────
+        // ── Cas 3 : plat  "email"  (même code — getNestedValue gère les deux) ──
+        Object value = getNestedValue(input, src);
+        if (value == null) {
+            log.warn("MappingRule id={} — sourceField '{}' not found in input",
+                    rule.getId(), src);
+            return;
+        }
+
+        removeNestedKey(output, src);          // supprime l'ancienne clé
+        setNestedValue(output, tgt, value);    // insère sous le nouveau chemin
+        log.debug("Mapped '{}' → '{}'", src, tgt);
+    }
+
+    // ── Lire une valeur en dot-notation ────────────────────────────────────────
+// "client.email" → traverse Map niveau par niveau
+    @SuppressWarnings("unchecked")
+    private Object getNestedValue(Map<String, Object> map, String path) {
+        String[] keys = path.split("\\.");
+        Object current = map;
+        for (String key : keys) {
+            if (!(current instanceof Map)) return null;
+            current = ((Map<String, Object>) current).get(key);
+        }
+        return current;
+    }
+
+    // ── Écrire une valeur en dot-notation ──────────────────────────────────────
+// "client.contact.email" → crée les Map intermédiaires si besoin
+    @SuppressWarnings("unchecked")
+    private void setNestedValue(Map<String, Object> map, String path, Object value) {
+        String[] keys = path.split("\\.");
+        Map<String, Object> current = map;
+        for (int i = 0; i < keys.length - 1; i++) {
+            current = (Map<String, Object>)
+                    current.computeIfAbsent(keys[i], k -> new HashMap<>());
+        }
+        current.put(keys[keys.length - 1], value);
+    }
+
+    // ── Supprimer une clé en dot-notation ─────────────────────────────────────
+// nécessaire pour ne pas garder l'ancienne clé source dans output
+    @SuppressWarnings("unchecked")
+    private void removeNestedKey(Map<String, Object> map, String path) {
+        String[] keys = path.split("\\.");
+        Map<String, Object> current = map;
+        for (int i = 0; i < keys.length - 1; i++) {
+            Object next = current.get(keys[i]);
+            if (!(next instanceof Map)) return;
+            current = (Map<String, Object>) next;
+        }
+        current.remove(keys[keys.length - 1]);
+    }
+
+    // ── Traiter un champ de type array  "items[].id" ──────────────────────────
+    @SuppressWarnings("unchecked")
+    private void processArrayField(MappingRule rule,
+                                   Map<String, Object> input,
+                                   Map<String, Object> output) {
+        String src = rule.getSourceField();
+        String tgt = rule.getTargetField();
+
+        // "items[].id"  →  arrayPath="items"  subSrc="id"
+        int sep = src.indexOf("[].");
+        String arrayPath = src.substring(0, sep);
+        String subSrc    = src.substring(sep + 3);
+
+        // subTgt : même logique sur le targetField s'il est aussi de type array
+        String subTgt = tgt.contains("[].") ? tgt.substring(tgt.indexOf("[].") + 3) : tgt;
+        String tgtArray = tgt.contains("[].") ? tgt.substring(0, tgt.indexOf("[].")) : arrayPath;
+
+        Object arrayObj = getNestedValue(input, arrayPath);
+        if (!(arrayObj instanceof List)) {
+            log.warn("MappingRule id={} — '{}' n'est pas un array dans input",
+                    rule.getId(), arrayPath);
+            return;
+        }
+
+        List<Object> items = (List<Object>) arrayObj;
+
+        // Récupère (ou crée) la liste cible dans output
+        List<Object> outItems = (List<Object>)
+                ((Map<String, Object>) output
+                        .computeIfAbsent(tgtArray, k -> new java.util.ArrayList<>()));
+
+        for (int i = 0; i < items.size(); i++) {
+            if (!(items.get(i) instanceof Map)) continue;
+            Map<String, Object> srcItem = (Map<String, Object>) items.get(i);
+
+            // S'assure que l'item correspondant existe dans outItems
+            while (outItems.size() <= i) outItems.add(new HashMap<String, Object>());
+            Map<String, Object> outItem = (Map<String, Object>) outItems.get(i);
+
+            Object value = getNestedValue(srcItem, subSrc);
+            if (value == null) {
+                log.warn("MappingRule id={} — '{}' absent dans item[{}]",
+                        rule.getId(), subSrc, i);
+                continue;
+            }
+            outItem.remove(subSrc);
+            setNestedValue(outItem, subTgt, value);
+            log.debug("Array mapped [{}] '{}' → '{}'", i, subSrc, subTgt);
+        }
+    }
+
+//VALUE_TRANSFORM
+    private void applyValueTransform(MappingRule rule,
+                                     Map<String, Object> input,
+                                     Map<String, Object> output) {
+        if (rule.getExpression() == null || rule.getExpression().isBlank()) {
+            log.warn("VALUE_TRANSFORM rule id={} — expression is null or blank, skipping", rule.getId());
+            return;
+        }
+
+        String expr = rule.getExpression().trim();
+        Object transformed;
+
+        try {
+            // CONCAT lit plusieurs champs de l'input — cas spécial
+            if (expr.startsWith("CONCAT:")) {
+                transformed = applyConcat(expr, input);
+            } else {
+                // toutes les autres transformations travaillent sur une valeur unique
+                Object raw = getNestedValue(input, rule.getSourceField());
+                if (raw == null) {
+                    log.warn("VALUE_TRANSFORM rule id={} — sourceField '{}' not found in input",
+                            rule.getId(), rule.getSourceField());
+                    return;
+                }
+                transformed = transformSingleValue(raw, expr);
+            }
+        } catch (Exception e) {
+            log.error("VALUE_TRANSFORM rule id={} — failed: {}", rule.getId(), e.getMessage());
+            return;
+        }
+
+        removeNestedKey(output, rule.getSourceField());
+        setNestedValue(output, rule.getTargetField(), transformed);
+        log.debug("VALUE_TRANSFORM '{}' → '{}' ({})",
+                rule.getSourceField(), rule.getTargetField(), expr);
+    }
+
+
+    private Object transformSingleValue(Object raw, String expr) {
+        String s = raw.toString();
+
+        // ── Famille teal : String simple ───────────────────────────────────────
+        if (expr.equalsIgnoreCase("UPPERCASE")) return s.toUpperCase();
+        if (expr.equalsIgnoreCase("LOWERCASE")) return s.toLowerCase();
+        if (expr.equalsIgnoreCase("TRIM"))      return s.trim();
+
+        // ── Famille amber : extraction ─────────────────────────────────────────
+        // expression = "SPLIT:séparateur:index"
+        // ex: "SPLIT:@:0"  sur "john@example.com"  → "john"
+        // ex: "SPLIT:@:1"  sur "john@example.com"  → "example.com"
+        if (expr.toUpperCase().startsWith("SPLIT:")) {
+            String[] parts = expr.split(":", 3);
+            if (parts.length < 3)
+                throw new IllegalArgumentException("SPLIT format: SPLIT:separator:index");
+            String separator = parts[1];
+            int index = Integer.parseInt(parts[2].trim());
+            String[] tokens = s.split(java.util.regex.Pattern.quote(separator));
+            if (index < 0 || index >= tokens.length)
+                throw new IllegalArgumentException(
+                        "SPLIT index " + index + " out of bounds (length=" + tokens.length + ")");
+            return tokens[index].trim();
+        }
+
+        // ── Famille coral : nettoyage regex ────────────────────────────────────
+        // expression = "REGEX_REPLACE:pattern:replacement"
+        // le replacement peut être vide → "REGEX_REPLACE:[^0-9]:"
+        if (expr.toUpperCase().startsWith("REGEX_REPLACE:")) {
+            // split en 3 parties max — le replacement peut contenir des ":"
+            String body = expr.substring("REGEX_REPLACE:".length());
+            int sepIdx = body.indexOf(":");
+            if (sepIdx < 0)
+                throw new IllegalArgumentException("REGEX_REPLACE format: REGEX_REPLACE:pattern:replacement");
+            String pattern     = body.substring(0, sepIdx);
+            String replacement = body.substring(sepIdx + 1); // peut être vide
+            return s.replaceAll(pattern, replacement);
+        }
+
+        throw new IllegalArgumentException("Unknown VALUE_TRANSFORM expression: " + expr);
+    }
+
+    // expression = "CONCAT:séparateur:champ1:champ2:..."
+// ex: "CONCAT: :firstName:lastName"  → "John Doe"
+// ex: "CONCAT:-:year:month:day"      → "2024-01-15"
+    private Object applyConcat(String expr, Map<String, Object> input) {
+        // split en 4+ parties : ["CONCAT", séparateur, champ1, champ2, ...]
+        String[] parts = expr.split(":", -1); // -1 conserve les séparateurs vides
+        if (parts.length < 4)
+            throw new IllegalArgumentException(
+                    "CONCAT format: CONCAT:separator:field1:field2[:field3...]");
+
+        String separator = parts[1]; // peut être "" pour concaténation sans séparateur
+        StringBuilder sb = new StringBuilder();
+        for (int i = 2; i < parts.length; i++) {
+            Object val = getNestedValue(input, parts[i].trim());
+            if (val == null)
+                throw new IllegalArgumentException(
+                        "CONCAT — field '" + parts[i].trim() + "' not found in input");
+            if (i > 2) sb.append(separator);
+            sb.append(val);
+        }
+        return sb.toString();
+    }
+
+
+
+    //RESTRUCTURING
+    private void applyRestructuring(MappingRule rule,
+                                    Map<String, Object> input,
+                                    Map<String, Object> output) {
+        String expr = rule.getExpression() == null ? "" : rule.getExpression().trim().toUpperCase();
+
+        if (expr.equals("FLATTEN")) {
+            applyFlatten(rule, input, output);
+        } else {
+            // pas d'expression → NEST par défaut
+            // le chemin cible est donné par targetField (ex: "contact.mail")
+            applyNest(rule, input, output);
+        }
+    }
+
+    // Déplace sourceField vers le chemin imbriqué targetField.
+// Ex: sourceField="email", targetField="contact.mail"
+// {"email":"a@b.com"} → {"contact":{"mail":"a@b.com"}}
+    private void applyNest(MappingRule rule,
+                           Map<String, Object> input,
+                           Map<String, Object> output) {
+        Object value = getNestedValue(input, rule.getSourceField());
+        if (value == null) {
+            log.warn("RESTRUCTURING/NEST rule id={} — sourceField '{}' not found in input",
+                    rule.getId(), rule.getSourceField());
+            return;
+        }
+
+        // Supprime l'ancien emplacement dans output
+        removeNestedKey(output, rule.getSourceField());
+
+        // Crée les Map intermédiaires et insère la valeur au chemin cible
+        setNestedValue(output, rule.getTargetField(), value);
+
+        log.debug("RESTRUCTURING/NEST '{}' → '{}'",
+                rule.getSourceField(), rule.getTargetField());
+    }
+
+    // Explose toutes les clés d'un sous-objet vers la racine de output,
+// en préfixant chaque clé par le chemin parent.
+// Ex: sourceField="contact"
+// {"contact":{"mail":"a@b.com","phone":"0600"}}
+// → {"contact.mail":"a@b.com","contact.phone":"0600"}
+    @SuppressWarnings("unchecked")
+    private void applyFlatten(MappingRule rule,
+                              Map<String, Object> input,
+                              Map<String, Object> output) {
+        Object subObj = getNestedValue(input, rule.getSourceField());
+
+        if (!(subObj instanceof Map)) {
+            log.warn("RESTRUCTURING/FLATTEN rule id={} — '{}' is not an object (or not found)",
+                    rule.getId(), rule.getSourceField());
+            return;
+        }
+
+        Map<String, Object> subMap = (Map<String, Object>) subObj;
+
+        // Préfixe = sourceField (ex: "contact") — conserve la traçabilité
+        String prefix = rule.getSourceField();
+
+        // Aplatit récursivement (gère les objets imbriqués dans l'objet)
+        flattenInto(output, subMap, prefix);
+
+        // Supprime l'objet original de output
+        removeNestedKey(output, rule.getSourceField());
+
+        log.debug("RESTRUCTURING/FLATTEN '{}' → {} clés aplaties",
+                rule.getSourceField(), subMap.size());
+    }
+
+    // Parcourt récursivement subMap et insère chaque feuille dans target
+// avec la clé préfixée par path.
+    @SuppressWarnings("unchecked")
+    private void flattenInto(Map<String, Object> target,
+                             Map<String, Object> subMap,
+                             String path) {
+        for (Map.Entry<String, Object> entry : subMap.entrySet()) {
+            String fullKey = path + "." + entry.getKey();
+            if (entry.getValue() instanceof Map) {
+                // récursion — sous-objet dans le sous-objet
+                flattenInto(target, (Map<String, Object>) entry.getValue(), fullKey);
+            } else {
+                target.put(fullKey, entry.getValue());
+            }
+        }
+    }
+
+
+    //FORMAT_CHANGE
+    private void applyFormatChange(MappingRule rule,
+                                   Map<String, Object> input,
+                                   Map<String, Object> output) {
+        Object raw = getNestedValue(input, rule.getSourceField());
+        if (raw == null) {
+            log.warn("FORMAT_CHANGE rule id={} — '{}' not found in input",
+                    rule.getId(), rule.getSourceField());
+            return;
+        }
+
+        Object converted;
+        try {
+            converted = convertValue(raw, rule.getExpression());
+        } catch (Exception e) {
+            log.error("FORMAT_CHANGE rule id={} — conversion failed: {}", rule.getId(), e.getMessage());
+            return;
+        }
+
+        // targetField peut être différent de sourceField (renommage + conversion simultané)
+        removeNestedKey(output, rule.getSourceField());
+        setNestedValue(output, rule.getTargetField(), converted);
+        log.debug("FORMAT_CHANGE '{}' → '{}' ({})", rule.getSourceField(), rule.getTargetField(), rule.getExpression());
+    }
+
+    private Object convertValue(Object raw, String expression) {
+        // expression contient le nom de la conversion (ex: "STRING_TO_INT")
+        // sauf pour DATE_REFORMAT où c'est "sourceFormat|targetFormat"
+        String expr = expression == null ? "" : expression.trim().toUpperCase();
+
+        return switch (expr) {
+
+            // ── String → type primitif ───────────────────────────────────────
+            case "STRING_TO_INT" -> {
+                String s = raw.toString().trim();
+                // gère les doubles comme "3.0" envoyés par Jackson
+                yield (int) Double.parseDouble(s);
+            }
+            case "STRING_TO_DOUBLE" -> Double.parseDouble(raw.toString().trim());
+
+            case "STRING_TO_BOOL"   -> {
+                String s = raw.toString().trim().toLowerCase();
+                yield switch (s) {
+                    case "true",  "1", "yes", "oui" -> true;
+                    case "false", "0", "no",  "non" -> false;
+                    default -> throw new IllegalArgumentException("Cannot convert '" + s + "' to boolean");
+                };
+            }
+
+            // ── Type primitif → String ───────────────────────────────────────
+            case "NUMBER_TO_STRING", "BOOL_TO_STRING", "" -> String.valueOf(raw);
+
+            // ── Date → epoch secondes ────────────────────────────────────────
+            case "DATE_TO_UNIX" -> {
+                // accepte aussi un nombre déjà en epoch
+                if (raw instanceof Number n) yield n.longValue();
+                yield java.time.LocalDate
+                        .parse(raw.toString().trim(),
+                                java.time.format.DateTimeFormatter.ISO_LOCAL_DATE)
+                        .atStartOfDay(java.time.ZoneOffset.UTC)
+                        .toEpochSecond();
+            }
+
+            // ── Epoch secondes → ISO date ────────────────────────────────────
+            case "UNIX_TO_DATE" -> {
+                long epoch = raw instanceof Number n ? n.longValue()
+                        : Long.parseLong(raw.toString().trim());
+                yield java.time.Instant.ofEpochSecond(epoch)
+                        .atZone(java.time.ZoneOffset.UTC)
+                        .toLocalDate()
+                        .format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE);
+            }
+
+            // ── Reformater une date  "sourceFormat|targetFormat" ────────────
+            default -> {
+                // expression = "dd/MM/yyyy|yyyy-MM-dd"
+                if (!expr.contains("|"))
+                    throw new IllegalArgumentException("Unknown FORMAT_CHANGE expression: " + expression);
+
+                String[] parts = expression.split("\\|", 2);
+                java.time.format.DateTimeFormatter srcFmt =
+                        java.time.format.DateTimeFormatter.ofPattern(parts[0].trim());
+                java.time.format.DateTimeFormatter tgtFmt =
+                        java.time.format.DateTimeFormatter.ofPattern(parts[1].trim());
+
+                yield java.time.LocalDate
+                        .parse(raw.toString().trim(), srcFmt)
+                        .format(tgtFmt);
+            }
+        };
+    }
+
+
+
+    //
+    // sourceField est ignoré — tous les champs source viennent de l'expression.
+// targetField = nom du nouveau champ créé dans output.
+    private void applyCalculatedField(MappingRule rule,
+                                      Map<String, Object> input,
+                                      Map<String, Object> output) {
+        if (rule.getExpression() == null || rule.getExpression().isBlank()) {
+            log.warn("CALCULATED_FIELD rule id={} — expression is null or blank, skipping",
+                    rule.getId());
+            return;
+        }
+
+        String expr = rule.getExpression().trim();
+        Object result;
+
+        try {
+            if (expr.toUpperCase().startsWith("IF:")) {
+                result = evaluateConditional(expr, input);
+            } else if (isAggregation(expr)) {
+                result = evaluateAggregation(expr, input);
+            } else {
+                // expression arithmétique : "{prix} * (1 + {tva})"
+                result = evaluateArithmetic(expr, input);
+            }
+        } catch (Exception e) {
+            log.error("CALCULATED_FIELD rule id={} — evaluation failed: {}",
+                    rule.getId(), e.getMessage());
+            return;
+        }
+
+        setNestedValue(output, rule.getTargetField(), result);
+        log.debug("CALCULATED_FIELD → '{}' = {}", rule.getTargetField(), result);
+    }
+
+    private boolean isAggregation(String expr) {
+        String up = expr.toUpperCase();
+        return up.startsWith("SUM:")  || up.startsWith("AVG:")   ||
+                up.startsWith("COUNT:")|| up.startsWith("MIN:")   ||
+                up.startsWith("MAX:");
+    }
+
+    // Remplace chaque {champ} par sa valeur numérique issue de input,
+// puis évalue l'expression via javax.script (Nashorn/Rhino — inclus dans le JDK).
+// Supporte : + - * / % () et les constantes numériques.
+    private Object evaluateArithmetic(String expr, Map<String, Object> input) {
+        String resolved = expr;
+        java.util.regex.Matcher m =
+                java.util.regex.Pattern.compile("\\{([^}]+)}")
+                        .matcher(expr);
+
+        while (m.find()) {
+            String fieldName = m.group(1).trim();
+            Object val = getNestedValue(input, fieldName);
+            if (val == null)
+                throw new IllegalArgumentException(
+                        "ARITHMETIC — field '" + fieldName + "' not found in input");
+            if (!(val instanceof Number))
+                throw new IllegalArgumentException(
+                        "ARITHMETIC — field '" + fieldName + "' is not a number (got: " + val + ")");
+            resolved = resolved.replace(m.group(0), val.toString());
+        }
+
+        // exp4j 0.4.8 — evaluate() retourne un double primitif
+        // les deux exceptions possibles sont RuntimeException et ses sous-classes
+        try {
+            return new net.objecthunter.exp4j.ExpressionBuilder(resolved)
+                    .build()
+                    .evaluate();                    // retourne double — pas besoin de cast
+        } catch (RuntimeException e) {             // couvre IllegalArgumentException + tout ce qu'exp4j lève
+            throw new IllegalArgumentException(
+                    "ARITHMETIC — invalid expression '" + resolved + "': " + e.getMessage());
+        }
+    }
+    // Syntaxe : IF:champ:op:valeurComparee:siVrai:siFaux
+// op supportés : eq ne gt lt gte lte contains
+// Exemple : "IF:montant:gt:1000:VIP:STD"
+    private Object evaluateConditional(String expr, Map<String, Object> input) {
+        // split en 6 parties max — siVrai/siFaux peuvent contenir des ":"
+        String[] parts = expr.split(":", 6);
+        if (parts.length < 6)
+            throw new IllegalArgumentException(
+                    "IF format: IF:field:op:compareValue:ifTrue:ifFalse — got: " + expr);
+
+        // parts[0] = "IF", [1] = champ, [2] = op, [3] = valeur, [4] = siVrai, [5] = siFaux
+        String fieldName    = parts[1].trim();
+        String op           = parts[2].trim().toLowerCase();
+        String compareValue = parts[3].trim();
+        String ifTrue       = parts[4].trim();
+        String ifFalse      = parts[5].trim();
+
+        Object fieldVal = getNestedValue(input, fieldName);
+        if (fieldVal == null)
+            throw new IllegalArgumentException(
+                    "IF — field '" + fieldName + "' not found in input");
+
+        boolean condition = evaluateCondition(fieldVal, op, compareValue);
+        return condition ? ifTrue : ifFalse;
+    }
+
+    private boolean evaluateCondition(Object fieldVal, String op, String compareValue) {
+        String strVal = fieldVal.toString().trim();
+
+        return switch (op) {
+            case "eq"       -> strVal.equalsIgnoreCase(compareValue);
+            case "ne"       -> !strVal.equalsIgnoreCase(compareValue);
+            case "contains" -> strVal.toLowerCase().contains(compareValue.toLowerCase());
+
+            // Comparaisons numériques
+            case "gt", "lt", "gte", "lte" -> {
+                double fieldNum   = Double.parseDouble(strVal);
+                double compareNum = Double.parseDouble(compareValue);
+                yield switch (op) {
+                    case "gt"  -> fieldNum >  compareNum;
+                    case "lt"  -> fieldNum <  compareNum;
+                    case "gte" -> fieldNum >= compareNum;
+                    case "lte" -> fieldNum <= compareNum;
+                    default    -> false;
+                };
+            }
+            default -> throw new IllegalArgumentException("Unknown IF operator: " + op);
+        };
+    }
+
+    // Syntaxe : OP:arrayField[].subField
+// COUNT accepte aussi : COUNT:arrayField[] (sans sous-champ)
+// Exemple : "SUM:items[].prix"   "COUNT:items[]"   "AVG:lignes[].quantite"
+    @SuppressWarnings("unchecked")
+    private Object evaluateAggregation(String expr, Map<String, Object> input) {
+        String up   = expr.toUpperCase();
+        int    sep  = expr.indexOf(":");
+        String op   = expr.substring(0, sep).toUpperCase();
+        String path = expr.substring(sep + 1).trim();   // "items[].prix"
+
+        // Sépare le chemin array du sous-champ
+        // "items[].prix" → arrayPath="items", subField="prix"
+        // "items[]"      → arrayPath="items", subField=null (COUNT seul)
+        String arrayPath;
+        String subField;
+
+        if (path.contains("[].")) {
+            int idx  = path.indexOf("[].");
+            arrayPath = path.substring(0, idx);
+            subField  = path.substring(idx + 3);
+        } else if (path.endsWith("[]")) {
+            arrayPath = path.substring(0, path.length() - 2);
+            subField  = null;
+        } else {
+            throw new IllegalArgumentException(
+                    "Aggregation path must contain '[].' or end with '[]' — got: " + path);
+        }
+
+        Object arrayObj = getNestedValue(input, arrayPath);
+        if (!(arrayObj instanceof java.util.List))
+            throw new IllegalArgumentException(
+                    "Aggregation — '" + arrayPath + "' is not an array");
+
+        java.util.List<Object> items = (java.util.List<Object>) arrayObj;
+
+        // COUNT ne nécessite pas de sous-champ
+        if (op.equals("COUNT")) return items.size();
+
+        if (subField == null)
+            throw new IllegalArgumentException(op + " requires a sub-field (e.g. items[].prix)");
+
+        // Extrait les valeurs numériques du sous-champ dans chaque item
+        final String sf = subField;
+        java.util.List<Double> values = items.stream()
+                .filter(item -> item instanceof Map)
+                .map(item -> {
+                    Object v = getNestedValue((Map<String, Object>) item, sf);
+                    if (v == null)
+                        throw new IllegalArgumentException(
+                                op + " — sub-field '" + sf + "' not found in one of the items");
+                    if (!(v instanceof Number))
+                        throw new IllegalArgumentException(
+                                op + " — sub-field '" + sf + "' is not a number");
+                    return ((Number) v).doubleValue();
+                })
+                .toList();
+
+        if (values.isEmpty())
+            throw new IllegalArgumentException(op + " — array is empty");
+
+        return switch (op) {
+            case "SUM" -> values.stream().mapToDouble(Double::doubleValue).sum();
+            case "AVG" -> values.stream().mapToDouble(Double::doubleValue).average().orElse(0);
+            case "MIN" -> values.stream().mapToDouble(Double::doubleValue).min().orElse(0);
+            case "MAX" -> values.stream().mapToDouble(Double::doubleValue).max().orElse(0);
+            default    -> throw new IllegalArgumentException("Unknown aggregation: " + op);
+        };
     }
 
     // -------------------------------------------------------------------------
@@ -180,6 +788,7 @@ public class MappingServiceImpl implements MappingService {
                 rule.getSourceField(),
                 rule.getTargetField(),
                 rule.getMappingType(),
+                rule.getExpression(),
                 rule.isActive(),
                 rule.getPipeline().getId()
         );

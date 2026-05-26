@@ -8,6 +8,7 @@ public record MappingRuleResponse(
     String sourceField,
     String targetField,
     MappingType mappingType,
+    String expression,
     boolean active,
     Long pipelineId
 ) {}
