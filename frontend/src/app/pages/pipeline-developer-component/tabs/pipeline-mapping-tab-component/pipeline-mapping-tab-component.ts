@@ -3,10 +3,8 @@ import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { FormsModule } from '@angular/forms';
 import { MappingRuleService } from '../../../../services/mapping/mapping-rule-service';
-import { PipelineFieldService } from '../../../../services/pipelineField/pipeline-field-service';
 import { MappingRuleResponse } from '../../../../models/mapping-rule';
 import { MappingResultResponse } from '../../../../models/mapping-result';
-import { PipelineFieldResponse } from '../../../../models/pipelineField';
 
 @Component({
   selector: 'app-pipeline-mapping-tab',
@@ -19,56 +17,130 @@ export class PipelineMappingTabComponent implements OnInit {
 
   @Input() pipelineId!: number;
 
-  mappingRules:   MappingRuleResponse[]  = [];
-  pipelineFields: PipelineFieldResponse[] = [];
+  mappingRules: MappingRuleResponse[] = [];
   loading = false;
 
   mappingForm!: FormGroup;
   editingRuleId: number | null = null;
 
   // Test zone
-  testPayload  = '';
+  testPayload = '';
   testResult:  MappingResultResponse | null = null;
   testError:   string | null = null;
   testLoading  = false;
 
+  readonly expressionHints: Record<string, string> = {
+    FIELD_PLACEMENT:  '',
+    VALUE_TRANSFORM:  'e.g. UPPERCASE · LOWERCASE · TRIM · CONCAT: :firstName:lastName · SPLIT:@:0 · REGEX_REPLACE:[^0-9]:',
+    FORMAT_CHANGE:    'e.g. STRING_TO_INT · STRING_TO_DOUBLE · DATE_TO_UNIX · UNIX_TO_DATE · dd/MM/yyyy|yyyy-MM-dd',
+    CALCULATED_FIELD: 'e.g. {price} * (1 + {tax}) · IF:amount:gt:1000:VIP:STD · SUM:items[].price · AVG:items[].qty',
+    RESTRUCTURING:    'Leave empty to NEST (move field to nested path) · or type FLATTEN to flatten an object'
+  };
+
   constructor(
     private mappingService: MappingRuleService,
-    private fieldsService:  PipelineFieldService,
-    private fb: FormBuilder,
-    private cdr: ChangeDetectorRef
+    private fb:             FormBuilder,
+    private cdr:            ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
     this.mappingForm = this.fb.group({
-      sourceField:  ['', Validators.required],
-      targetField:  ['', Validators.required],
-      mappingType:  ['', Validators.required]
+      sourceField: ['', Validators.required],
+      targetField: ['', Validators.required],
+      mappingType: ['', Validators.required],
+      expression:  ['']
     });
+
+    // React to mappingType changes
+    this.mappingForm.get('mappingType')!.valueChanges.subscribe(type => {
+      this.mappingForm.get('expression')!.setValue('');
+      this.updateSourceFieldValidator(type);
+      this.updateTargetFieldValidator();
+      this.cdr.detectChanges();
+    });
+
+    // React to expression changes — targetField validator depends on FLATTEN
+    this.mappingForm.get('expression')!.valueChanges.subscribe(() => {
+      this.updateTargetFieldValidator();
+      this.cdr.detectChanges();
+    });
+
     this.loadRules();
   }
 
+  // ── Validators ────────────────────────────────────────────────────────────
+
+  private updateSourceFieldValidator(type: string): void {
+    const ctrl = this.mappingForm.get('sourceField')!;
+    if (type === 'CALCULATED_FIELD') {
+      ctrl.clearValidators();
+      ctrl.setValue('N/A');
+    } else {
+      ctrl.setValidators(Validators.required);
+      ctrl.setValue('');
+    }
+    ctrl.updateValueAndValidity();
+  }
+
+  private updateTargetFieldValidator(): void {
+    const ctrl = this.mappingForm.get('targetField')!;
+    if (this.targetFieldHidden) {
+      ctrl.clearValidators();
+      ctrl.setValue('N/A');
+    } else {
+      ctrl.setValidators(Validators.required);
+    }
+    ctrl.updateValueAndValidity();
+  }
+
+  // ── Getters ───────────────────────────────────────────────────────────────
+
+  get needsExpression(): boolean {
+    const t = this.mappingForm.get('mappingType')?.value;
+    return ['VALUE_TRANSFORM', 'FORMAT_CHANGE', 'CALCULATED_FIELD', 'RESTRUCTURING'].includes(t);
+  }
+
+  get currentHint(): string {
+    return this.expressionHints[this.mappingForm.get('mappingType')?.value] ?? '';
+  }
+
+  // CALCULATED_FIELD — sourceField ignored by backend
+  get sourceFieldHidden(): boolean {
+    return this.mappingForm.get('mappingType')?.value === 'CALCULATED_FIELD';
+  }
+
+  // RESTRUCTURING + FLATTEN — targetField ignored by backend
+  get targetFieldHidden(): boolean {
+    const type = this.mappingForm.get('mappingType')?.value;
+    const expr = this.mappingForm.get('expression')?.value?.trim().toUpperCase();
+    return type === 'RESTRUCTURING' && expr === 'FLATTEN';
+  }
+
   // ── Load ──────────────────────────────────────────────────────────────────
+
   private loadRules(): void {
     this.loading = true;
-    this.fieldsService.getFields(this.pipelineId).subscribe(data => {
-      this.pipelineFields = data;
-      this.cdr.detectChanges();
-    });
-    // Fetch all rules (active + inactive) so the user can re-activate them
     this.mappingService.getAllRules(this.pipelineId).subscribe({
-      next: data => { this.mappingRules = data; this.loading = false; this.cdr.detectChanges(); },
-      error: ()  => { this.loading = false; this.cdr.detectChanges(); }
+      next: data => {
+        this.mappingRules = data;
+        this.loading = false;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.loading = false;
+        this.cdr.detectChanges();
+      }
     });
   }
 
-  // ── Save (create or update) ────────────────────────────────────────────────
+  // ── Save (create or update) ───────────────────────────────────────────────
+
   saveMappingRule(): void {
     if (this.mappingForm.invalid) return;
     const val = this.mappingForm.value;
 
     if (this.editingRuleId !== null) {
-      // No update endpoint in the API — delete + recreate pattern
+      // No update endpoint — delete + recreate pattern
       this.mappingService.deleteRule(this.pipelineId, this.editingRuleId).subscribe(() => {
         this.mappingService.createRule(this.pipelineId, val).subscribe(() => {
           this.cancelEdit();
@@ -84,12 +156,14 @@ export class PipelineMappingTabComponent implements OnInit {
   }
 
   // ── Edit ──────────────────────────────────────────────────────────────────
+
   openEdit(r: MappingRuleResponse): void {
     this.editingRuleId = r.id;
     this.mappingForm.patchValue({
       sourceField: r.sourceField,
       targetField: r.targetField,
-      mappingType: r.mappingType
+      mappingType: r.mappingType,
+      expression:  r.expression ?? ''
     });
     this.cdr.detectChanges();
   }
@@ -100,23 +174,24 @@ export class PipelineMappingTabComponent implements OnInit {
     this.cdr.detectChanges();
   }
 
-  // ── Toggle active / inactive ───────────────────────────────────────────────
+  // ── Toggle active / inactive ──────────────────────────────────────────────
+
   toggleRule(r: MappingRuleResponse): void {
     if (r.active) {
-      // Soft-delete → inactive
       this.mappingService.deleteRule(this.pipelineId, r.id).subscribe(() => this.loadRules());
     } else {
-      // Re-activate
       this.mappingService.activateRule(this.pipelineId, r.id).subscribe(() => this.loadRules());
     }
   }
 
   // ── Delete ────────────────────────────────────────────────────────────────
+
   deleteRule(id: number): void {
     this.mappingService.deleteRule(this.pipelineId, id).subscribe(() => this.loadRules());
   }
 
   // ── Apply test ────────────────────────────────────────────────────────────
+
   applyTest(): void {
     if (!this.testPayload.trim()) return;
     this.testLoading = true;
@@ -138,6 +213,7 @@ export class PipelineMappingTabComponent implements OnInit {
   }
 
   // ── Labels ────────────────────────────────────────────────────────────────
+
   mappingTypeLabel(type: string): string {
     const labels: Record<string, string> = {
       'FIELD_PLACEMENT':  'Field Placement',
