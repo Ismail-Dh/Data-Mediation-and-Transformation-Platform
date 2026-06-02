@@ -3,8 +3,10 @@ import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { FormsModule } from '@angular/forms';
 import { MappingRuleService } from '../../../../services/mapping/mapping-rule-service';
+import { PipelineFieldService } from '../../../../services/pipelineField/pipeline-field-service';
 import { MappingRuleResponse } from '../../../../models/mapping-rule';
 import { MappingResultResponse } from '../../../../models/mapping-result';
+import { PipelineFieldResponse } from '../../../../models/pipelineField';
 
 @Component({
   selector: 'app-pipeline-mapping-tab',
@@ -18,6 +20,7 @@ export class PipelineMappingTabComponent implements OnInit {
   @Input() pipelineId!: number;
 
   mappingRules: MappingRuleResponse[] = [];
+  pipelineFields: PipelineFieldResponse[] = [];
   loading = false;
 
   mappingForm!: FormGroup;
@@ -39,6 +42,7 @@ export class PipelineMappingTabComponent implements OnInit {
 
   constructor(
     private mappingService: MappingRuleService,
+    private fieldsService:  PipelineFieldService,
     private fb:             FormBuilder,
     private cdr:            ChangeDetectorRef
   ) {}
@@ -120,6 +124,19 @@ export class PipelineMappingTabComponent implements OnInit {
 
   private loadRules(): void {
     this.loading = true;
+
+    // Chargement des champs du pipeline
+    this.fieldsService.getFields(this.pipelineId).subscribe({
+      next: data => {
+        this.pipelineFields = data;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.cdr.detectChanges();
+      }
+    });
+
+    // Chargement des règles de mapping
     this.mappingService.getAllRules(this.pipelineId).subscribe({
       next: data => {
         this.mappingRules = data;
