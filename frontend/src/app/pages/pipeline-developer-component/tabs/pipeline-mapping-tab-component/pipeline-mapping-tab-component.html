@@ -1,6 +1,5 @@
 <div class="tab-panel">
 
-  <!-- ── Create / Edit rule ──────────────────────────────────────────────── -->
   <div class="rules-section">
     <div class="rules-section-title">
       <span class="rules-section-label">
@@ -14,14 +13,15 @@
     <form [formGroup]="mappingForm" (ngSubmit)="saveMappingRule()" class="inline-form">
       <div class="inline-form-fields">
 
-        <!-- Source Field -->
         <ng-container *ngIf="!sourceFieldHidden">
           <div class="field field--inline">
             <label>Source Field <span class="req">*</span></label>
-            <input
-              type="text"
-              formControlName="sourceField"
-              placeholder="e.g. client_id, client.email, items[].id" />
+            <select formControlName="sourceField">
+              <option value="">Select a schema field…</option>
+              <option *ngFor="let f of pipelineFields" [value]="f.fieldPath">
+                {{ f.fieldPath }} ({{ f.fieldType }})
+              </option>
+            </select>
             <span class="field-error"
               *ngIf="mappingForm.get('sourceField')?.touched && mappingForm.get('sourceField')?.invalid">
               Required
@@ -34,7 +34,6 @@
           <span class="field-hint">Fields come from the expression for this type</span>
         </div>
 
-        <!-- Arrow -->
         <div class="mapping-arrow-col">
           <svg viewBox="0 0 24 8" class="mapping-arrow-icon">
             <path d="M0 4h20M16 1l4 3-4 3" stroke="currentColor" stroke-width="1.5"
@@ -42,7 +41,6 @@
           </svg>
         </div>
 
-        <!-- Target Field -->
         <ng-container *ngIf="!targetFieldHidden">
           <div class="field field--inline">
             <label>Target Field <span class="req">*</span></label>
@@ -59,7 +57,6 @@
           <span class="field-hint">Not used for FLATTEN</span>
         </div>
 
-        <!-- Mapping Type -->
         <div class="field field--inline">
           <label>Mapping Type <span class="req">*</span></label>
           <select formControlName="mappingType">
@@ -78,7 +75,6 @@
 
       </div>
 
-      <!-- Expression -->
       <div class="field field--full" *ngIf="needsExpression">
         <label>Expression</label>
         <input type="text" formControlName="expression" placeholder="Enter expression…" />
@@ -98,7 +94,6 @@
     </form>
   </div>
 
-  <!-- ── Test mapping ────────────────────────────────────────────────────── -->
   <div class="rules-section">
     <div class="rules-section-title">
       <span class="rules-section-label">Test mapping</span>
@@ -126,7 +121,6 @@
       </button>
     </div>
 
-    <!-- Test result -->
     <div class="test-result" *ngIf="testResult">
       <div class="test-result-col">
         <span class="test-result-label">Original</span>
@@ -142,7 +136,6 @@
       </div>
     </div>
 
-    <!-- Test error -->
     <div class="test-error" *ngIf="testError">
       <svg viewBox="0 0 16 16" class="test-error-icon">
         <circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5" fill="none"/>
@@ -154,7 +147,6 @@
     </div>
   </div>
 
-  <!-- ── Rules list ──────────────────────────────────────────────────────── -->
   <div class="fields-list" *ngIf="mappingRules.length > 0">
     <table class="fields-table">
       <thead>
@@ -194,7 +186,6 @@
             <span class="expression-empty" *ngIf="!r.expression">—</span>
           </td>
 
-          <!-- ✅ FIX: div wrapper inside td -->
           <td>
             <div class="toggle-wrap">
               <label class="toggle">
@@ -204,7 +195,6 @@
             </div>
           </td>
 
-          <!-- ✅ FIX: div wrapper inside td -->
           <td>
             <div class="field-actions-cell">
               <button class="icon-btn icon-btn--edit" title="Edit" (click)="openEdit(r)">
