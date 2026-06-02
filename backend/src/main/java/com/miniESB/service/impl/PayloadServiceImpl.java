@@ -5,6 +5,7 @@ import com.miniESB.domain.entity.Pipeline;
 import com.miniESB.domain.entity.PipelineField;
 import com.miniESB.domain.enums.DataFormat;
 import com.miniESB.domain.enums.PayloadStatus;
+import com.miniESB.domain.enums.PipelineStatus; // Ajout potentiel selon votre package d'enums
 import com.miniESB.dto.payload.PayloadRequest;
 import com.miniESB.dto.payload.PayloadResponse;
 import com.miniESB.exception.PayloadValidationException;
@@ -27,7 +28,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class PayloadServiceImpl implements PayloadService {
 
-    private final PayloadRepository          payloadRepository;
+    private final PayloadRepository         payloadRepository;
     private final PipelineRepository         pipelineRepository;
     private final PipelineFieldRepository    pipelineFieldRepository;
     private final StructuralValidatorService structuralValidatorService;
@@ -45,35 +46,44 @@ public class PayloadServiceImpl implements PayloadService {
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Pipeline not found with id=" + pipelineId));
 
-        // 2 — charger le schéma (PipelineField) défini par le Developer
+        // 2 — sauvegarder en RECEIVED immédiatement pour traçabilité
+        Payload payload = persistPayload(request, pipeline, PayloadStatus.RECEIVED);
+        log.info("Payload received: id={}, pipeline={}", payload.getId(), pipelineId);
+
+        // 3 — charger le schéma (PipelineField) défini par le Developer
         List<PipelineField> fields = pipelineFieldRepository.findAllByPipelineId(pipelineId);
 
-        // 3 — validation structurelle niveau 1
-        //     Si aucun champ défini → payload accepté sans contrôle structurel
+        // 4 — validation structurelle niveau 1
         if (fields.isEmpty()) {
             log.warn("Pipeline id={} has no PipelineField defined — skipping structural validation", pipelineId);
         } else {
             /*
              * structuralValidatorService.validate() lève PayloadValidationException
              * si au moins une violation est détectée.
-             * Le GlobalExceptionHandler la traduit en HTTP 422 avec le détail des violations.
-             * On persiste quand même le payload avec status=FAILED pour traçabilité.
              */
             try {
                 structuralValidatorService.validate(request.rawContent(), fields);
             } catch (PayloadValidationException pve) {
-                // Persist failed payload for auditability, then re-throw for 422
-                persistPayload(request, pipeline, PayloadStatus.FAILED);
+                // payload → FAILED
+                payload.setStatus(PayloadStatus.FAILED);
+                payloadRepository.save(payload);
+                
                 log.warn("Structural validation FAILED for pipeline={} — {} violation(s)",
                         pipelineId, pve.getViolations().size());
                 throw pve;
             }
         }
 
-        // 4 — validation OK (ou pas de schéma) → statut VALIDATED
-        Payload saved = persistPayload(request, pipeline, PayloadStatus.VALIDATED);
-        log.info("Payload accepted: id={}, pipeline={}, status={}", saved.getId(), pipelineId, saved.getStatus());
-        return toResponse(saved);
+        // 5 — validation OK (ou pas de schéma) → statut VALIDATED
+        payload.setStatus(PayloadStatus.VALIDATED);
+        payloadRepository.save(payload);
+
+        // 6 — pipeline → VALIDATED
+        pipeline.setStatus(PipelineStatus.VALIDATED);
+        pipelineRepository.save(pipeline);
+
+        log.info("Payload validated: id={}, pipeline={}", payload.getId(), pipelineId);
+        return toResponse(payload);
     }
 
     // -------------------------------------------------------------------------
