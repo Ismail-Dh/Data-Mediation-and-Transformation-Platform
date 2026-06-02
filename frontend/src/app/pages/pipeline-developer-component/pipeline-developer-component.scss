@@ -340,7 +340,15 @@ $shadow-hov:0 6px 24px rgba(0, 0, 0, 0.11);
 
   &--sm     { width: 380px; }
   &--detail { width: 440px; }
-  &--wide   { width: 720px; max-height: 88vh; overflow-y: auto; }
+  &--wide   {
+    width: min(1100px, 94vw);
+    max-height: 92vh;
+    height: 92vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+  }
 }
 
 @keyframes slideUp {
@@ -518,6 +526,14 @@ $shadow-hov:0 6px 24px rgba(0, 0, 0, 0.11);
 
 .tab-panel {
   min-height: 160px;
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 2px; // avoid scrollbar overlap
+
+  // scrollbar styling
+  &::-webkit-scrollbar       { width: 5px; }
+  &::-webkit-scrollbar-track { background: transparent; }
+  &::-webkit-scrollbar-thumb { background: #ddd; border-radius: 4px; &:hover { background: #bbb; } }
 }
 
 .tab-empty {
@@ -905,3 +921,77 @@ $shadow-hov:0 6px 24px rgba(0, 0, 0, 0.11);
 // Submit divider
 .submit-divider { display:flex; align-items:center; gap:.75rem; margin:.75rem 0; color:#ccc; font-size:.75rem; }
 .submit-divider::before,.submit-divider::after { content:''; flex:1; border-top:1px solid #eef0f4; }
+
+// ══════════════════════════════════════════════════════════════════════════════
+// DETAIL MODAL — layout plein écran avec zones fixes
+// ══════════════════════════════════════════════════════════════════════════════
+
+// Le modal--wide est désormais flex column, height fixée.
+// On sectionne : header / info-row / tabs / tab-panel(scroll) / footer
+
+.modal--detail {
+
+  // ── Zone header (fixe) ───────────────────────────────────────────────────
+  > .modal-header {
+    flex-shrink: 0;
+    padding: 1.5rem 2rem 1rem;
+    margin-bottom: 0;
+    border-bottom: 1px solid #f0f0f0;
+
+    h2 { font-size: 1.3rem; font-weight: 700; }
+  }
+
+  // ── Zone info-row (fixe) ────────────────────────────────────────────────
+  > .detail-info-row {
+    flex-shrink: 0;
+    margin: 0;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    border-top: none;
+    padding: 0.9rem 2rem;
+    gap: 1.5rem 3rem;
+  }
+
+  // ── Zone tabs (fixe) ────────────────────────────────────────────────────
+  > .detail-tabs {
+    flex-shrink: 0;
+    margin-bottom: 0;
+    padding: 0 2rem;
+    border-bottom: 2px solid #eef0f4;
+  }
+
+  // ── Zone tab-panel (scrollable, prend tout l'espace restant) ─────────────
+  > .tab-panel,
+  > app-pipeline-fields-tab,
+  > app-pipeline-payloads-tab,
+  > app-pipeline-rules-tab,
+  > app-pipeline-mapping-tab {
+    flex: 1;
+    min-height: 0; // critical for flex overflow
+    overflow-y: auto;
+    padding: 1.5rem 2rem;
+
+    &::-webkit-scrollbar       { width: 5px; }
+    &::-webkit-scrollbar-track { background: transparent; }
+    &::-webkit-scrollbar-thumb { background: #ddd; border-radius: 4px; &:hover { background: #bbb; } }
+  }
+
+  // ── Zone footer (fixe) ──────────────────────────────────────────────────
+  > .modal-footer {
+    flex-shrink: 0;
+    margin-top: 0;
+    padding: 1rem 2rem;
+    border-top: 1px solid #f0f0f0;
+  }
+}
+
+// ── detail-title : nom + badge côte à côte ───────────────────────────────────
+.detail-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-direction: row; // override column du parent
+
+  h2 { margin: 0; }
+}

@@ -136,17 +136,27 @@
 <div class="modal-overlay" *ngIf="detailPipeline" (click)="closeDetail()">
   <div class="modal modal--detail modal--wide" (click)="$event.stopPropagation()">
 
+    <!-- ── Header fixe ─────────────────────────────────────────────────── -->
     <div class="modal-header">
       <div class="detail-title">
         <h2>{{ detailPipeline.name }}</h2>
         <span class="badge" [ngClass]="'badge--' + detailPipeline!.status.toLowerCase()">{{ detailPipeline.status }}</span>
       </div>
-      <button class="close-btn" (click)="closeDetail()"><svg viewBox="0 0 20 20"><line x1="4" y1="4" x2="16" y2="16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="16" y1="4" x2="4" y2="16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+      <button class="close-btn" (click)="closeDetail()">
+        <svg viewBox="0 0 20 20"><line x1="4" y1="4" x2="16" y2="16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="16" y1="4" x2="4" y2="16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
     </div>
 
+    <!-- ── Info-row fixe ───────────────────────────────────────────────── -->
     <div class="detail-info-row">
-      <div class="detail-kv"><span class="detail-label">Version</span><span class="detail-val">{{ detailPipeline.version || '—' }}</span></div>
-      <div class="detail-kv"><span class="detail-label">Created</span><span class="detail-val">{{ detailPipeline.createdAt | date:'dd MMM yyyy' }}</span></div>
+      <div class="detail-kv">
+        <span class="detail-label">Version</span>
+        <span class="detail-val">{{ detailPipeline.version || '—' }}</span>
+      </div>
+      <div class="detail-kv">
+        <span class="detail-label">Created</span>
+        <span class="detail-val">{{ detailPipeline.createdAt | date:'dd MMM yyyy' }}</span>
+      </div>
       <div class="detail-kv">
         <span class="detail-label">Format</span>
         <span class="detail-val fmt-inline">
@@ -159,17 +169,22 @@
         <span class="detail-label">Provider</span>
         <span class="detail-val">{{ detailPipeline.providerName }}</span>
       </div>
+      <div class="detail-kv" *ngIf="detailPipeline.providerEndpoint">
+        <span class="detail-label">Endpoint</span>
+        <span class="detail-val"><code style="font-size:.8rem">{{ detailPipeline.providerEndpoint }}</code></span>
+      </div>
     </div>
 
-    <!-- TABS -->
+    <!-- ── Tabs fixe ───────────────────────────────────────────────────── -->
     <div class="detail-tabs">
       <button class="tab-btn" [class.tab-btn--active]="detailTab === 'info'"     (click)="setDetailTab('info')">Overview</button>
       <button class="tab-btn" [class.tab-btn--active]="detailTab === 'fields'"   (click)="setDetailTab('fields')">Schema Fields</button>
       <button class="tab-btn" [class.tab-btn--active]="detailTab === 'payloads'" (click)="setDetailTab('payloads')">Payloads</button>
       <button class="tab-btn" [class.tab-btn--active]="detailTab === 'rules'"    (click)="setDetailTab('rules')">Validation Rules</button>
-      <button class="tab-btn" [class.tab-btn--active]="detailTab === 'mapping'" (click)="setDetailTab('mapping')">Mapping Rules</button>
-
+      <button class="tab-btn" [class.tab-btn--active]="detailTab === 'mapping'"  (click)="setDetailTab('mapping')">Mapping Rules</button>
     </div>
+
+    <!-- ── Tab content scrollable ─────────────────────────────────────── -->
 
     <!-- TAB: Overview -->
     <div class="tab-panel" *ngIf="detailTab === 'info'">
@@ -212,16 +227,17 @@
       [pipelineId]="detailPipeline!.id">
     </app-pipeline-rules-tab>
 
-     <!-- TAB: Mapping Rules -->
-   <app-pipeline-mapping-tab
-     *ngIf="detailTab === 'mapping'"
-     [pipelineId]="detailPipeline!.id">
-   </app-pipeline-mapping-tab>
+    <!-- TAB: Mapping Rules -->
+    <app-pipeline-mapping-tab
+      *ngIf="detailTab === 'mapping'"
+      [pipelineId]="detailPipeline!.id">
+    </app-pipeline-mapping-tab>
 
-    <!-- Footer -->
+    <!-- ── Footer fixe ─────────────────────────────────────────────────── -->
     <div class="modal-footer">
       <button class="btn btn--secondary" (click)="closeDetail()">Close</button>
       <button class="btn btn--primary" (click)="openEdit(detailPipeline!); closeDetail()">Edit Pipeline</button>
     </div>
+
   </div>
 </div>
