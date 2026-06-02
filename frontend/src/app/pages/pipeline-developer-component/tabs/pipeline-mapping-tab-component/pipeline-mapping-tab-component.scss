@@ -475,3 +475,70 @@ $radius-md: 10px;
   font-size: 0.85rem;
   color: $text-sub;
 }
+
+// ══════════════════════════════════════════════════════════════════════════════
+// MAPPING MODE TOGGLE — 3 modes exclusifs : drag / form / json
+// ══════════════════════════════════════════════════════════════════════════════
+
+.mapping-mode-bar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.25rem;
+}
+
+.mapping-mode-toggle {
+  display: flex;
+  gap: 3px;
+  background: #f0f1f5;
+  border-radius: 10px;
+  padding: 4px;
+  flex-shrink: 0;
+}
+
+.mapping-mode-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0.48rem 0.9rem;
+  border: none;
+  border-radius: 7px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  font-family: inherit;
+  color: #999;
+  background: transparent;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+
+  &:hover:not(.mapping-mode-pill--active) {
+    color: $text-main;
+    background: rgba(255,255,255,.55);
+  }
+
+  &--active {
+    background: #fff;
+    color: $accent;
+    font-weight: 600;
+    box-shadow: 0 1px 5px rgba(0,0,0,.1);
+  }
+}
+
+.mapping-mode-icon {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+}
+
+.mapping-mode-desc {
+  font-size: 0.76rem;
+  color: #aaa;
+  font-style: italic;
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

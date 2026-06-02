@@ -1,107 +1,145 @@
-<div class="audit-container">
+<div class="page">
 
-  <div class="audit-header">
-    <h2>Audit Logs</h2>
-    <span class="total">{{ logs.length }} entrées</span>
+  <!-- ===== HEADER ===== -->
+  <div class="page-header">
+    <div class="page-title">
+      <div class="title-row">
+        <h1>Audit Logs</h1>
+        <span class="role-chip">ADMIN</span>
+      </div>
+      <span class="subtitle">Track all system actions and user activities</span>
+    </div>
   </div>
 
-  <!-- Filtres -->
-  <div class="filters">
-    <input
-      type="text"
-      placeholder="Rechercher par utilisateur..."
-      [(ngModel)]="filter.username"
-      (ngModelChange)="load()"
-    />
+  <!-- ===== STATS ===== -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <span class="stat-num">{{ logs.length }}</span>
+      <span class="stat-label">Total logs</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-num stat-num--success">{{ getSuccessCount() }}</span>
+      <span class="stat-label">Success</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-num stat-num--error">{{ getErrorCount() }}</span>
+      <span class="stat-label">Errors</span>
+    </div>
+  </div>
 
-    <select [(ngModel)]="filter.role" (ngModelChange)="load()">
-      <option value="">Tous les rôles</option>
+  <!-- ===== TOOLBAR ===== -->
+  <div class="toolbar">
+    <div class="search-wrap">
+      <svg class="search-icon" viewBox="0 0 20 20">
+        <circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" stroke-width="1.5" fill="none"/>
+        <line x1="13" y1="13" x2="18" y2="18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <input
+        type="text"
+        class="search-input"
+        placeholder="Search by user..."
+        [(ngModel)]="filter.username"
+        (ngModelChange)="load()"
+      />
+    </div>
+
+    <select class="filter-select" [(ngModel)]="filter.role" (ngModelChange)="load()">
+      <option value="">All roles</option>
       <option *ngFor="let r of ROLES" [value]="r">{{ r }}</option>
     </select>
 
-    <select [(ngModel)]="filter.action" (ngModelChange)="load()">
-      <option value="">Toutes les actions</option>
+    <select class="filter-select" [(ngModel)]="filter.action" (ngModelChange)="load()">
+      <option value="">All actions</option>
       <option *ngFor="let a of ACTIONS" [value]="a">{{ a }}</option>
     </select>
 
-    <select [(ngModel)]="filter.httpStatus" (ngModelChange)="load()">
-      <option [ngValue]="undefined">Tous les statuts</option>
+    <select class="filter-select" [(ngModel)]="filter.httpStatus" (ngModelChange)="load()">
+      <option [ngValue]="undefined">All statuses</option>
       <option *ngFor="let s of STATUSES" [ngValue]="s">{{ s }}</option>
     </select>
 
-    <button class="btn-reset" (click)="resetFilters()">Réinitialiser</button>
+    <button class="btn-reset" (click)="resetFilters()">Reset</button>
+    <span class="count-badge">{{ logs.length }} result{{ logs.length !== 1 ? 's' : '' }}</span>
   </div>
 
-  <!-- Loader -->
-  <div *ngIf="loading" class="loading">Chargement...</div>
+  <!-- ===== SPINNER ===== -->
+  <div class="td-empty" *ngIf="loading">Loading…</div>
 
-  <!-- Table -->
-  <div *ngIf="!loading" class="table-wrapper">
+  <!-- ===== TABLE ===== -->
+  <div class="table-card" *ngIf="!loading">
     <table>
       <thead>
         <tr>
-          <th>Utilisateur</th>
-          <th>Rôle</th>
+          <th>User</th>
+          <th>Role</th>
           <th>Action</th>
-          <th>Entité</th>
-          <th>ID cible</th>
-          <th>Statut HTTP</th>
-          <th>Erreur</th>
+          <th>Entity</th>
+          <th>Target ID</th>
+          <th>HTTP Status</th>
+          <th>Error</th>
           <th>Date</th>
-          <th>Actions</th>
+          <th class="th-actions">Actions</th>
         </tr>
       </thead>
       <tbody>
-        <tr *ngIf="logs.length === 0">
-          <td colspan="9" class="empty">Aucun log trouvé</td>
-        </tr>
         <tr *ngFor="let log of logs">
-          <td>{{ log.performedBy }}</td>
-          <td><span class="badge badge-role">{{ log.performedByRole }}</span></td>
+          <td class="td-name">{{ log.performedBy }}</td>
+          <td><span class="badge" [ngClass]="'badge--' + (log.performedByRole | lowercase)">{{ log.performedByRole }}</span></td>
           <td><span class="badge badge-action">{{ log.action }}</span></td>
           <td>{{ log.targetEntity }}</td>
-          <td>{{ log.targetId ?? '—' }}</td>
+          <td class="td-mono">{{ log.targetId ?? '—' }}</td>
           <td>
-            <span *ngIf="log.httpStatus" [class]="'badge ' + getStatusClass(log.httpStatus)">
+            <span *ngIf="log.httpStatus" class="status-badge" [class]="getStatusClass(log.httpStatus)">
               {{ log.httpStatus }}
             </span>
             <span *ngIf="!log.httpStatus">—</span>
           </td>
           <td>
-            <span *ngIf="log.errorMessage" class="error-msg">
-              {{ log.errorMessage }}
+            <span *ngIf="log.errorMessage" class="error-msg" title="{{ log.errorMessage }}">
+              {{ truncate(log.errorMessage, 40) }}
             </span>
             <span *ngIf="!log.errorMessage">—</span>
           </td>
           <td>{{ log.timestamp | date:'dd/MM/yyyy HH:mm:ss' }}</td>
-          <td>
-            <button class="btn-detail" (click)="openDetail(log)">Détails</button>
+          <td class="td-actions">
+            <button class="icon-btn icon-btn--view" title="View Details" (click)="openDetail(log)">
+              <svg viewBox="0 0 20 20">
+                <circle cx="10" cy="10" r="3" stroke="currentColor" stroke-width="1.5" fill="none"/>
+                <path d="M2 10s3-6 8-6 8 6 8 6-3 6-8 6-8-6-8-6z" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+              </svg>
+            </button>
           </td>
+         </tr>
+        <tr *ngIf="logs.length === 0">
+          <td colspan="9" class="td-empty">No logs found</td>
         </tr>
       </tbody>
     </table>
   </div>
 
-  <!-- Modal détails -->
+  <!-- ===== DETAIL MODAL ===== -->
   <div class="modal-overlay" *ngIf="selectedLog" (click)="closeDetail()">
-    <div class="modal-box" (click)="$event.stopPropagation()">
-
+    <div class="modal" (click)="$event.stopPropagation()">
       <div class="modal-header">
-        <h3>Détails du log #{{ selectedLog.id }}</h3>
-        <button class="btn-close" (click)="closeDetail()">✕</button>
+        <h2>Log details #{{ selectedLog.id }}</h2>
+        <button class="close-btn" (click)="closeDetail()">
+          <svg viewBox="0 0 20 20">
+            <line x1="4" y1="4" x2="16" y2="16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            <line x1="16" y1="4" x2="4" y2="16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </button>
       </div>
 
       <div class="modal-body">
-
         <div class="detail-row">
-          <span class="detail-label">Utilisateur</span>
+          <span class="detail-label">User</span>
           <span class="detail-value">{{ selectedLog.performedBy }}</span>
         </div>
 
         <div class="detail-row">
-          <span class="detail-label">Rôle</span>
+          <span class="detail-label">Role</span>
           <span class="detail-value">
-            <span class="badge badge-role">{{ selectedLog.performedByRole }}</span>
+            <span class="badge" [ngClass]="'badge--' + (selectedLog.performedByRole | lowercase)">{{ selectedLog.performedByRole }}</span>
           </span>
         </div>
 
@@ -113,45 +151,47 @@
         </div>
 
         <div class="detail-row">
-          <span class="detail-label">Entité</span>
+          <span class="detail-label">Entity</span>
           <span class="detail-value">{{ selectedLog.targetEntity }}</span>
         </div>
 
         <div class="detail-row">
-          <span class="detail-label">ID cible</span>
-          <span class="detail-value">{{ selectedLog.targetId ?? '—' }}</span>
+          <span class="detail-label">Target ID</span>
+          <span class="detail-value td-mono">{{ selectedLog.targetId ?? '—' }}</span>
         </div>
 
         <div class="detail-row">
-          <span class="detail-label">Statut HTTP</span>
+          <span class="detail-label">HTTP Status</span>
           <span class="detail-value">
-            <span [class]="'badge ' + getStatusClass(selectedLog.httpStatus)">
-              {{ selectedLog.httpStatus ?? '—' }}
+            <span *ngIf="selectedLog.httpStatus" class="status-badge" [class]="getStatusClass(selectedLog.httpStatus)">
+              {{ selectedLog.httpStatus }}
             </span>
+            <span *ngIf="!selectedLog.httpStatus">—</span>
           </span>
         </div>
 
         <div class="detail-row">
           <span class="detail-label">Date</span>
-          <span class="detail-value">
-            {{ selectedLog.timestamp | date:'dd/MM/yyyy HH:mm:ss' }}
-          </span>
+          <span class="detail-value">{{ selectedLog.timestamp | date:'dd/MM/yyyy HH:mm:ss' }}</span>
         </div>
 
         <div class="detail-row" *ngIf="selectedLog.details">
-          <span class="detail-label">Détails</span>
+          <span class="detail-label">Details</span>
           <span class="detail-value detail-code">{{ selectedLog.details }}</span>
         </div>
 
         <div class="detail-error" *ngIf="selectedLog.errorMessage">
           <div class="error-title">
-            <span class="badge badge-error">{{ selectedLog.errorCode }}</span>
+            <span class="badge badge--error">Error</span>
+            <span *ngIf="selectedLog.errorCode" class="error-code">{{ selectedLog.errorCode }}</span>
           </div>
           <p class="error-text">{{ selectedLog.errorMessage }}</p>
         </div>
+      </div>
 
+      <div class="modal-footer">
+        <button type="button" class="btn btn--secondary" (click)="closeDetail()">Close</button>
       </div>
     </div>
   </div>
-
 </div>

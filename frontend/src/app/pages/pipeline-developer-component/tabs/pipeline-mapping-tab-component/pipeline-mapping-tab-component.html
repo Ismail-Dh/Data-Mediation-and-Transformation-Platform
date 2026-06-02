@@ -1,249 +1,362 @@
 <div class="tab-panel">
 
-  <!-- ── Create / Edit rule ──────────────────────────────────────────────── -->
-  <div class="rules-section">
-    <div class="rules-section-title">
-      <span class="rules-section-label">
-        {{ editingRuleId !== null ? 'Edit mapping rule' : 'Create a mapping rule' }}
-      </span>
-      <span class="rules-section-sub">
-        Define how a field is translated from source to target
-      </span>
-    </div>
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!-- MODE TOGGLE                                                           -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <div class="mapping-mode-bar">
+    <div class="mapping-mode-toggle">
 
-    <form [formGroup]="mappingForm" (ngSubmit)="saveMappingRule()" class="inline-form">
-      <div class="inline-form-fields">
-
-        <!-- Source Field -->
-        <ng-container *ngIf="!sourceFieldHidden">
-          <div class="field field--inline">
-            <label>Source Field <span class="req">*</span></label>
-            <input
-              type="text"
-              formControlName="sourceField"
-              placeholder="e.g. client_id, client.email, items[].id" />
-            <span class="field-error"
-              *ngIf="mappingForm.get('sourceField')?.touched && mappingForm.get('sourceField')?.invalid">
-              Required
-            </span>
-          </div>
-        </ng-container>
-
-        <div class="field field--inline field--disabled" *ngIf="sourceFieldHidden">
-          <label>Source Field</label>
-          <span class="field-hint">Fields come from the expression for this type</span>
-        </div>
-
-        <!-- Arrow -->
-        <div class="mapping-arrow-col">
-          <svg viewBox="0 0 24 8" class="mapping-arrow-icon">
-            <path d="M0 4h20M16 1l4 3-4 3" stroke="currentColor" stroke-width="1.5"
-              fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </div>
-
-        <!-- Target Field -->
-        <ng-container *ngIf="!targetFieldHidden">
-          <div class="field field--inline">
-            <label>Target Field <span class="req">*</span></label>
-            <input type="text" formControlName="targetField" placeholder="e.g. id_client" />
-            <span class="field-error"
-              *ngIf="mappingForm.get('targetField')?.touched && mappingForm.get('targetField')?.invalid">
-              Required
-            </span>
-          </div>
-        </ng-container>
-
-        <div class="field field--inline field--disabled" *ngIf="targetFieldHidden">
-          <label>Target Field</label>
-          <span class="field-hint">Not used for FLATTEN</span>
-        </div>
-
-        <!-- Mapping Type -->
-        <div class="field field--inline">
-          <label>Mapping Type <span class="req">*</span></label>
-          <select formControlName="mappingType">
-            <option value="">Select…</option>
-            <option value="FIELD_PLACEMENT">Field Placement</option>
-            <option value="FORMAT_CHANGE">Format Change</option>
-            <option value="VALUE_TRANSFORM">Value Transform</option>
-            <option value="CALCULATED_FIELD">Calculated Field</option>
-            <option value="RESTRUCTURING">Restructuring</option>
-          </select>
-          <span class="field-error"
-            *ngIf="mappingForm.get('mappingType')?.touched && mappingForm.get('mappingType')?.invalid">
-            Required
-          </span>
-        </div>
-
-      </div>
-
-      <!-- Expression -->
-      <div class="field field--full" *ngIf="needsExpression">
-        <label>Expression</label>
-        <input type="text" formControlName="expression" placeholder="Enter expression…" />
-        <span class="field-hint" *ngIf="currentHint">{{ currentHint }}</span>
-      </div>
-
-      <div class="inline-form-actions">
-        <button type="button" class="btn btn--secondary btn--sm"
-          *ngIf="editingRuleId !== null" (click)="cancelEdit()">
-          Cancel
-        </button>
-        <button type="submit" class="btn btn--primary btn--sm"
-          [disabled]="mappingForm.invalid">
-          {{ editingRuleId !== null ? 'Update Rule' : '+ Add Rule' }}
-        </button>
-      </div>
-    </form>
-  </div>
-
-  <!-- ── Test mapping ────────────────────────────────────────────────────── -->
-  <div class="rules-section">
-    <div class="rules-section-title">
-      <span class="rules-section-label">Test mapping</span>
-      <span class="rules-section-sub">Apply active rules to a raw JSON payload</span>
-    </div>
-
-    <div class="test-area">
-      <div class="test-input-wrap">
-        <label class="test-label">Raw JSON payload</label>
-        <textarea
-          class="test-textarea"
-          [(ngModel)]="testPayload"
-          placeholder='e.g. {"client_id": "123", "montant": 500}'
-          rows="3">
-        </textarea>
-      </div>
-      <button
-        class="btn btn--primary btn--sm test-run-btn"
-        [disabled]="!testPayload.trim() || testLoading"
-        (click)="applyTest()">
-        <svg viewBox="0 0 16 16" class="run-icon">
-          <polygon points="4,2 14,8 4,14" fill="currentColor"/>
+      <button class="mapping-mode-pill"
+        [class.mapping-mode-pill--active]="mappingMode === 'drag'"
+        (click)="setMappingMode('drag')">
+        <svg viewBox="0 0 16 16" class="mapping-mode-icon">
+          <rect x="1" y="1" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.3" fill="none"/>
+          <rect x="9" y="1" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.3" fill="none"/>
+          <rect x="1" y="9" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.3" fill="none"/>
+          <path d="M12 9v6M9 12h6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
         </svg>
-        {{ testLoading ? 'Running…' : 'Run' }}
+        Visual / Drag & Drop
       </button>
+
+      <button class="mapping-mode-pill"
+        [class.mapping-mode-pill--active]="mappingMode === 'form'"
+        (click)="setMappingMode('form')">
+        <svg viewBox="0 0 16 16" class="mapping-mode-icon">
+          <rect x="1" y="2" width="14" height="3" rx="1" stroke="currentColor" stroke-width="1.3" fill="none"/>
+          <rect x="1" y="7" width="14" height="3" rx="1" stroke="currentColor" stroke-width="1.3" fill="none"/>
+          <rect x="1" y="12" width="8" height="3" rx="1" stroke="currentColor" stroke-width="1.3" fill="none"/>
+        </svg>
+        Formulaire
+      </button>
+
+      <button class="mapping-mode-pill"
+        [class.mapping-mode-pill--active]="mappingMode === 'json'"
+        (click)="setMappingMode('json')">
+        <svg viewBox="0 0 16 16" class="mapping-mode-icon">
+          <path d="M4 2C2.5 2 2 3 2 4v2c0 1-.5 1.5-1 2 .5.5 1 1 1 2v2c0 1 .5 2 2 2"
+            stroke="currentColor" stroke-width="1.3" fill="none" stroke-linecap="round"/>
+          <path d="M12 2c1.5 0 2 1 2 2v2c0 1 .5 1.5 1 2-.5.5-1 1-1 2v2c0 1-.5 2-2 2"
+            stroke="currentColor" stroke-width="1.3" fill="none" stroke-linecap="round"/>
+          <circle cx="6"  cy="8" r="1" fill="currentColor"/>
+          <circle cx="8"  cy="8" r="1" fill="currentColor"/>
+          <circle cx="10" cy="8" r="1" fill="currentColor"/>
+        </svg>
+        JSON Editor
+      </button>
+
     </div>
 
-    <!-- Test result -->
-    <div class="test-result" *ngIf="testResult">
-      <div class="test-result-col">
-        <span class="test-result-label">Original</span>
-        <pre class="test-result-pre">{{ testResult.original | json }}</pre>
-      </div>
-      <svg viewBox="0 0 24 8" class="result-arrow">
-        <path d="M0 4h20M16 1l4 3-4 3" stroke="currentColor" stroke-width="1.5"
-          fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-      <div class="test-result-col">
-        <span class="test-result-label">Mapped</span>
-        <pre class="test-result-pre test-result-pre--mapped">{{ testResult.mapped | json }}</pre>
-      </div>
-    </div>
-
-    <!-- Test error -->
-    <div class="test-error" *ngIf="testError">
-      <svg viewBox="0 0 16 16" class="test-error-icon">
-        <circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5" fill="none"/>
-        <line x1="8" y1="5" x2="8" y2="9" stroke="currentColor"
-          stroke-width="1.5" stroke-linecap="round"/>
-        <circle cx="8" cy="11.5" r="0.75" fill="currentColor"/>
-      </svg>
-      {{ testError }}
-    </div>
+    <!-- mode description chip -->
+    <span class="mapping-mode-desc" *ngIf="mappingMode === 'drag'">
+      Glissez les champs Consumer sur les champs Provider pour créer des connexions
+    </span>
+    <span class="mapping-mode-desc" *ngIf="mappingMode === 'form'">
+      Définissez chaque règle de mapping via un formulaire structuré
+    </span>
+    <span class="mapping-mode-desc" *ngIf="mappingMode === 'json'">
+      Éditez directement le mapping en JSON avec validation de schéma
+    </span>
   </div>
 
-  <!-- ── Rules list ──────────────────────────────────────────────────────── -->
-  <div class="fields-list" *ngIf="mappingRules.length > 0">
-    <table class="fields-table">
-      <thead>
-        <tr>
-          <th>Source Field</th>
-          <th></th>
-          <th>Target Field</th>
-          <th>Type</th>
-          <th>Expression</th>
-          <th>Active</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let r of mappingRules"
-          [class.row--editing]="editingRuleId === r.id">
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!-- MODE : DRAG & DROP VISUEL                                             -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <ng-container *ngIf="mappingMode === 'drag'">
 
-          <td><code>{{ r.sourceField }}</code></td>
+    <app-mapping-editor
+      [pipelineId]="pipelineId"
+      [providerPipelineId]="providerPipelineId">
+    </app-mapping-editor>
 
-          <td class="arrow-cell">
-            <svg viewBox="0 0 24 8" class="row-arrow">
+    <!-- Rules list (lecture seule dans ce mode) -->
+    <ng-container *ngTemplateOutlet="rulesList"></ng-container>
+
+    <!-- Test -->
+    <ng-container *ngTemplateOutlet="testBlock"></ng-container>
+
+  </ng-container>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!-- MODE : FORMULAIRE                                                     -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <ng-container *ngIf="mappingMode === 'form'">
+
+    <!-- Create / Edit rule form -->
+    <div class="rules-section">
+      <div class="rules-section-title">
+        <span class="rules-section-label">
+          {{ editingRuleId !== null ? 'Edit mapping rule' : 'Create a mapping rule' }}
+        </span>
+        <span class="rules-section-sub">
+          Define how a field is translated from source to target
+        </span>
+      </div>
+
+      <form [formGroup]="mappingForm" (ngSubmit)="saveMappingRule()" class="inline-form">
+        <div class="inline-form-fields">
+
+          <!-- Source Field -->
+          <ng-container *ngIf="!sourceFieldHidden">
+            <div class="field field--inline">
+              <label>Source Field <span class="req">*</span></label>
+              <select formControlName="sourceField">
+  <option value="">Select a schema field…</option>
+  <option *ngFor="let f of pipelineFields" [value]="f.fieldPath">
+    {{ f.fieldPath }} ({{ f.fieldType }})
+  </option>
+</select>
+              <span class="field-error"
+                *ngIf="mappingForm.get('sourceField')?.touched && mappingForm.get('sourceField')?.invalid">
+                Required
+              </span>
+            </div>
+          </ng-container>
+
+          <div class="field field--inline field--disabled" *ngIf="sourceFieldHidden">
+            <label>Source Field</label>
+            <span class="field-hint">Fields come from the expression for this type</span>
+          </div>
+
+          <!-- Arrow -->
+          <div class="mapping-arrow-col">
+            <svg viewBox="0 0 24 8" class="mapping-arrow-icon">
               <path d="M0 4h20M16 1l4 3-4 3" stroke="currentColor" stroke-width="1.5"
                 fill="none" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
-          </td>
+          </div>
 
-          <td><code>{{ r.targetField }}</code></td>
-
-          <td>
-            <span class="type-chip type-chip--{{ r.mappingType.toLowerCase() }}">
-              {{ mappingTypeLabel(r.mappingType) }}
-            </span>
-          </td>
-
-          <td>
-            <code class="expression-cell" *ngIf="r.expression">{{ r.expression }}</code>
-            <span class="expression-empty" *ngIf="!r.expression">—</span>
-          </td>
-
-          <!-- ✅ FIX: div wrapper inside td -->
-          <td>
-            <div class="toggle-wrap">
-              <label class="toggle">
-                <input type="checkbox" [checked]="r.active" (change)="toggleRule(r)" />
-                <span class="toggle-slider"></span>
-              </label>
+          <!-- Target Field -->
+          <ng-container *ngIf="!targetFieldHidden">
+            <div class="field field--inline">
+              <label>Target Field <span class="req">*</span></label>
+              <input type="text" formControlName="targetField" placeholder="e.g. id_client" />
+              <span class="field-error"
+                *ngIf="mappingForm.get('targetField')?.touched && mappingForm.get('targetField')?.invalid">
+                Required
+              </span>
             </div>
-          </td>
+          </ng-container>
 
-          <!-- ✅ FIX: div wrapper inside td -->
-          <td>
-            <div class="field-actions-cell">
-              <button class="icon-btn icon-btn--edit" title="Edit" (click)="openEdit(r)">
-                <svg viewBox="0 0 20 20">
-                  <path d="M14.85 2.15a2 2 0 0 1 2.83 2.83L6.5 16.17 2 18l1.83-4.5L14.85 2.15z"
-                    stroke="currentColor" stroke-width="1.5" fill="none"
-                    stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-              </button>
-              <button class="icon-btn icon-btn--delete" title="Delete" (click)="deleteRule(r.id)">
-                <svg viewBox="0 0 20 20">
-                  <polyline points="3 6 5 6 17 6" stroke="currentColor"
-                    stroke-width="1.5" fill="none" stroke-linecap="round"/>
-                  <path d="M8 6V4h4v2" stroke="currentColor"
-                    stroke-width="1.5" fill="none" stroke-linecap="round"/>
-                  <path d="M6 6l1 11h6l1-11" stroke="currentColor" stroke-width="1.5"
+          <div class="field field--inline field--disabled" *ngIf="targetFieldHidden">
+            <label>Target Field</label>
+            <span class="field-hint">Not used for FLATTEN</span>
+          </div>
+
+          <!-- Mapping Type -->
+          <div class="field field--inline">
+            <label>Mapping Type <span class="req">*</span></label>
+            <select formControlName="mappingType">
+              <option value="">Select…</option>
+              <option value="FIELD_PLACEMENT">Field Placement</option>
+              <option value="FORMAT_CHANGE">Format Change</option>
+              <option value="VALUE_TRANSFORM">Value Transform</option>
+              <option value="CALCULATED_FIELD">Calculated Field</option>
+              <option value="RESTRUCTURING">Restructuring</option>
+            </select>
+            <span class="field-error"
+              *ngIf="mappingForm.get('mappingType')?.touched && mappingForm.get('mappingType')?.invalid">
+              Required
+            </span>
+          </div>
+
+        </div>
+
+        <!-- Expression -->
+        <div class="field field--full" *ngIf="needsExpression">
+          <label>Expression</label>
+          <input type="text" formControlName="expression" placeholder="Enter expression…" />
+          <span class="field-hint" *ngIf="currentHint">{{ currentHint }}</span>
+        </div>
+
+        <div class="inline-form-actions">
+          <button type="button" class="btn btn--secondary btn--sm"
+            *ngIf="editingRuleId !== null" (click)="cancelEdit()">
+            Cancel
+          </button>
+          <button type="submit" class="btn btn--primary btn--sm"
+            [disabled]="mappingForm.invalid">
+            {{ editingRuleId !== null ? 'Update Rule' : '+ Add Rule' }}
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Rules list -->
+    <ng-container *ngTemplateOutlet="rulesList"></ng-container>
+
+    <!-- Test -->
+    <ng-container *ngTemplateOutlet="testBlock"></ng-container>
+
+  </ng-container>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!-- MODE : JSON EDITOR                                                    -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <ng-container *ngIf="mappingMode === 'json'">
+
+    <app-mapping-json-editor [pipelineId]="pipelineId">
+    </app-mapping-json-editor>
+
+    <!-- Rules list -->
+    <ng-container *ngTemplateOutlet="rulesList"></ng-container>
+
+    <!-- Test -->
+    <ng-container *ngTemplateOutlet="testBlock"></ng-container>
+
+  </ng-container>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!-- SHARED TEMPLATES                                                      -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+
+  <!-- ── Rules list template ────────────────────────────────────────────── -->
+  <ng-template #rulesList>
+    <div class="rules-section">
+      <div class="rules-section-title">
+        <span class="rules-section-label">Active Mapping Rules</span>
+        <span class="rules-section-sub">{{ mappingRules.length }} rule{{ mappingRules.length !== 1 ? 's' : '' }} configured</span>
+      </div>
+
+      <div class="fields-list" *ngIf="mappingRules.length > 0">
+        <table class="fields-table">
+          <thead>
+            <tr>
+              <th>Source Field</th>
+              <th></th>
+              <th>Target Field</th>
+              <th>Type</th>
+              <th>Expression</th>
+              <th>Active</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let r of mappingRules"
+              [class.row--editing]="editingRuleId === r.id">
+
+              <td><code>{{ r.sourceField }}</code></td>
+
+              <td class="arrow-cell">
+                <svg viewBox="0 0 24 8" class="row-arrow">
+                  <path d="M0 4h20M16 1l4 3-4 3" stroke="currentColor" stroke-width="1.5"
                     fill="none" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
-              </button>
-            </div>
-          </td>
+              </td>
 
-        </tr>
-      </tbody>
-    </table>
-  </div>
+              <td><code>{{ r.targetField }}</code></td>
 
-  <div class="tab-empty" *ngIf="mappingRules.length === 0 && !loading">
-    <svg viewBox="0 0 24 24" class="tab-empty-icon">
-      <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor"
-        stroke-width="1.5" fill="none"/>
-      <path d="M8 12h3M13 12h3" stroke="currentColor"
-        stroke-width="1.5" stroke-linecap="round"/>
-      <path d="M11 10v4" stroke="currentColor"
-        stroke-width="1.5" stroke-linecap="round"/>
-    </svg>
-    <span>No mapping rules yet. Create a rule above to start transforming fields.</span>
-  </div>
+              <td>
+                <span class="type-chip type-chip--{{ r.mappingType.toLowerCase() }}">
+                  {{ mappingTypeLabel(r.mappingType) }}
+                </span>
+              </td>
 
-  <div class="tab-loading" *ngIf="loading">Loading mapping rules…</div>
+              <td>
+                <code class="expression-cell" *ngIf="r.expression">{{ r.expression }}</code>
+                <span class="expression-empty" *ngIf="!r.expression">—</span>
+              </td>
+
+              <td>
+                <div class="toggle-wrap">
+                  <label class="toggle">
+                    <input type="checkbox" [checked]="r.active" (change)="toggleRule(r)" />
+                    <span class="toggle-slider"></span>
+                  </label>
+                </div>
+              </td>
+
+              <td>
+                <div class="field-actions-cell">
+                  <button class="icon-btn icon-btn--edit" title="Edit"
+                    (click)="openEdit(r); mappingMode !== 'form' && setMappingMode('form')">
+                    <svg viewBox="0 0 20 20">
+                      <path d="M14.85 2.15a2 2 0 0 1 2.83 2.83L6.5 16.17 2 18l1.83-4.5L14.85 2.15z"
+                        stroke="currentColor" stroke-width="1.5" fill="none"
+                        stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </button>
+                  <button class="icon-btn icon-btn--delete" title="Delete" (click)="deleteRule(r.id)">
+                    <svg viewBox="0 0 20 20">
+                      <polyline points="3 6 5 6 17 6" stroke="currentColor"
+                        stroke-width="1.5" fill="none" stroke-linecap="round"/>
+                      <path d="M8 6V4h4v2" stroke="currentColor"
+                        stroke-width="1.5" fill="none" stroke-linecap="round"/>
+                      <path d="M6 6l1 11h6l1-11" stroke="currentColor" stroke-width="1.5"
+                        fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </button>
+                </div>
+              </td>
+
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="tab-empty" *ngIf="mappingRules.length === 0 && !loading">
+        <svg viewBox="0 0 24 24" class="tab-empty-icon">
+          <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor"
+            stroke-width="1.5" fill="none"/>
+          <path d="M8 12h3M13 12h3" stroke="currentColor"
+            stroke-width="1.5" stroke-linecap="round"/>
+          <path d="M11 10v4" stroke="currentColor"
+            stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        <span>No mapping rules yet. Create a rule to start transforming fields.</span>
+      </div>
+
+      <div class="tab-loading" *ngIf="loading">Loading mapping rules…</div>
+    </div>
+  </ng-template>
+
+  <!-- ── Test block template ────────────────────────────────────────────── -->
+  <ng-template #testBlock>
+    <div class="rules-section">
+      <div class="rules-section-title">
+        <span class="rules-section-label">Test mapping</span>
+        <span class="rules-section-sub">Apply active rules to a raw JSON payload</span>
+      </div>
+
+      <div class="test-area">
+        <div class="test-input-wrap">
+          <label class="test-label">Raw JSON payload</label>
+          <textarea class="test-textarea" [(ngModel)]="testPayload"
+            placeholder='e.g. {"client_id": "123", "montant": 500}' rows="3">
+          </textarea>
+        </div>
+        <button class="btn btn--primary btn--sm test-run-btn"
+          [disabled]="!testPayload.trim() || testLoading"
+          (click)="applyTest()">
+          <svg viewBox="0 0 16 16" class="run-icon"><polygon points="4,2 14,8 4,14" fill="currentColor"/></svg>
+          {{ testLoading ? 'Running…' : 'Run' }}
+        </button>
+      </div>
+
+      <div class="test-result" *ngIf="testResult">
+        <div class="test-result-col">
+          <span class="test-result-label">Original</span>
+          <pre class="test-result-pre">{{ testResult.original | json }}</pre>
+        </div>
+        <svg viewBox="0 0 24 8" class="result-arrow">
+          <path d="M0 4h20M16 1l4 3-4 3" stroke="currentColor" stroke-width="1.5"
+            fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <div class="test-result-col">
+          <span class="test-result-label">Mapped</span>
+          <pre class="test-result-pre test-result-pre--mapped">{{ testResult.mapped | json }}</pre>
+        </div>
+      </div>
+
+      <div class="test-error" *ngIf="testError">
+        <svg viewBox="0 0 16 16" class="test-error-icon">
+          <circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5" fill="none"/>
+          <line x1="8" y1="5" x2="8" y2="9" stroke="currentColor"
+            stroke-width="1.5" stroke-linecap="round"/>
+          <circle cx="8" cy="11.5" r="0.75" fill="currentColor"/>
+        </svg>
+        {{ testError }}
+      </div>
+    </div>
+  </ng-template>
 
 </div>

@@ -5,25 +5,45 @@ import { FormsModule } from '@angular/forms';
 import { MappingRuleService } from '../../../../services/mapping/mapping-rule-service';
 import { MappingRuleResponse } from '../../../../models/mapping-rule';
 import { MappingResultResponse } from '../../../../models/mapping-result';
+import { MappingEditor } from './mapping-editor/mapping-editor';
+import { MappingJsonEditor } from './mapping-json-editor/mapping-json-editor';
+import { PipelineFieldResponse } from '../../../../models/pipelineField';
+import { PipelineFieldService } from '../../../../services/pipelineField/pipeline-field-service';
+
+type MappingMode = 'drag' | 'form' | 'json';
 
 @Component({
   selector: 'app-pipeline-mapping-tab',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, MappingEditor, MappingJsonEditor],
   templateUrl: './pipeline-mapping-tab-component.html',
   styleUrl: './pipeline-mapping-tab-component.scss'
 })
 export class PipelineMappingTabComponent implements OnInit {
 
   @Input() pipelineId!: number;
+  pipelineFields: PipelineFieldResponse[] = [];
 
+
+  /**
+   * ID du pipeline Provider si différent du Consumer.
+   * Laisser null si le Provider est externe (REST tiers, Kafka, etc.)
+   * — dans ce cas, les champs cibles se déclarent via le bouton "+ Field"
+   */
+  @Input() providerPipelineId: number | null = null;
+
+  // ── Mode exclusif ─────────────────────────────────────────────────────────
+  mappingMode: MappingMode = 'drag';
+
+  // ── Data ──────────────────────────────────────────────────────────────────
   mappingRules: MappingRuleResponse[] = [];
   loading = false;
 
+  // ── Form ──────────────────────────────────────────────────────────────────
   mappingForm!: FormGroup;
   editingRuleId: number | null = null;
 
-  // Test zone
+  // ── Test zone ─────────────────────────────────────────────────────────────
   testPayload = '';
   testResult:  MappingResultResponse | null = null;
   testError:   string | null = null;
@@ -39,6 +59,7 @@ export class PipelineMappingTabComponent implements OnInit {
 
   constructor(
     private mappingService: MappingRuleService,
+    private fieldsService:  PipelineFieldService,
     private fb:             FormBuilder,
     private cdr:            ChangeDetectorRef
   ) {}
@@ -51,7 +72,6 @@ export class PipelineMappingTabComponent implements OnInit {
       expression:  ['']
     });
 
-    // React to mappingType changes
     this.mappingForm.get('mappingType')!.valueChanges.subscribe(type => {
       this.mappingForm.get('expression')!.setValue('');
       this.updateSourceFieldValidator(type);
@@ -59,13 +79,24 @@ export class PipelineMappingTabComponent implements OnInit {
       this.cdr.detectChanges();
     });
 
-    // React to expression changes — targetField validator depends on FLATTEN
     this.mappingForm.get('expression')!.valueChanges.subscribe(() => {
       this.updateTargetFieldValidator();
       this.cdr.detectChanges();
     });
 
     this.loadRules();
+  }
+
+  // ── Mode switching ────────────────────────────────────────────────────────
+
+  setMappingMode(mode: MappingMode): void {
+    if (this.mappingMode === mode) return;
+    this.mappingMode = mode;
+    // If we leave form mode while editing, cancel the edit
+    if (mode !== 'form' && this.editingRuleId !== null) {
+      this.cancelEdit();
+    }
+    this.cdr.detectChanges();
   }
 
   // ── Validators ────────────────────────────────────────────────────────────
@@ -104,12 +135,10 @@ export class PipelineMappingTabComponent implements OnInit {
     return this.expressionHints[this.mappingForm.get('mappingType')?.value] ?? '';
   }
 
-  // CALCULATED_FIELD — sourceField ignored by backend
   get sourceFieldHidden(): boolean {
     return this.mappingForm.get('mappingType')?.value === 'CALCULATED_FIELD';
   }
 
-  // RESTRUCTURING + FLATTEN — targetField ignored by backend
   get targetFieldHidden(): boolean {
     const type = this.mappingForm.get('mappingType')?.value;
     const expr = this.mappingForm.get('expression')?.value?.trim().toUpperCase();
@@ -120,6 +149,18 @@ export class PipelineMappingTabComponent implements OnInit {
 
   private loadRules(): void {
     this.loading = true;
+      // Chargement des champs du pipeline
+    this.fieldsService.getFields(this.pipelineId).subscribe({
+      next: data => {
+        this.pipelineFields = data;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.cdr.detectChanges();
+      }
+    });
+
+    // Chargement des règles de mapping
     this.mappingService.getAllRules(this.pipelineId).subscribe({
       next: data => {
         this.mappingRules = data;
@@ -133,14 +174,13 @@ export class PipelineMappingTabComponent implements OnInit {
     });
   }
 
-  // ── Save (create or update) ───────────────────────────────────────────────
+  // ── Save ──────────────────────────────────────────────────────────────────
 
   saveMappingRule(): void {
     if (this.mappingForm.invalid) return;
     const val = this.mappingForm.value;
 
     if (this.editingRuleId !== null) {
-      // No update endpoint — delete + recreate pattern
       this.mappingService.deleteRule(this.pipelineId, this.editingRuleId).subscribe(() => {
         this.mappingService.createRule(this.pipelineId, val).subscribe(() => {
           this.cancelEdit();
@@ -157,7 +197,14 @@ export class PipelineMappingTabComponent implements OnInit {
 
   // ── Edit ──────────────────────────────────────────────────────────────────
 
+  /**
+   * openEdit() bascule automatiquement en mode Formulaire si on n'y est pas,
+   * pour que l'utilisateur puisse éditer la règle immédiatement.
+   */
   openEdit(r: MappingRuleResponse): void {
+    if (this.mappingMode !== 'form') {
+      this.mappingMode = 'form';
+    }
     this.editingRuleId = r.id;
     this.mappingForm.patchValue({
       sourceField: r.sourceField,
@@ -190,7 +237,7 @@ export class PipelineMappingTabComponent implements OnInit {
     this.mappingService.deleteRule(this.pipelineId, id).subscribe(() => this.loadRules());
   }
 
-  // ── Apply test ────────────────────────────────────────────────────────────
+  // ── Test ─────────────────────────────────────────────────────────────────
 
   applyTest(): void {
     if (!this.testPayload.trim()) return;

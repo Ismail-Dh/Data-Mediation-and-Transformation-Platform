@@ -1,0 +1,112 @@
+<!-- ╔══════════════════════════════════════════════════════════════════╗
+     ║    Mapping JSON Editor — Monaco + Visual bascule bidirectionnelle ║
+     ╚══════════════════════════════════════════════════════════════════╝ -->
+
+<div class="mje-root">
+
+  <!-- ── Toolbar ─────────────────────────────────────────────────────────── -->
+  <div class="mje-toolbar">
+
+    <!-- Mode toggle -->
+    <div class="mje-toggle" role="group" aria-label="Editor mode">
+      <button
+        class="mje-toggle__btn"
+        [class.mje-toggle__btn--active]="mode === 'visual'"
+        (click)="switchMode('visual')"
+        [disabled]="mode === 'json' && !jsonValid"
+        title="{{ mode === 'json' && !jsonValid ? 'Fix JSON errors before switching' : '' }}"
+      >
+        <svg viewBox="0 0 16 16" width="13" height="13">
+          <rect x="1" y="3" width="6" height="10" rx="1.5" stroke="currentColor" stroke-width="1.3" fill="none"/>
+          <rect x="9" y="3" width="6" height="10" rx="1.5" stroke="currentColor" stroke-width="1.3" fill="none"/>
+          <line x1="3" y1="6.5" x2="5" y2="6.5" stroke="currentColor" stroke-width="1.3"/>
+          <line x1="11" y1="6.5" x2="13" y2="6.5" stroke="currentColor" stroke-width="1.3"/>
+        </svg>
+        Visual
+      </button>
+      <button
+        class="mje-toggle__btn"
+        [class.mje-toggle__btn--active]="mode === 'json'"
+        (click)="switchMode('json')"
+      >
+        <svg viewBox="0 0 16 16" width="13" height="13">
+          <path d="M4 3L1 8l3 5" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+          <path d="M12 3l3 5-3 5" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+          <line x1="9" y1="2" x2="7" y2="14" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+        </svg>
+        JSON
+      </button>
+    </div>
+
+    <!-- JSON-mode actions -->
+    <div class="mje-toolbar__json-actions" *ngIf="mode === 'json'">
+      <button class="mje-btn mje-btn--ghost mje-btn--sm" (click)="prettify()" title="Format JSON">
+        <svg viewBox="0 0 16 16" width="13" height="13">
+          <path d="M2 4h12M2 8h8M2 12h10" stroke="currentColor" stroke-width="1.3"
+                stroke-linecap="round"/>
+        </svg>
+        Format
+      </button>
+      <button
+        class="mje-btn mje-btn--primary mje-btn--sm"
+        [disabled]="!jsonValid || !jsonDirty || saving"
+        (click)="applyJson()"
+      >
+        <svg viewBox="0 0 16 16" width="12" height="12" *ngIf="!saving">
+          <polyline points="2 8 6 12 14 4" stroke="currentColor" stroke-width="1.5"
+                    fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span class="mje-spinner" *ngIf="saving"></span>
+        {{ saving ? 'Applying…' : 'Apply JSON' }}
+      </button>
+    </div>
+
+    <!-- Save status -->
+    <div class="mje-status" [class.mje-status--saved]="saveStatus === 'saved'"
+         [class.mje-status--error]="saveStatus === 'error'"
+         *ngIf="saveStatus !== 'idle'">
+      <svg viewBox="0 0 12 12" width="11" height="11" *ngIf="saveStatus === 'saved'">
+        <polyline points="1 6 4.5 9.5 11 3" stroke="currentColor" stroke-width="1.5"
+                  fill="none" stroke-linecap="round"/>
+      </svg>
+      <svg viewBox="0 0 12 12" width="11" height="11" *ngIf="saveStatus === 'error'">
+        <circle cx="6" cy="6" r="5" stroke="currentColor" stroke-width="1.3" fill="none"/>
+        <line x1="6" y1="3.5" x2="6" y2="6.5" stroke="currentColor" stroke-width="1.3"/>
+        <circle cx="6" cy="8.5" r="0.6" fill="currentColor"/>
+      </svg>
+      {{ saveStatus === 'saved' ? 'Saved' : 'Save failed' }}
+    </div>
+  </div>
+
+  <!-- ── JSON validation banner ──────────────────────────────────────────── -->
+  <div class="mje-errors" *ngIf="mode === 'json' && jsonErrors.length > 0">
+    <div class="mje-errors__header">
+      <svg viewBox="0 0 16 16" width="13" height="13">
+        <circle cx="8" cy="8" r="6.5" stroke="#e03131" stroke-width="1.3" fill="none"/>
+        <line x1="8" y1="5" x2="8" y2="8.5" stroke="#e03131" stroke-width="1.4" stroke-linecap="round"/>
+        <circle cx="8" cy="10.5" r="0.7" fill="#e03131"/>
+      </svg>
+      {{ jsonErrors.length }} validation error{{ jsonErrors.length > 1 ? 's' : '' }}
+    </div>
+    <ul class="mje-errors__list">
+      <li *ngFor="let err of jsonErrors">{{ err }}</li>
+    </ul>
+  </div>
+
+ 
+
+  <!-- ── JSON mode — Monaco container ───────────────────────────────────── -->
+  <div class="mje-monaco-wrap" *ngIf="mode === 'json'">
+    <div class="mje-monaco-container" #monacoContainer></div>
+    <div class="mje-monaco-hint">
+      <svg viewBox="0 0 12 12" width="10" height="10">
+        <circle cx="6" cy="6" r="5" stroke="currentColor" stroke-width="1.2" fill="none"/>
+        <path d="M6 5.5v3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+        <circle cx="6" cy="4" r="0.55" fill="currentColor"/>
+      </svg>
+      JSON is validated against the mapping schema in real time. Press
+      <kbd>Ctrl+Space</kbd> for autocomplete.
+    </div>
+  </div>
+
+</div>
