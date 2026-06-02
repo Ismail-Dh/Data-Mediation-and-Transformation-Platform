@@ -79,4 +79,16 @@ export class AuditLogAdminComponent implements OnInit {
     if (status < 400) return 'badge-warning';
     return 'badge-error';
   }
+  getSuccessCount(): number {
+  return this.logs.filter(log => log.httpStatus && log.httpStatus >= 200 && log.httpStatus < 300).length;
+}
+
+getErrorCount(): number {
+  return this.logs.filter(log => log.httpStatus && log.httpStatus >= 400).length;
+}
+
+truncate(str: string, maxLength: number): string {
+  if (!str) return '';
+  return str.length > maxLength ? str.substring(0, maxLength) + '...' : str;
+}
 }

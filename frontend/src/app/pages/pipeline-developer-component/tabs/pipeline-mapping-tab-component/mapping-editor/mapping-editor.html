@@ -1,0 +1,194 @@
+<!-- ╔══════════════════════════════════════════════════════════════╗
+     ║       Mapping Editor — Consumer → Provider                  ║
+     ╚══════════════════════════════════════════════════════════════╝ -->
+
+<div class="me-root" [class.me-dragging]="drag.active">
+
+  <!-- ── Header ────────────────────────────────────────────────────────── -->
+  <div class="me-header">
+    <div class="me-header__left">
+      <span class="me-header__title">Mapping Editor</span>
+      <span class="me-header__sub">
+        Drag a <strong>Consumer</strong> field onto a <strong>Provider</strong> field to create a connection
+      </span>
+    </div>
+    <div class="me-legend">
+      <span class="me-legend__item" *ngFor="let t of MAPPING_TYPES"
+            [style.--dot-color]="typeColor(t)">
+        <span class="me-legend__dot"></span>{{ typeLabel(t) }}
+      </span>
+    </div>
+  </div>
+
+  <!-- ── Loading ───────────────────────────────────────────────────────── -->
+  <div class="me-loading" *ngIf="loading">
+    <span class="me-loading__spinner"></span> Loading…
+  </div>
+
+  <!-- ── Source legend pills ───────────────────────────────────────────── -->
+  <div class="me-origin-bar" *ngIf="!loading">
+    <span class="me-origin-pill me-origin-pill--pipeline">⬤ Pipeline fields</span>
+    <span class="me-origin-pill me-origin-pill--provider">⬤ Provider fields</span>
+    <span class="me-origin-pill me-origin-pill--inferred">⬤ Inferred from rules</span>
+  </div>
+
+  <!-- ── Canvas ────────────────────────────────────────────────────────── -->
+  <div class="me-canvas" #editorCanvas *ngIf="!loading">
+
+    <!-- SVG overlay -->
+    <svg class="me-svg" #svgOverlay aria-hidden="true">
+
+      <!-- Connection shadows + lines -->
+      <g *ngFor="let conn of connections; trackBy: trackConn">
+        <path class="me-conn__shadow" [attr.d]="getConnectionPath(conn)" />
+        <path class="me-conn__line"
+              [attr.d]="getConnectionPath(conn)"
+              [attr.stroke]="connColor(conn)"
+              [class.me-conn--inactive]="!conn.active" />
+      </g>
+
+      <!-- Ghost line while dragging -->
+      <path *ngIf="drag.active" class="me-conn__ghost" [attr.d]="getDragLinePath()" />
+
+      <!-- Type badges — ng-container avoids *ngFor + *ngIf on same element -->
+      <ng-container *ngFor="let conn of connections; trackBy: trackConn">
+        <ng-container *ngIf="getConnectionMidpoint(conn) as mid">
+          <g class="me-badge-group">
+            <rect [attr.x]="mid.x - 36" [attr.y]="mid.y - 10"
+                  width="72" height="20" rx="10"
+                  [attr.fill]="connColor(conn)"
+                  class="me-badge__bg"
+                  (click)="openConfig(conn)" />
+            <text [attr.x]="mid.x" [attr.y]="mid.y + 4"
+                  class="me-badge__text" text-anchor="middle"
+                  (click)="openConfig(conn)">{{ typeLabel(conn.mappingType) }}</text>
+          </g>
+        </ng-container>
+      </ng-container>
+    </svg>
+
+    <!-- ── SOURCE panel (Consumer) ────────────────────────────────────── -->
+    <div class="me-panel me-panel--source" #sourcePanel>
+      <div class="me-panel__header">
+        <span class="me-panel__icon me-panel__icon--consumer">C</span>
+        <span class="me-panel__title">Consumer</span>
+        <span class="me-panel__count">{{ sourceFields.length }} fields</span>
+      </div>
+
+      <div class="me-fields">
+        <div *ngFor="let f of sourceFields; trackBy: trackField"
+             class="me-field me-field--source"
+             [class.me-field--connected]="isSourceConnected(f.fieldPath)"
+             [class.me-field--dragging]="drag.active && drag.sourceField === f.fieldPath"
+             [attr.data-field-id]="'src-' + f.fieldPath"
+             (mousedown)="onFieldMouseDown($event, f)">
+          <span class="me-field__dot" [class.me-field__dot--connected]="isSourceConnected(f.fieldPath)"></span>
+          <span class="me-field__path">{{ f.fieldPath }}</span>
+          <span class="me-field__type">{{ f.fieldType }}</span>
+          <span class="me-field__handle" title="Drag to connect">
+            <svg viewBox="0 0 16 16" width="12" height="12">
+              <circle cx="5" cy="4" r="1.3" fill="currentColor"/>
+              <circle cx="11" cy="4" r="1.3" fill="currentColor"/>
+              <circle cx="5" cy="8" r="1.3" fill="currentColor"/>
+              <circle cx="11" cy="8" r="1.3" fill="currentColor"/>
+              <circle cx="5" cy="12" r="1.3" fill="currentColor"/>
+              <circle cx="11" cy="12" r="1.3" fill="currentColor"/>
+            </svg>
+          </span>
+        </div>
+
+        <div class="me-fields__empty" *ngIf="sourceFields.length === 0">
+          No consumer fields defined for this pipeline.
+        </div>
+      </div>
+    </div>
+
+    <!-- ── TARGET panel (Provider) ────────────────────────────────────── -->
+    <div class="me-panel me-panel--target" #targetPanel>
+      <div class="me-panel__header">
+        <span class="me-panel__icon me-panel__icon--provider">P</span>
+        <span class="me-panel__title">Provider</span>
+        <span class="me-panel__count">{{ targetFields.length }} fields</span>
+
+        <!-- Add provider field button (shown when no providerPipelineId) -->
+        <button class="me-btn me-btn--add"
+                title="Declare a provider field manually"
+                (click)="toggleAddTargetField()">
+          {{ showAddTargetField ? '✕' : '+ Field' }}
+        </button>
+      </div>
+
+      <!-- Manual field addition form -->
+      <div class="me-add-field-form" *ngIf="showAddTargetField">
+        <div class="me-add-field-form__row">
+          <input class="me-add-field-form__input"
+                 [(ngModel)]="newTargetFieldPath"
+                 placeholder="provider.fieldName"
+                 (keyup.enter)="addTargetField()" />
+          <select class="me-add-field-form__select" [(ngModel)]="newTargetFieldType">
+            <option *ngFor="let t of FIELD_TYPES" [value]="t">{{ t }}</option>
+          </select>
+          <button class="me-btn me-btn--primary me-btn--sm" (click)="addTargetField()">Add</button>
+        </div>
+        <div class="me-add-field-form__error" *ngIf="addTargetError">{{ addTargetError }}</div>
+        <div class="me-add-field-form__hint">
+          Declare the field paths that exist in your Provider's payload schema.
+        </div>
+      </div>
+
+      <!-- Provider hint when empty and no provider pipeline configured -->
+      <div class="me-panel__no-provider" *ngIf="targetFields.length === 0 && !showAddTargetField">
+        <svg viewBox="0 0 20 20" width="16" height="16">
+          <circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="1.3" fill="none"/>
+          <path d="M10 6v5M10 13v1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        <span>
+          No provider fields found.
+          <ng-container *ngIf="!providerPipelineId">
+            Use <strong>+ Field</strong> to declare the Provider's target fields,
+            or pass a <code>[providerPipelineId]</code> input.
+          </ng-container>
+        </span>
+      </div>
+
+      <div class="me-fields">
+        <div *ngFor="let f of targetFields; trackBy: trackField"
+             class="me-field me-field--target"
+             [class.me-field--connected]="isTargetConnected(f.fieldPath)"
+             [class.me-field--drop-hover]="drag.active && hoveredTarget === f.fieldPath"
+             [class.me-field--inferred]="f.source === 'inferred'"
+             [attr.data-field-id]="'tgt-' + f.fieldPath"
+             (mouseenter)="onTargetEnter(f.fieldPath)"
+             (mouseleave)="onTargetLeave()">
+
+          <!-- Origin badge -->
+          <span class="me-field__origin"
+                [class.me-field__origin--provider]="f.source === 'provider'"
+                [class.me-field__origin--inferred]="f.source === 'inferred'"
+                [title]="f.source === 'inferred' ? 'Inferred from existing rules' : 'Declared provider field'">
+            {{ f.source === 'inferred' ? '~' : '⬤' }}
+          </span>
+
+          <span class="me-field__type">{{ f.fieldType }}</span>
+          <span class="me-field__path">{{ f.fieldPath }}</span>
+          <span class="me-field__dot me-field__dot--right"
+                [class.me-field__dot--connected]="isTargetConnected(f.fieldPath)"></span>
+
+          <!-- Remove button (only for manually added / inferred fields not in use) -->
+          <button class="me-field__remove"
+                  *ngIf="f.source !== 'pipeline' && canRemoveTarget(f.fieldPath)"
+                  title="Remove this field"
+                  (click)="removeTargetField(f.fieldPath); $event.stopPropagation()">✕</button>
+        </div>
+
+        <div class="me-fields__empty" *ngIf="targetFields.length === 0 && !showAddTargetField">
+          <!-- handled by me-panel__no-provider above -->
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /me-canvas -->
+
+
+
+</div>
