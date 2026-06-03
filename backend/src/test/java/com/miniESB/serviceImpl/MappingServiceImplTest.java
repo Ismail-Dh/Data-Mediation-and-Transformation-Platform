@@ -18,7 +18,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
+import com.miniESB.repository.PayloadRepository;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -33,6 +33,7 @@ class MappingServiceImplTest {
 
     @Mock private MappingRuleRepository mappingRuleRepository;
     @Mock private PipelineRepository    pipelineRepository;
+    @Mock private PayloadRepository     payloadRepository;
 
     private MappingServiceImpl mappingService;
 
@@ -42,10 +43,11 @@ class MappingServiceImplTest {
     void setUp() {
         // ObjectMapper injecté manuellement — pas de Spring context
         mappingService = new MappingServiceImpl(
-                mappingRuleRepository,
-                pipelineRepository,
-                new ObjectMapper()
-        );
+           mappingRuleRepository,
+           pipelineRepository,
+           new ObjectMapper(), 
+           payloadRepository
+       );
 
         pipeline = Pipeline.builder().id(1L).build();
     }

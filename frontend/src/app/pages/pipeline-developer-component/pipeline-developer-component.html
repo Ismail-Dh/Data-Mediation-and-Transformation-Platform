@@ -215,18 +215,18 @@
       [pipelineId]="detailPipeline!.id">
     </app-pipeline-fields-tab>
 
-    <!-- TAB: Payloads -->
-    <app-pipeline-payloads-tab
-      *ngIf="detailTab === 'payloads'"
-      [pipelineId]="detailPipeline!.id">
-    </app-pipeline-payloads-tab>
+  
 
     <!-- TAB: Validation Rules -->
     <app-pipeline-rules-tab
       *ngIf="detailTab === 'rules'"
       [pipelineId]="detailPipeline!.id">
     </app-pipeline-rules-tab>
-
+    <!-- TAB: Payloads -->
+    <app-pipeline-payloads-tab
+      *ngIf="detailTab === 'payloads'"
+      [pipelineId]="detailPipeline!.id">
+    </app-pipeline-payloads-tab>
     <!-- TAB: Mapping Rules -->
     <app-pipeline-mapping-tab
       *ngIf="detailTab === 'mapping'"
