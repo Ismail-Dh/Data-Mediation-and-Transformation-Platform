@@ -1,4 +1,3 @@
-<!-- ===== HEADER ===== -->
 <div class="page">
   <div class="page-header">
     <div class="page-title">
@@ -13,7 +12,6 @@
     </button>
   </div>
 
-  <!-- FILTERS -->
   <div class="toolbar">
     <div class="search-wrap">
       <svg class="search-icon" viewBox="0 0 20 20"><circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" stroke-width="1.5" fill="none"/><line x1="13" y1="13" x2="18" y2="18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
@@ -26,7 +24,6 @@
     <span class="count-badge">{{ filtered.length }} pipeline{{ filtered.length !== 1 ? 's' : '' }}</span>
   </div>
 
-  <!-- CARD GRID -->
   <div class="card-grid" *ngIf="filtered.length > 0">
     <div class="pipeline-card" *ngFor="let p of filtered; trackBy: trackById" (click)="openDetail(p)">
       <div class="card-head">
@@ -54,6 +51,9 @@
       <div class="card-footer">
         <span class="card-date">{{ p.createdAt | date:'MMM dd, yyyy' }}</span>
         <div class="card-actions" (click)="$event.stopPropagation()">
+          <button class="btn btn--secondary btn--sm" (click)="openSandbox(p)">
+            ▶ Sandbox
+          </button>
           <button class="icon-btn icon-btn--edit" title="Edit" (click)="openEdit(p)">
             <svg viewBox="0 0 20 20"><path d="M14.85 2.15a2 2 0 0 1 2.83 2.83L6.5 16.17 2 18l1.83-4.5L14.85 2.15z" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
@@ -65,7 +65,6 @@
     </div>
   </div>
 
-  <!-- EMPTY STATE -->
   <div class="empty-state" *ngIf="filtered.length === 0">
     <svg class="empty-icon" viewBox="0 0 48 48"><rect x="6" y="12" width="36" height="28" rx="4" stroke="currentColor" stroke-width="2" fill="none"/><path d="M16 12V9a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3" stroke="currentColor" stroke-width="2" fill="none"/><line x1="16" y1="24" x2="32" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="16" y1="30" x2="26" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
     <p class="empty-title" *ngIf="!searchQuery && !filterStatus">No pipelines yet</p>
@@ -76,7 +75,6 @@
   </div>
 </div>
 
-<!-- CREATE / EDIT MODAL -->
 <div class="modal-overlay" *ngIf="showModal" (click)="closeModal()">
   <div class="modal" (click)="$event.stopPropagation()">
     <div class="modal-header">
@@ -120,7 +118,6 @@
   </div>
 </div>
 
-<!-- DELETE CONFIRM -->
 <div class="modal-overlay" *ngIf="deletingPipeline" (click)="cancelDelete()">
   <div class="modal modal--sm" (click)="$event.stopPropagation()">
     <div class="modal-header"><h2>Delete pipeline</h2></div>
@@ -132,11 +129,9 @@
   </div>
 </div>
 
-<!-- DETAIL MODAL -->
 <div class="modal-overlay" *ngIf="detailPipeline" (click)="closeDetail()">
   <div class="modal modal--detail modal--wide" (click)="$event.stopPropagation()">
 
-    <!-- ── Header fixe ─────────────────────────────────────────────────── -->
     <div class="modal-header">
       <div class="detail-title">
         <h2>{{ detailPipeline.name }}</h2>
@@ -147,7 +142,6 @@
       </button>
     </div>
 
-    <!-- ── Info-row fixe ───────────────────────────────────────────────── -->
     <div class="detail-info-row">
       <div class="detail-kv">
         <span class="detail-label">Version</span>
@@ -175,7 +169,6 @@
       </div>
     </div>
 
-    <!-- ── Tabs fixe ───────────────────────────────────────────────────── -->
     <div class="detail-tabs">
       <button class="tab-btn" [class.tab-btn--active]="detailTab === 'info'"     (click)="setDetailTab('info')">Overview</button>
       <button class="tab-btn" [class.tab-btn--active]="detailTab === 'fields'"   (click)="setDetailTab('fields')">Schema Fields</button>
@@ -184,9 +177,6 @@
       <button class="tab-btn" [class.tab-btn--active]="detailTab === 'mapping'"  (click)="setDetailTab('mapping')">Mapping Rules</button>
     </div>
 
-    <!-- ── Tab content scrollable ─────────────────────────────────────── -->
-
-    <!-- TAB: Overview -->
     <div class="tab-panel" *ngIf="detailTab === 'info'">
       <div class="detail-body">
         <div class="detail-row"><span class="detail-label">Version</span><span class="detail-val">{{ detailPipeline.version || '—' }}</span></div>
@@ -209,35 +199,57 @@
       </div>
     </div>
 
-    <!-- TAB: Schema Fields -->
     <app-pipeline-fields-tab
       *ngIf="detailTab === 'fields'"
       [pipelineId]="detailPipeline!.id">
     </app-pipeline-fields-tab>
 
-  
-
-    <!-- TAB: Validation Rules -->
     <app-pipeline-rules-tab
       *ngIf="detailTab === 'rules'"
       [pipelineId]="detailPipeline!.id">
     </app-pipeline-rules-tab>
-    <!-- TAB: Payloads -->
+
     <app-pipeline-payloads-tab
       *ngIf="detailTab === 'payloads'"
       [pipelineId]="detailPipeline!.id">
     </app-pipeline-payloads-tab>
-    <!-- TAB: Mapping Rules -->
+
     <app-pipeline-mapping-tab
       *ngIf="detailTab === 'mapping'"
       [pipelineId]="detailPipeline!.id">
     </app-pipeline-mapping-tab>
 
-    <!-- ── Footer fixe ─────────────────────────────────────────────────── -->
     <div class="modal-footer">
       <button class="btn btn--secondary" (click)="closeDetail()">Close</button>
       <button class="btn btn--primary" (click)="openEdit(detailPipeline!); closeDetail()">Edit Pipeline</button>
     </div>
+  </div>
+</div>
 
+<div class="modal-overlay" *ngIf="sandboxPipeline" (click)="closeSandbox()">
+  <div class="modal modal--wide" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div class="detail-title">
+        <h2>Sandbox — {{ sandboxPipeline.name }}</h2>
+        <span class="badge badge--{{ sandboxPipeline.status.toLowerCase() }}">
+          {{ sandboxPipeline.status }}
+        </span>
+      </div>
+      <button class="close-btn" (click)="closeSandbox()">
+        <svg viewBox="0 0 20 20">
+          <line x1="4" y1="4" x2="16" y2="16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <line x1="16" y1="4" x2="4" y2="16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+
+    <app-pipeline-sandbox-tab
+      [pipelineId]="sandboxPipeline.id"
+      [pipeline]="sandboxPipeline">
+    </app-pipeline-sandbox-tab>
+
+    <div class="modal-footer">
+      <button class="btn btn--secondary" (click)="closeSandbox()">Close</button>
+    </div>
   </div>
 </div>
