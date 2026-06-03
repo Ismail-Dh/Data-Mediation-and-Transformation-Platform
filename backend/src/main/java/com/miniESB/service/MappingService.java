@@ -17,4 +17,6 @@ public interface MappingService {
 
     // Mapping execution
     MappingResultResponse applyMappingToPayload(Long pipelineId, String rawContent);
+    MappingResultResponse applyMappingToPayload(Long pipelineId, Long payloadId);
+
 }

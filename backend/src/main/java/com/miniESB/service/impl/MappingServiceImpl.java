@@ -5,11 +5,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.miniESB.domain.entity.MappingRule;
 import com.miniESB.domain.entity.Pipeline;
 import com.miniESB.domain.enums.MappingType;
+import com.miniESB.domain.enums.PayloadStatus;
+import com.miniESB.domain.enums.PipelineStatus;
 import com.miniESB.dto.mapping.MappingResultResponse;
 import com.miniESB.dto.mapping.MappingRuleRequest;
 import com.miniESB.dto.mapping.MappingRuleResponse;
 import com.miniESB.exception.ResourceNotFoundException;
 import com.miniESB.repository.MappingRuleRepository;
+import com.miniESB.repository.PayloadRepository;
 import com.miniESB.repository.PipelineRepository;
 import com.miniESB.service.MappingService;
 import lombok.RequiredArgsConstructor;
@@ -18,8 +21,9 @@ import net.objecthunter.exp4j.Expression;
 import net.objecthunter.exp4j.ExpressionBuilder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import com.miniESB.domain.entity.Payload;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -33,32 +37,42 @@ public class MappingServiceImpl implements MappingService {
     private final MappingRuleRepository mappingRuleRepository;
     private final PipelineRepository    pipelineRepository;
     private final ObjectMapper          objectMapper; // injected by Spring — do not instantiate manually
+    private final PayloadRepository payloadRepository; // ajouter
+
 
     // -------------------------------------------------------------------------
     // CRUD
     // -------------------------------------------------------------------------
 
-    @Override
-    @Transactional
-    public MappingRuleResponse createRule(Long pipelineId, MappingRuleRequest request) {
-        Pipeline pipeline = pipelineRepository.findById(pipelineId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Pipeline not found with id=" + pipelineId));
+@Override
+@Transactional
+public MappingRuleResponse createRule(Long pipelineId, MappingRuleRequest request) {
+    Pipeline pipeline = pipelineRepository.findById(pipelineId)
+            .orElseThrow(() -> new ResourceNotFoundException(
+                    "Pipeline not found with id=" + pipelineId));
 
-        MappingRule rule = MappingRule.builder()
-                .sourceField(request.sourceField())
-                .targetField(request.targetField())
-                .mappingType(request.mappingType())
-                .expression(request.expression())
-                .active(true)
-                .pipeline(pipeline)
-                .build();
+    MappingRule rule = MappingRule.builder()
+            .sourceField(request.sourceField())
+            .targetField(request.targetField())
+            .mappingType(request.mappingType())
+            .expression(request.expression())
+            .active(true)
+            .pipeline(pipeline)
+            .build();
 
-        MappingRule saved = mappingRuleRepository.save(rule);
-        log.info("MappingRule created: id={}, {}→{}, pipeline={}",
-                saved.getId(), saved.getSourceField(), saved.getTargetField(), pipelineId);
-        return toResponse(saved);
+    MappingRule saved = mappingRuleRepository.save(rule);
+    log.info("MappingRule created: id={}, {}→{}, pipeline={}",
+            saved.getId(), saved.getSourceField(), saved.getTargetField(), pipelineId);
+
+    // Dirty-checking : pas besoin de save() explicite — Hibernate détecte le changement
+    if (pipeline.getStatus() == PipelineStatus.DRAFT) {
+        pipeline.setStatus(PipelineStatus.CONFIGURED);
+        // ❌ pipelineRepository.save(pipeline);  ← SUPPRIMER cette ligne
+        log.info("Pipeline id={} status updated to CONFIGURED", pipelineId);
     }
+
+    return toResponse(saved);
+}
 
     @Override
     public List<MappingRuleResponse> getRulesByPipeline(Long pipelineId) {
@@ -98,6 +112,35 @@ public class MappingServiceImpl implements MappingService {
         rule.setActive(false); // soft delete — rule is kept in DB for audit purposes
         mappingRuleRepository.save(rule);
         log.info("MappingRule disabled: id={}, pipeline={}", ruleId, pipelineId);
+    }
+
+    @Override
+    @Transactional
+    public MappingResultResponse applyMappingToPayload(Long pipelineId, Long payloadId) {
+      pipelineRepository.findById(pipelineId)
+            .orElseThrow(() -> new ResourceNotFoundException(
+                    "Pipeline not found with id=" + pipelineId));
+
+       Payload payload = payloadRepository.findById(payloadId)
+            .orElseThrow(() -> new ResourceNotFoundException(
+                    "Payload not found with id=" + payloadId));
+
+       // Vérifier que le payload est VALIDATED avant de mapper
+       if (payload.getStatus() != PayloadStatus.VALIDATED) {
+          throw new IllegalStateException(
+                "Payload id=" + payloadId + " must be VALIDATED before mapping — current status: "
+                + payload.getStatus());
+       }
+
+       Map<String, Object> input  = parseRawContent(payload.getRawContent());
+       Map<String, Object> mapped = applyMapping(pipelineId, input);
+
+       // payload → MAPPED
+       payload.setStatus(PayloadStatus.MAPPED);
+       payloadRepository.save(payload);
+       log.info("Payload mapped: id={}, pipeline={}", payloadId, pipelineId);
+
+       return new MappingResultResponse(pipelineId, input, mapped);
     }
 
     @Override
@@ -146,7 +189,7 @@ public class MappingServiceImpl implements MappingService {
         }
 
         // Copy all fields first — unmapped fields are kept as-is
-        Map<String, Object> output = new HashMap<>(input);
+        Map<String, Object> output = new LinkedHashMap<>(input);
 
         for (MappingRule rule : rules) {
             if (rule.getMappingType() == MappingType.FIELD_PLACEMENT) {
@@ -729,7 +772,7 @@ public class MappingServiceImpl implements MappingService {
     // Parses a raw JSON string into a Map. Throws if the content is not valid JSON.
     private Map<String, Object> parseRawContent(String rawContent) {
         try {
-            return objectMapper.readValue(rawContent, new TypeReference<>() {});
+        return objectMapper.readValue(rawContent, new TypeReference<LinkedHashMap<String, Object>>() {});
         } catch (Exception e) {
             throw new IllegalArgumentException("Invalid JSON content: " + e.getMessage());
         }

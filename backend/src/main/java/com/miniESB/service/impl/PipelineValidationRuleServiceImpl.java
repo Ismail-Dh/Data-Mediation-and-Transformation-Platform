@@ -2,6 +2,7 @@ package com.miniESB.service.impl;
 
 import com.miniESB.domain.entity.Pipeline;
 import com.miniESB.domain.entity.ValidationRule;
+import com.miniESB.domain.enums.PipelineStatus;
 import com.miniESB.dto.pipelineValidationRule.PipelineValidationRuleRequest;
 import com.miniESB.dto.pipelineValidationRule.PipelineValidationRuleResponse;
 import com.miniESB.exception.ResourceNotFoundException;
@@ -24,8 +25,7 @@ public class PipelineValidationRuleServiceImpl implements PipelineValidationRule
     private final PipelineRepository       pipelineRepository;
 
     // ── ADD ───────────────────────────────────────────────────────────────────
-
-    @Override
+@Override
     @Transactional
     public PipelineValidationRuleResponse addRule(Long pipelineId, PipelineValidationRuleRequest request) {
         Pipeline pipeline = findPipelineOrThrow(pipelineId);
@@ -76,7 +76,16 @@ public class PipelineValidationRuleServiceImpl implements PipelineValidationRule
                     request.fieldName(), request.ruleType(), pipelineId);
         }
 
+        // 1 — Sauvegarde de la règle de validation
         ValidationRule saved = validationRuleRepository.save(rule);
+
+        // 2 — Mutation du statut du pipeline si celui-ci est en brouillon (DRAFT)
+        if (pipeline.getStatus() == PipelineStatus.DRAFT) {
+            pipeline.setStatus(PipelineStatus.CONFIGURED);
+            pipelineRepository.save(pipeline);
+            log.info("Pipeline id={} status updated to CONFIGURED", pipelineId);
+        }
+
         return toResponse(saved, pipelineId);
     }
 
