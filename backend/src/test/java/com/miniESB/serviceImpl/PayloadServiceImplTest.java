@@ -38,7 +38,7 @@ import static org.mockito.Mockito.*;
 @DisplayName("PayloadServiceImpl — unit tests")
 class PayloadServiceImplTest {
 
-    @Mock private PayloadRepository          payloadRepository;
+    @Mock private PayloadRepository         payloadRepository;
     @Mock private PipelineRepository         pipelineRepository;
     @Mock private PipelineFieldRepository    pipelineFieldRepository;
     @Mock private StructuralValidatorService structuralValidatorService;
@@ -120,6 +120,8 @@ class PayloadServiceImplTest {
                     .id(11L).rawContent("{}")
                     .format(DataFormat.JSON).status(PayloadStatus.FAILED)
                     .receivedAt(LocalDateTime.now()).pipeline(pipeline).build();
+            
+            // Stubbing requires flexibility because save() is called twice with different entity states
             when(payloadRepository.save(any())).thenReturn(failedPayload);
 
             assertThatThrownBy(() -> payloadService.receivePayload(1L, validRequest))
@@ -130,10 +132,12 @@ class PayloadServiceImplTest {
                         assertThat(pve.getViolations().get(0).fieldPath()).isEqualTo("orderId");
                     });
 
-            // FAILED payload must still be persisted
+            // ✅ Fix: Capturing across multiple invocations (Initial Save + Failed Save)
             ArgumentCaptor<Payload> captor = ArgumentCaptor.forClass(Payload.class);
-            verify(payloadRepository).save(captor.capture());
-            assertThat(captor.getValue().getStatus()).isEqualTo(PayloadStatus.FAILED);
+            verify(payloadRepository, times(2)).save(captor.capture());
+            
+            // The final status update should be FAILED
+            assertThat(captor.getAllValues().get(1).getStatus()).isEqualTo(PayloadStatus.FAILED);
         }
 
         @Test
@@ -157,10 +161,12 @@ class PayloadServiceImplTest {
 
             payloadService.receivePayload(1L, validRequest);
 
+            // ✅ Fix: Verify both saves and inspect the initial properties
             ArgumentCaptor<Payload> captor = ArgumentCaptor.forClass(Payload.class);
-            verify(payloadRepository).save(captor.capture());
-            assertThat(captor.getValue().getFormat()).isEqualTo(DataFormat.JSON);
-            assertThat(captor.getValue().getPipeline()).isEqualTo(pipeline);
+            verify(payloadRepository, times(2)).save(captor.capture());
+            
+            assertThat(captor.getAllValues().get(0).getFormat()).isEqualTo(DataFormat.JSON);
+            assertThat(captor.getAllValues().get(0).getPipeline()).isEqualTo(pipeline);
         }
     }
 

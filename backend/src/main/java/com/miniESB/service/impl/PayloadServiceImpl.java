@@ -5,7 +5,6 @@ import com.miniESB.domain.entity.Pipeline;
 import com.miniESB.domain.entity.PipelineField;
 import com.miniESB.domain.enums.DataFormat;
 import com.miniESB.domain.enums.PayloadStatus;
-import com.miniESB.domain.enums.PipelineStatus; // Ajout potentiel selon votre package d'enums
 import com.miniESB.dto.payload.PayloadRequest;
 import com.miniESB.dto.payload.PayloadResponse;
 import com.miniESB.exception.PayloadValidationException;
@@ -78,9 +77,7 @@ public class PayloadServiceImpl implements PayloadService {
         payload.setStatus(PayloadStatus.VALIDATED);
         payloadRepository.save(payload);
 
-        // 6 — pipeline → VALIDATED
-        pipeline.setStatus(PipelineStatus.VALIDATED);
-        pipelineRepository.save(pipeline);
+        
 
         log.info("Payload validated: id={}, pipeline={}", payload.getId(), pipelineId);
         return toResponse(payload);
