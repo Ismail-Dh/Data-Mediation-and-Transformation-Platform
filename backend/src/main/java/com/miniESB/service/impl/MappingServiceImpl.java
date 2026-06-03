@@ -136,8 +136,7 @@ public class MappingServiceImpl implements MappingService {
         return new MappingResultResponse(pipelineId, input, mapped);
     }
 
-    // Applies active FIELD_PLACEMENT rules to the parsed input.
-    // Fields without a matching rule are passed through unchanged.
+
     private Map<String, Object> applyMapping(Long pipelineId, Map<String, Object> input) {
         List<MappingRule> rules = mappingRuleRepository.findByPipelineIdAndActiveTrue(pipelineId);
 
@@ -179,14 +178,13 @@ public class MappingServiceImpl implements MappingService {
         String src = rule.getSourceField();
         String tgt = rule.getTargetField();
 
-        // ── Cas 1 : array  "items[].id" ────────────────────────────────────────
+
         if (src.contains("[].")) {
             processArrayField(rule, input, output);
             return;
         }
 
-        // ── Cas 2 : dot-notation  "client.email" ───────────────────────────────
-        // ── Cas 3 : plat  "email"  (même code — getNestedValue gère les deux) ──
+
         Object value = getNestedValue(input, src);
         if (value == null) {
             log.warn("MappingRule id={} — sourceField '{}' not found in input",
@@ -194,13 +192,12 @@ public class MappingServiceImpl implements MappingService {
             return;
         }
 
-        removeNestedKey(output, src);          // supprime l'ancienne clé
-        setNestedValue(output, tgt, value);    // insère sous le nouveau chemin
+        removeNestedKey(output, src);
+        setNestedValue(output, tgt, value);
         log.debug("Mapped '{}' → '{}'", src, tgt);
     }
 
-    // ── Lire une valeur en dot-notation ────────────────────────────────────────
-// "client.email" → traverse Map niveau par niveau
+
     @SuppressWarnings("unchecked")
     private Object getNestedValue(Map<String, Object> map, String path) {
         String[] keys = path.split("\\.");
@@ -212,8 +209,7 @@ public class MappingServiceImpl implements MappingService {
         return current;
     }
 
-    // ── Écrire une valeur en dot-notation ──────────────────────────────────────
-// "client.contact.email" → crée les Map intermédiaires si besoin
+
     @SuppressWarnings("unchecked")
     private void setNestedValue(Map<String, Object> map, String path, Object value) {
         String[] keys = path.split("\\.");
@@ -225,8 +221,7 @@ public class MappingServiceImpl implements MappingService {
         current.put(keys[keys.length - 1], value);
     }
 
-    // ── Supprimer une clé en dot-notation ─────────────────────────────────────
-// nécessaire pour ne pas garder l'ancienne clé source dans output
+
     @SuppressWarnings("unchecked")
     private void removeNestedKey(Map<String, Object> map, String path) {
         String[] keys = path.split("\\.");
@@ -239,7 +234,6 @@ public class MappingServiceImpl implements MappingService {
         current.remove(keys[keys.length - 1]);
     }
 
-    // ── Traiter un champ de type array  "items[].id" ──────────────────────────
     @SuppressWarnings("unchecked")
     private void processArrayField(MappingRule rule,
                                    Map<String, Object> input,
@@ -247,12 +241,10 @@ public class MappingServiceImpl implements MappingService {
         String src = rule.getSourceField();
         String tgt = rule.getTargetField();
 
-        // "items[].id"  →  arrayPath="items"  subSrc="id"
         int sep = src.indexOf("[].");
         String arrayPath = src.substring(0, sep);
         String subSrc    = src.substring(sep + 3);
 
-        // subTgt : même logique sur le targetField s'il est aussi de type array
         String subTgt = tgt.contains("[].") ? tgt.substring(tgt.indexOf("[].") + 3) : tgt;
         String tgtArray = tgt.contains("[].") ? tgt.substring(0, tgt.indexOf("[].")) : arrayPath;
 
@@ -265,7 +257,6 @@ public class MappingServiceImpl implements MappingService {
 
         List<Object> items = (List<Object>) arrayObj;
 
-        // Récupère (ou crée) la liste cible dans output
         List<Object> outItems = (List<Object>)
                 ((Map<String, Object>) output
                         .computeIfAbsent(tgtArray, k -> new java.util.ArrayList<>()));
@@ -303,11 +294,9 @@ public class MappingServiceImpl implements MappingService {
         Object transformed;
 
         try {
-            // CONCAT lit plusieurs champs de l'input — cas spécial
             if (expr.startsWith("CONCAT:")) {
                 transformed = applyConcat(expr, input);
             } else {
-                // toutes les autres transformations travaillent sur une valeur unique
                 Object raw = getNestedValue(input, rule.getSourceField());
                 if (raw == null) {
                     log.warn("VALUE_TRANSFORM rule id={} — sourceField '{}' not found in input",
@@ -331,15 +320,13 @@ public class MappingServiceImpl implements MappingService {
     private Object transformSingleValue(Object raw, String expr) {
         String s = raw.toString();
 
-        // ── Famille teal : String simple ───────────────────────────────────────
         if (expr.equalsIgnoreCase("UPPERCASE")) return s.toUpperCase();
         if (expr.equalsIgnoreCase("LOWERCASE")) return s.toLowerCase();
         if (expr.equalsIgnoreCase("TRIM"))      return s.trim();
 
         // ── Famille amber : extraction ─────────────────────────────────────────
         // expression = "SPLIT:séparateur:index"
-        // ex: "SPLIT:@:0"  sur "john@example.com"  → "john"
-        // ex: "SPLIT:@:1"  sur "john@example.com"  → "example.com"
+
         if (expr.toUpperCase().startsWith("SPLIT:")) {
             String[] parts = expr.split(":", 3);
             if (parts.length < 3)
@@ -357,13 +344,12 @@ public class MappingServiceImpl implements MappingService {
         // expression = "REGEX_REPLACE:pattern:replacement"
         // le replacement peut être vide → "REGEX_REPLACE:[^0-9]:"
         if (expr.toUpperCase().startsWith("REGEX_REPLACE:")) {
-            // split en 3 parties max — le replacement peut contenir des ":"
             String body = expr.substring("REGEX_REPLACE:".length());
             int sepIdx = body.indexOf(":");
             if (sepIdx < 0)
                 throw new IllegalArgumentException("REGEX_REPLACE format: REGEX_REPLACE:pattern:replacement");
             String pattern     = body.substring(0, sepIdx);
-            String replacement = body.substring(sepIdx + 1); // peut être vide
+            String replacement = body.substring(sepIdx + 1);
             return s.replaceAll(pattern, replacement);
         }
 
@@ -371,16 +357,14 @@ public class MappingServiceImpl implements MappingService {
     }
 
     // expression = "CONCAT:séparateur:champ1:champ2:..."
-// ex: "CONCAT: :firstName:lastName"  → "John Doe"
-// ex: "CONCAT:-:year:month:day"      → "2024-01-15"
+
     private Object applyConcat(String expr, Map<String, Object> input) {
-        // split en 4+ parties : ["CONCAT", séparateur, champ1, champ2, ...]
-        String[] parts = expr.split(":", -1); // -1 conserve les séparateurs vides
+        String[] parts = expr.split(":", -1);
         if (parts.length < 4)
             throw new IllegalArgumentException(
                     "CONCAT format: CONCAT:separator:field1:field2[:field3...]");
 
-        String separator = parts[1]; // peut être "" pour concaténation sans séparateur
+        String separator = parts[1];
         StringBuilder sb = new StringBuilder();
         for (int i = 2; i < parts.length; i++) {
             Object val = getNestedValue(input, parts[i].trim());
@@ -404,15 +388,12 @@ public class MappingServiceImpl implements MappingService {
         if (expr.equals("FLATTEN")) {
             applyFlatten(rule, input, output);
         } else {
-            // pas d'expression → NEST par défaut
-            // le chemin cible est donné par targetField (ex: "contact.mail")
+
             applyNest(rule, input, output);
         }
     }
 
-    // Déplace sourceField vers le chemin imbriqué targetField.
-// Ex: sourceField="email", targetField="contact.mail"
-// {"email":"a@b.com"} → {"contact":{"mail":"a@b.com"}}
+
     private void applyNest(MappingRule rule,
                            Map<String, Object> input,
                            Map<String, Object> output) {
@@ -423,21 +404,15 @@ public class MappingServiceImpl implements MappingService {
             return;
         }
 
-        // Supprime l'ancien emplacement dans output
         removeNestedKey(output, rule.getSourceField());
 
-        // Crée les Map intermédiaires et insère la valeur au chemin cible
         setNestedValue(output, rule.getTargetField(), value);
 
         log.debug("RESTRUCTURING/NEST '{}' → '{}'",
                 rule.getSourceField(), rule.getTargetField());
     }
 
-    // Explose toutes les clés d'un sous-objet vers la racine de output,
-// en préfixant chaque clé par le chemin parent.
-// Ex: sourceField="contact"
-// {"contact":{"mail":"a@b.com","phone":"0600"}}
-// → {"contact.mail":"a@b.com","contact.phone":"0600"}
+
     @SuppressWarnings("unchecked")
     private void applyFlatten(MappingRule rule,
                               Map<String, Object> input,
@@ -452,21 +427,17 @@ public class MappingServiceImpl implements MappingService {
 
         Map<String, Object> subMap = (Map<String, Object>) subObj;
 
-        // Préfixe = sourceField (ex: "contact") — conserve la traçabilité
         String prefix = rule.getSourceField();
 
-        // Aplatit récursivement (gère les objets imbriqués dans l'objet)
         flattenInto(output, subMap, prefix);
 
-        // Supprime l'objet original de output
         removeNestedKey(output, rule.getSourceField());
 
         log.debug("RESTRUCTURING/FLATTEN '{}' → {} clés aplaties",
                 rule.getSourceField(), subMap.size());
     }
 
-    // Parcourt récursivement subMap et insère chaque feuille dans target
-// avec la clé préfixée par path.
+
     @SuppressWarnings("unchecked")
     private void flattenInto(Map<String, Object> target,
                              Map<String, Object> subMap,
@@ -474,7 +445,6 @@ public class MappingServiceImpl implements MappingService {
         for (Map.Entry<String, Object> entry : subMap.entrySet()) {
             String fullKey = path + "." + entry.getKey();
             if (entry.getValue() instanceof Map) {
-                // récursion — sous-objet dans le sous-objet
                 flattenInto(target, (Map<String, Object>) entry.getValue(), fullKey);
             } else {
                 target.put(fullKey, entry.getValue());
@@ -502,7 +472,6 @@ public class MappingServiceImpl implements MappingService {
             return;
         }
 
-        // targetField peut être différent de sourceField (renommage + conversion simultané)
         removeNestedKey(output, rule.getSourceField());
         setNestedValue(output, rule.getTargetField(), converted);
         log.debug("FORMAT_CHANGE '{}' → '{}' ({})", rule.getSourceField(), rule.getTargetField(), rule.getExpression());
@@ -577,9 +546,7 @@ public class MappingServiceImpl implements MappingService {
 
 
 
-    //
-    // sourceField est ignoré — tous les champs source viennent de l'expression.
-// targetField = nom du nouveau champ créé dans output.
+
     private void applyCalculatedField(MappingRule rule,
                                       Map<String, Object> input,
                                       Map<String, Object> output) {
@@ -618,9 +585,7 @@ public class MappingServiceImpl implements MappingService {
                 up.startsWith("MAX:");
     }
 
-    // Remplace chaque {champ} par sa valeur numérique issue de input,
-// puis évalue l'expression via javax.script (Nashorn/Rhino — inclus dans le JDK).
-// Supporte : + - * / % () et les constantes numériques.
+
     private Object evaluateArithmetic(String expr, Map<String, Object> input) {
         String resolved = expr;
         java.util.regex.Matcher m =
@@ -639,28 +604,23 @@ public class MappingServiceImpl implements MappingService {
             resolved = resolved.replace(m.group(0), val.toString());
         }
 
-        // exp4j 0.4.8 — evaluate() retourne un double primitif
-        // les deux exceptions possibles sont RuntimeException et ses sous-classes
+
         try {
             return new net.objecthunter.exp4j.ExpressionBuilder(resolved)
                     .build()
-                    .evaluate();                    // retourne double — pas besoin de cast
-        } catch (RuntimeException e) {             // couvre IllegalArgumentException + tout ce qu'exp4j lève
+                    .evaluate();
+        } catch (RuntimeException e) {
             throw new IllegalArgumentException(
                     "ARITHMETIC — invalid expression '" + resolved + "': " + e.getMessage());
         }
     }
-    // Syntaxe : IF:champ:op:valeurComparee:siVrai:siFaux
-// op supportés : eq ne gt lt gte lte contains
-// Exemple : "IF:montant:gt:1000:VIP:STD"
+
     private Object evaluateConditional(String expr, Map<String, Object> input) {
-        // split en 6 parties max — siVrai/siFaux peuvent contenir des ":"
         String[] parts = expr.split(":", 6);
         if (parts.length < 6)
             throw new IllegalArgumentException(
                     "IF format: IF:field:op:compareValue:ifTrue:ifFalse — got: " + expr);
 
-        // parts[0] = "IF", [1] = champ, [2] = op, [3] = valeur, [4] = siVrai, [5] = siFaux
         String fieldName    = parts[1].trim();
         String op           = parts[2].trim().toLowerCase();
         String compareValue = parts[3].trim();
@@ -684,7 +644,6 @@ public class MappingServiceImpl implements MappingService {
             case "ne"       -> !strVal.equalsIgnoreCase(compareValue);
             case "contains" -> strVal.toLowerCase().contains(compareValue.toLowerCase());
 
-            // Comparaisons numériques
             case "gt", "lt", "gte", "lte" -> {
                 double fieldNum   = Double.parseDouble(strVal);
                 double compareNum = Double.parseDouble(compareValue);
@@ -700,19 +659,15 @@ public class MappingServiceImpl implements MappingService {
         };
     }
 
-    // Syntaxe : OP:arrayField[].subField
-// COUNT accepte aussi : COUNT:arrayField[] (sans sous-champ)
-// Exemple : "SUM:items[].prix"   "COUNT:items[]"   "AVG:lignes[].quantite"
+
     @SuppressWarnings("unchecked")
     private Object evaluateAggregation(String expr, Map<String, Object> input) {
         String up   = expr.toUpperCase();
         int    sep  = expr.indexOf(":");
         String op   = expr.substring(0, sep).toUpperCase();
-        String path = expr.substring(sep + 1).trim();   // "items[].prix"
+        String path = expr.substring(sep + 1).trim();
 
-        // Sépare le chemin array du sous-champ
-        // "items[].prix" → arrayPath="items", subField="prix"
-        // "items[]"      → arrayPath="items", subField=null (COUNT seul)
+
         String arrayPath;
         String subField;
 
@@ -735,13 +690,11 @@ public class MappingServiceImpl implements MappingService {
 
         java.util.List<Object> items = (java.util.List<Object>) arrayObj;
 
-        // COUNT ne nécessite pas de sous-champ
         if (op.equals("COUNT")) return items.size();
 
         if (subField == null)
             throw new IllegalArgumentException(op + " requires a sub-field (e.g. items[].prix)");
 
-        // Extrait les valeurs numériques du sous-champ dans chaque item
         final String sf = subField;
         java.util.List<Double> values = items.stream()
                 .filter(item -> item instanceof Map)
