@@ -120,4 +120,20 @@ public class PipelineController {
     public ResponseEntity<List<PipelineResponse>> getAllPipelines() {
         return ResponseEntity.ok(pipelineService.getAllPipelines());
     }
+    @Operation(summary = "Manually validate a pipeline — marks it as ready")
+@PatchMapping("/{pipelineId}/validate")
+@PreAuthorize("hasAnyRole('DEVELOPER', 'ADMIN')")
+public ResponseEntity<PipelineResponse> validatePipeline(
+        @PathVariable Long pipelineId) {
+    return ResponseEntity.ok(pipelineService.validatePipeline(pipelineId));
+}
+
+@Operation(summary = "Revert a validated pipeline back to CONFIGURED")
+@PatchMapping("/{pipelineId}/revert")
+@PreAuthorize("hasAnyRole('DEVELOPER', 'ADMIN')")
+public ResponseEntity<PipelineResponse> revertPipeline(
+        @PathVariable Long pipelineId) {
+    return ResponseEntity.ok(pipelineService.revertPipeline(pipelineId));
+}
+
 }

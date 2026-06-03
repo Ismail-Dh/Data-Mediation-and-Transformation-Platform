@@ -1,0 +1,403 @@
+$accent:    #3b5bdb;
+$green:     #2e7d32;
+$danger:    #c62828;
+$border:    #e8e8e8;
+$text-main: #1a1a2e;
+$text-sub:  #6b7280;
+$radius-sm: 6px;
+$radius-md: 10px;
+$radius-lg: 14px;
+
+// ── Panel ─────────────────────────────────────────────────────────────────────
+.sandbox-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.5rem 2rem;
+}
+
+// ── Section card ──────────────────────────────────────────────────────────────
+.sandbox-section {
+  background: #fff;
+  border: 1px solid $border;
+  border-radius: $radius-lg;
+  padding: 1.25rem 1.5rem;
+
+  &--result {
+    border-color: #c3d7f7;
+    background: #fafcff;
+  }
+}
+
+// ── Section header ────────────────────────────────────────────────────────────
+.section-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.section-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  svg { width: 16px; height: 16px; }
+
+  &--status { background: #e8f5e9; color: $green; }
+  &--run    { background: #e8eaf6; color: $accent; svg { width: 12px; height: 12px; } }
+  &--result { background: #e3f2fd; color: #1565c0; }
+}
+
+.section-title {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: $text-main;
+  margin-bottom: 2px;
+}
+
+.section-sub {
+  display: block;
+  font-size: 0.75rem;
+  color: $text-sub;
+}
+
+// ── Status bar ────────────────────────────────────────────────────────────────
+.status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  background: #f8f9fb;
+  border-radius: $radius-md;
+  padding: 0.85rem 1rem;
+  border: 1px solid #eef0f4;
+}
+
+.status-display {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.status-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: $text-sub;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.status-btns {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+// ── Badges ────────────────────────────────────────────────────────────────────
+.badge {
+  display: inline-block;
+  padding: 3px 12px;
+  border-radius: 20px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+
+  &--draft      { background: #fef3e2; color: #b7610c; }
+  &--configured { background: #e3f2fd; color: #1565c0; }
+  &--validated  { background: #e8f5e9; color: $green; }
+}
+
+// ── Buttons ───────────────────────────────────────────────────────────────────
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0.5rem 1rem;
+  border-radius: $radius-md;
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  font-family: inherit;
+  transition: all 0.15s;
+
+  svg { width: 13px; height: 13px; flex-shrink: 0; }
+
+  &:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  &--validate {
+    background: #e8f5e9;
+    color: $green;
+    border: 1px solid #a5d6a7;
+    &:hover:not(:disabled) { background: #d7eed8; }
+  }
+
+  &--revert {
+    background: #f5f5f5;
+    color: $text-sub;
+    border: 1px solid $border;
+    &:hover:not(:disabled) { background: #ebebeb; color: $text-main; }
+  }
+
+  &--run {
+    background: $accent;
+    color: #fff;
+    padding: 0.6rem 1.4rem;
+    font-size: 0.88rem;
+    &:hover:not(:disabled) { background: #2f4ac0; }
+  }
+}
+
+// ── Spinner ───────────────────────────────────────────────────────────────────
+.spinner {
+  width: 13px;
+  height: 13px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+// ── Form ──────────────────────────────────────────────────────────────────────
+.sandbox-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.format-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.form-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: $text-sub;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
+.format-pills {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.format-pill {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid $border;
+  background: #f5f5f5;
+  color: $text-sub;
+  font-family: inherit;
+  transition: all 0.12s;
+
+  &--active {
+    background: #e8eaf6;
+    color: $accent;
+    border-color: #c5cae9;
+  }
+
+  &:hover:not(.format-pill--active) {
+    background: #ebebeb;
+    color: $text-main;
+  }
+}
+
+.payload-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.payload-textarea {
+  width: 100%;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid $border;
+  border-radius: $radius-md;
+  font-family: monospace;
+  font-size: 0.82rem;
+  line-height: 1.55;
+  color: $text-main;
+  background: #fff;
+  resize: vertical;
+  box-sizing: border-box;
+  transition: border-color 0.15s;
+
+  &::placeholder { color: #bbb; }
+  &:focus { outline: none; border-color: $accent; box-shadow: 0 0 0 3px rgba(59,91,219,.08); }
+}
+
+// ── Steps ─────────────────────────────────────────────────────────────────────
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin-bottom: 1.25rem;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.85rem 1rem;
+  border-radius: $radius-md;
+  border: 1px solid $border;
+  background: #fff;
+
+  &--ok   { border-color: #a5d6a7; background: #f6fdf7; }
+  &--fail { border-color: #ffcdd2; background: #fff8f8; }
+  &--skip { border-color: #e8e8e8; background: #fafafa; }
+}
+
+.step-connector {
+  width: 2px;
+  height: 12px;
+  background: #a5d6a7;
+  margin-left: 22px;
+}
+
+.step-dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 0.85rem;
+
+  svg { width: 12px; height: 12px; }
+
+  .step--ok   & { background: #e8f5e9; color: $green; }
+  .step--fail & { background: #fce4ec; color: $danger; }
+  .step--skip & { background: #f0f0f0; color: #bbb; font-weight: 600; }
+}
+
+.step-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.step-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: $text-main;
+}
+
+.step-msg {
+  font-size: 0.75rem;
+  color: $text-sub;
+}
+
+.step-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+
+  &--ok     { background: #e8f5e9; color: $green; }
+  &--fail   { background: #fce4ec; color: $danger; }
+  &--mapped { background: #e3f2fd; color: #1565c0; }
+}
+
+// ── Payload diff ──────────────────────────────────────────────────────────────
+.payload-diff {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.diff-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.diff-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+
+  svg { width: 10px; height: 10px; flex-shrink: 0; }
+
+  &--original { color: $text-sub; }
+  &--mapped   { color: #1565c0; }
+}
+
+.diff-pre {
+  background: #f8f9fb;
+  border: 1px solid $border;
+  border-radius: $radius-md;
+  padding: 0.85rem 1rem;
+  font-family: monospace;
+  font-size: 0.78rem;
+  line-height: 1.6;
+  color: $text-main;
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 220px;
+  overflow-y: auto;
+  margin: 0;
+
+  &--mapped {
+    border-color: #90caf9;
+    background: #f0f7ff;
+    color: #0d47a1;
+  }
+}
+
+.diff-arrow {
+  width: 28px;
+  height: 24px;
+  color: #bbb;
+  flex-shrink: 0;
+  margin-top: 1.85rem;
+
+  svg { width: 24px; height: 24px; }
+}
+
+// ── Errors ────────────────────────────────────────────────────────────────────
+.sandbox-error,
+.status-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0.65rem 0.9rem;
+  background: #fff0f0;
+  border: 1px solid #ffcdd2;
+  border-radius: $radius-md;
+  font-size: 0.82rem;
+  color: $danger;
+  margin-top: 0.5rem;
+
+  svg { width: 14px; height: 14px; flex-shrink: 0; }
+}

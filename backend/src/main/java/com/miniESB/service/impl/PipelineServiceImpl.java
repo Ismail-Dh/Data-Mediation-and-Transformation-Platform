@@ -21,7 +21,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
-
+import lombok.extern.slf4j.Slf4j;
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class PipelineServiceImpl implements PipelineService {
@@ -136,6 +137,44 @@ public class PipelineServiceImpl implements PipelineService {
             throw new AccessDeniedException("You are not the owner of this pipeline");
         }
     }
+    @Override
+@Transactional
+public PipelineResponse validatePipeline(Long pipelineId) {
+    Pipeline pipeline = pipelineRepository.findById(pipelineId)
+            .orElseThrow(() -> new ResourceNotFoundException(
+                    "Pipeline not found with id=" + pipelineId));
+
+    if (pipeline.getStatus() != PipelineStatus.CONFIGURED) {
+        throw new IllegalStateException(
+                "Pipeline must be CONFIGURED before validation — current status: "
+                + pipeline.getStatus());
+    }
+
+    pipeline.setStatus(PipelineStatus.VALIDATED);
+    pipelineRepository.save(pipeline);
+    log.info("Pipeline id={} manually validated", pipelineId);
+    return toResponse(pipeline);
+}
+
+@Override
+@Transactional
+public PipelineResponse revertPipeline(Long pipelineId) {
+    Pipeline pipeline = pipelineRepository.findById(pipelineId)
+            .orElseThrow(() -> new ResourceNotFoundException(
+                    "Pipeline not found with id=" + pipelineId));
+
+    if (pipeline.getStatus() != PipelineStatus.VALIDATED) {
+        throw new IllegalStateException(
+                "Pipeline must be VALIDATED to revert — current status: "
+                + pipeline.getStatus());
+    }
+
+    pipeline.setStatus(PipelineStatus.CONFIGURED);
+    pipelineRepository.save(pipeline);
+    log.info("Pipeline id={} reverted to CONFIGURED", pipelineId);
+    return toResponse(pipeline);
+}
+
 
     private PipelineResponse toResponse(Pipeline p) {
         return new PipelineResponse(
