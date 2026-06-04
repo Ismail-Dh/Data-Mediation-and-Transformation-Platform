@@ -73,6 +73,28 @@ public MappingRuleResponse createRule(Long pipelineId, MappingRuleRequest reques
 
     return toResponse(saved);
 }
+    @Override
+    @Transactional
+    public MappingRuleResponse updateRule(Long pipelineId, Long ruleId, MappingRuleRequest request) {
+        MappingRule rule = mappingRuleRepository.findById(ruleId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "MappingRule not found with id=" + ruleId));
+
+        if (!rule.getPipeline().getId().equals(pipelineId)) {
+            throw new ResourceNotFoundException(
+                    "MappingRule id=" + ruleId + " does not belong to pipeline id=" + pipelineId);
+        }
+
+        rule.setSourceField(request.sourceField());
+        rule.setTargetField(request.targetField());
+        rule.setMappingType(request.mappingType());
+        rule.setExpression(request.expression());
+        // active status is preserved — update never disables the rule
+
+        MappingRule updated = mappingRuleRepository.save(rule);
+        log.info("MappingRule updated: id={}, pipeline={}", ruleId, pipelineId);
+        return toResponse(updated);
+    }
 
     @Override
     public List<MappingRuleResponse> getRulesByPipeline(Long pipelineId) {

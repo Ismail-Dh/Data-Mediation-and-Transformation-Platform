@@ -14,6 +14,7 @@ public interface MappingService {
     List<MappingRuleResponse> getAllRulesByPipeline(Long pipelineId);
     void deleteRule(Long pipelineId, Long ruleId);
     MappingRuleResponse activateRule(Long pipelineId, Long ruleId);
+    MappingRuleResponse updateRule(Long pipelineId, Long ruleId, MappingRuleRequest request);
 
     // Mapping execution
     MappingResultResponse applyMappingToPayload(Long pipelineId, String rawContent);

@@ -38,7 +38,7 @@ public class PipelineFieldServiceImpl implements PipelineFieldService {
                 .fieldPath(request.fieldPath())
                 .fieldType(request.fieldType())
                 .required(request.required())
-                .nullable(request.nullable())
+                .nullable(!request.required())
                 .pipeline(pipeline)
                 .build();
 
@@ -71,7 +71,7 @@ public class PipelineFieldServiceImpl implements PipelineFieldService {
         field.setFieldPath(request.fieldPath());
         field.setFieldType(request.fieldType());
         field.setRequired(request.required());
-        field.setNullable(request.nullable());
+        field.setNullable(!request.required());
 
         PipelineField updated = pipelineFieldRepository.save(field);
         log.info("PipelineField updated: id={}, pipeline={}", updated.getId(), pipelineId);
