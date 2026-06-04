@@ -22,10 +22,8 @@ import net.objecthunter.exp4j.ExpressionBuilder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.miniESB.domain.entity.Payload;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -231,10 +229,50 @@ public MappingRuleResponse createRule(Long pipelineId, MappingRuleRequest reques
             }
         }
 
-        return output;
+        return reorderByInput(input, output, rules);
+
     }
+    private Map<String, Object> reorderByInput(Map<String, Object> input,
+                                               Map<String, Object> output,
+                                               List<MappingRule> rules) {
+        // Build a lookup: top-level sourceField → top-level targetField
+        Map<String, String> srcToTgt = new LinkedHashMap<>();
+        for (MappingRule rule : rules) {
+            String src = rule.getSourceField();
+            String tgt = rule.getTargetField();
+            if (src == null || tgt == null || src.equals("N/A") || tgt.equals("N/A")) continue;
+            String srcTop = src.contains(".") ? src.substring(0, src.indexOf('.')) : src;
+            String tgtTop = tgt.contains(".") ? tgt.substring(0, tgt.indexOf('.')) : tgt;
+            if (!srcTop.contains("[") && !tgtTop.contains("[")) {
+                srcToTgt.put(srcTop, tgtTop);
+            }
+        }
 
+        Map<String, Object> ordered = new LinkedHashMap<>();
+        Set<String> placed = new java.util.HashSet<>();
 
+        // 1. Walk input keys in original order
+        for (String inputKey : input.keySet()) {
+            String targetKey = srcToTgt.getOrDefault(inputKey, inputKey);
+            if (output.containsKey(targetKey) && !placed.contains(targetKey)) {
+                ordered.put(targetKey, output.get(targetKey));
+                placed.add(targetKey);
+            } else if (output.containsKey(inputKey) && !placed.contains(inputKey)) {
+                ordered.put(inputKey, output.get(inputKey));
+                placed.add(inputKey);
+            }
+            // key consumed by rule (e.g. FLATTEN) — skip
+        }
+
+        // 2. Append keys added by rules (CALCULATED_FIELD, new fields, etc.)
+        for (Map.Entry<String, Object> entry : output.entrySet()) {
+            if (!placed.contains(entry.getKey())) {
+                ordered.put(entry.getKey(), entry.getValue());
+            }
+        }
+
+        return ordered;
+    }
 
 
     private void applyFieldPlacement(MappingRule rule,
