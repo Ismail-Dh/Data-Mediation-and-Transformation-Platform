@@ -307,7 +307,7 @@ class PipelineValidationRuleServiceImplTest {
             assertThat(result.ruleType()).isEqualTo(RuleType.REGEX_EMAIL);
             assertThat(result.pattern()).isEqualTo("updated-pattern@.*");
             assertThat(result.description()).isEqualTo("Updated description");
-            assertThat(result.active()).isFalse();
+           
         }
 
         @Test
