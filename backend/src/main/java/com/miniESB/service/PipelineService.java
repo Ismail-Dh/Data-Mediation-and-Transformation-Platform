@@ -13,4 +13,6 @@ public interface PipelineService {
     PipelineResponse getPipelineById(Long id, String username);
     List<PipelineResponse> getMyPipelines(String username);
     List<PipelineResponse> getAllPipelines();
+    PipelineResponse validatePipeline(Long pipelineId);
+PipelineResponse revertPipeline(Long pipelineId);
 }

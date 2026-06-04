@@ -1,0 +1,169 @@
+<div class="sandbox-panel">
+
+  <!-- ── Pipeline status ─────────────────────────────────────────────────── -->
+  <div class="sandbox-section">
+    <div class="section-header">
+      <div class="section-icon section-icon--status">
+        <svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="1.5" fill="none"/><path d="M7 10l2 2 4-4" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div>
+        <span class="section-title">Pipeline status</span>
+        <span class="section-sub">Manually validate or revert after sandbox testing</span>
+      </div>
+    </div>
+
+    <div class="status-bar">
+      <div class="status-display">
+        <span class="status-label">Current status</span>
+        <span class="badge badge--{{ pipeline?.status?.toLowerCase() }}">
+          {{ pipeline?.status }}
+        </span>
+      </div>
+      <div class="status-btns">
+        <button
+          class="btn btn--validate"
+          [disabled]="!canValidate || statusLoading"
+          (click)="validate()">
+          <svg viewBox="0 0 16 16"><path d="M3 8l3 3 7-7" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Mark as Validated
+        </button>
+        <button
+          class="btn btn--revert"
+          [disabled]="!canRevert || statusLoading"
+          (click)="revert()">
+          <svg viewBox="0 0 16 16"><path d="M3 8a5 5 0 1 0 1.5-3.5L3 6V3H6" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Revert to Configured
+        </button>
+      </div>
+    </div>
+
+    <div class="status-error" *ngIf="statusError">{{ statusError }}</div>
+  </div>
+
+  <!-- ── Sandbox test ─────────────────────────────────────────────────────── -->
+  <div class="sandbox-section">
+    <div class="section-header">
+      <div class="section-icon section-icon--run">
+        <svg viewBox="0 0 20 20"><polygon points="5,3 17,10 5,17" fill="currentColor"/></svg>
+      </div>
+      <div>
+        <span class="section-title">Sandbox test</span>
+        <span class="section-sub">Submit a payload through validation + mapping — nothing sent to external systems</span>
+      </div>
+    </div>
+
+    <div class="sandbox-form">
+      <div class="format-row">
+        <label class="form-label">Format</label>
+        <div class="format-pills">
+          <button
+            *ngFor="let f of FORMATS"
+            class="format-pill"
+            [class.format-pill--active]="format === f"
+            (click)="format = f">
+            {{ f }}
+          </button>
+        </div>
+      </div>
+
+      <div class="payload-field">
+        <label class="form-label">Raw payload</label>
+        <textarea
+          class="payload-textarea"
+          [(ngModel)]="rawContent"
+          placeholder='{"client_id": "123", "montant": 500}'
+          rows="5">
+        </textarea>
+      </div>
+
+      <button
+        class="btn btn--run"
+        [disabled]="!rawContent.trim() || loading"
+        (click)="run()">
+        <svg viewBox="0 0 16 16" *ngIf="!loading">
+          <polygon points="4,2 14,8 4,14" fill="currentColor"/>
+        </svg>
+        <span class="spinner" *ngIf="loading"></span>
+        {{ loading ? 'Running…' : 'Run Sandbox' }}
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Result ────────────────────────────────────────────────────────────── -->
+  <div class="sandbox-section sandbox-section--result" *ngIf="result">
+    <div class="section-header">
+      <div class="section-icon section-icon--result">
+        <svg viewBox="0 0 20 20"><rect x="3" y="3" width="14" height="14" rx="3" stroke="currentColor" stroke-width="1.5" fill="none"/><path d="M7 10h6M10 7v6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </div>
+      <div>
+        <span class="section-title">Result</span>
+        <span class="section-sub">Payload #{{ result.payloadId }}</span>
+      </div>
+    </div>
+
+    <!-- Steps -->
+    <div class="steps">
+      <div class="step" [class.step--ok]="result.validationPassed" [class.step--fail]="!result.validationPassed">
+        <div class="step-dot">
+          <svg viewBox="0 0 12 12" *ngIf="result.validationPassed"><path d="M2 6l2.5 2.5L10 3" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <svg viewBox="0 0 12 12" *ngIf="!result.validationPassed"><line x1="3" y1="3" x2="9" y2="9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="9" y1="3" x2="3" y2="9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </div>
+        <div class="step-content">
+          <span class="step-name">Structural Validation</span>
+          <span class="step-msg">{{ result.validationMessage }}</span>
+        </div>
+        <span class="step-badge step-badge--ok" *ngIf="result.validationPassed">VALIDATED</span>
+        <span class="step-badge step-badge--fail" *ngIf="!result.validationPassed">FAILED</span>
+      </div>
+
+      <div class="step-connector" *ngIf="result.validationPassed"></div>
+
+      <div class="step step--ok" *ngIf="result.mappingApplied">
+        <div class="step-dot">
+          <svg viewBox="0 0 12 12"><path d="M2 6l2.5 2.5L10 3" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="step-content">
+          <span class="step-name">Mapping</span>
+          <span class="step-msg">Rules applied successfully</span>
+        </div>
+        <span class="step-badge step-badge--mapped">MAPPED</span>
+      </div>
+
+      <div class="step step--skip" *ngIf="!result.mappingApplied && result.validationPassed">
+        <div class="step-dot step-dot--skip">—</div>
+        <div class="step-content">
+          <span class="step-name">Mapping</span>
+          <span class="step-msg">No mapping rules defined for this pipeline</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Payload diff -->
+    <div class="payload-diff" *ngIf="result.mappingApplied && result.originalPayload">
+      <div class="diff-col">
+        <div class="diff-label diff-label--original">
+          <svg viewBox="0 0 12 12"><circle cx="6" cy="6" r="4" stroke="currentColor" stroke-width="1.2" fill="none"/></svg>
+          Original
+        </div>
+        <pre class="diff-pre">{{ result.originalPayload | json }}</pre>
+      </div>
+      <div class="diff-arrow">
+        <svg viewBox="0 0 24 24"><path d="M5 12h14M14 7l5 5-5 5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div class="diff-col">
+        <div class="diff-label diff-label--mapped">
+          <svg viewBox="0 0 12 12"><path d="M2 6l2.5 2.5L10 3" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Mapped
+        </div>
+        <pre class="diff-pre diff-pre--mapped">{{ result.mappedPayload | json }}</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Error ─────────────────────────────────────────────────────────────── -->
+  <div class="sandbox-error" *ngIf="error">
+    <svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.4" fill="none"/><line x1="8" y1="5" x2="8" y2="9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="8" cy="11" r="0.7" fill="currentColor"/></svg>
+    {{ error }}
+  </div>
+
+</div>
