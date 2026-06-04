@@ -18,10 +18,7 @@
         <label>Required</label>
         <label class="toggle"><input type="checkbox" formControlName="required" /><span class="toggle-slider"></span></label>
       </div>
-      <div class="field field--toggle">
-        <label>Nullable</label>
-        <label class="toggle"><input type="checkbox" formControlName="nullable" /><span class="toggle-slider"></span></label>
-      </div>
+      <!-- nullable is auto-computed as !required by the backend -->
     </div>
     <div class="inline-form-actions">
       <button type="button" class="btn btn--secondary btn--sm" *ngIf="editingFieldId !== null" (click)="cancelEdit()">Cancel</button>

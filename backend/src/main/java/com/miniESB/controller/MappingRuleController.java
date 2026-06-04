@@ -61,6 +61,16 @@ public class MappingRuleController {
         return ResponseEntity.ok(mappingService.activateRule(pipelineId, ruleId));
     }
 
+    @Operation(summary = "Update an existing mapping rule (type and/or expression)")
+    @PutMapping("/{ruleId}")
+    public ResponseEntity<MappingRuleResponse> updateRule(
+            @PathVariable Long pipelineId,
+            @PathVariable Long ruleId,
+            @Valid @RequestBody MappingRuleRequest request) {
+        return ResponseEntity.ok(mappingService.updateRule(pipelineId, ruleId, request));
+    }
+
+
     @Operation(summary = "Apply mapping rules to a raw JSON payload")
     @PostMapping("/apply")
     public ResponseEntity<MappingResultResponse> applyMapping(

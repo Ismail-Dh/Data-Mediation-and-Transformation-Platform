@@ -128,7 +128,7 @@ public class PipelineValidationRuleServiceImpl implements PipelineValidationRule
         rule.setRuleType(request.ruleType());
         rule.setPattern(request.pattern());
         rule.setDescription(request.description());
-        rule.setActive(request.active());
+
 
         ValidationRule updated = validationRuleRepository.save(rule);
         log.info("Updated private rule id={} on pipeline id={}", ruleId, pipelineId);
