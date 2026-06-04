@@ -189,6 +189,39 @@
 
   </div><!-- /me-canvas -->
 
-
+  <!-- ── Config modal ──────────────────────────────────────────────────── -->
+  <div class="me-modal-backdrop" *ngIf="configConn" (click)="closeConfig()"></div>
+  <div class="me-modal" *ngIf="configConn">
+    <div class="me-modal__header">
+      <span class="me-modal__title">Configure Mapping</span>
+      <button class="me-btn me-btn--icon" (click)="closeConfig()">✕</button>
+    </div>
+    <div class="me-modal__body">
+      <div class="me-modal__route">
+        <code>{{ configConn.sourceField }}</code><span>→</span><code>{{ configConn.targetField }}</code>
+      </div>
+      <label class="me-modal__label">Mapping Type</label>
+      <select class="me-modal__select" [(ngModel)]="configMappingType">
+        <option *ngFor="let t of MAPPING_TYPES" [value]="t">{{ typeLabel(t) }}</option>
+      </select>
+      <!-- Expression: required for types that need it, hidden for FIELD_PLACEMENT -->
+<ng-container *ngIf="configMappingType !== 'FIELD_PLACEMENT'">
+  <label class="me-modal__label">
+    Expression <span class="req" *ngIf="configNeedsExpression">*</span>
+    <span class="me-modal__optional" *ngIf="!configNeedsExpression">(optional)</span>
+  </label>
+  <input class="me-modal__input" [(ngModel)]="configExpression"
+         [placeholder]="configExpressionHint" />
+  <span class="me-modal__hint" *ngIf="configExpressionHint">{{ configExpressionHint }}</span>
+</ng-container>
+      <div class="me-modal__error" *ngIf="saveError">{{ saveError }}</div>
+    </div>
+    <div class="me-modal__footer">
+      <button class="me-btn me-btn--secondary" (click)="closeConfig()">Cancel</button>
+      <button class="me-btn me-btn--primary" [disabled]="saving" (click)="saveConfig()">
+        {{ saving ? 'Saving…' : 'Save' }}
+      </button>
+    </div>
+  </div>
 
 </div>

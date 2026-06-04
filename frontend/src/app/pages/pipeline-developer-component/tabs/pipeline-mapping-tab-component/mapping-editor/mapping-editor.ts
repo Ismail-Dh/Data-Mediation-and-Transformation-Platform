@@ -341,37 +341,54 @@ export class MappingEditor implements OnInit, AfterViewInit, OnDestroy {
     this.saveError         = null;
     this.cdr.detectChanges();
   }
+/** True when the selected mapping type requires an expression */
+get configNeedsExpression(): boolean {
+  return ['VALUE_TRANSFORM', 'FORMAT_CHANGE', 'CALCULATED_FIELD', 'RESTRUCTURING']
+    .includes(this.configMappingType);
+}
 
+/** Hint text matching the selected mapping type */
+get configExpressionHint(): string {
+  const hints: Record<string, string> = {
+    VALUE_TRANSFORM:  'e.g. UPPERCASE · LOWERCASE · TRIM · CONCAT: :firstName:lastName · SPLIT:@:0 · REGEX_REPLACE:[^0-9]:',
+    FORMAT_CHANGE:    'e.g. STRING_TO_INT · STRING_TO_DOUBLE · DATE_TO_UNIX · UNIX_TO_DATE · dd/MM/yyyy|yyyy-MM-dd',
+    CALCULATED_FIELD: 'e.g. {price} * (1 + {tax}) · IF:amount:gt:1000:VIP:STD · SUM:items[].price · AVG:items[].qty',
+    RESTRUCTURING:    'Leave empty to NEST · or type FLATTEN to flatten an object',
+  };
+  return hints[this.configMappingType] ?? '';
+}
   closeConfig(): void { this.configConn = null; this.cdr.detectChanges(); }
 
   saveConfig(): void {
     if (!this.configConn?.ruleId) return;
     this.saving = true;
-    this.mappingService.deleteRule(this.pipelineId, this.configConn.ruleId).subscribe(() => {
-      const req: MappingRuleRequest = {
-        sourceField: this.configConn!.sourceField,
-        targetField: this.configConn!.targetField,
-        mappingType: this.configMappingType,
-        expression:  this.configExpression,
-      };
-      this.mappingService.createRule(this.pipelineId, req).subscribe({
-        next: rule => {
-          this.connections = this.connections.map(c =>
-            c.id === this.configConn!.id
-              ? { ...c, ruleId: rule.id, mappingType: this.configMappingType, expression: this.configExpression }
-              : c
-          );
-          this.saving    = false;
-          this.configConn = null;
-          this.save$.next();
-          this.cdr.detectChanges();
-        },
-        error: err => {
-          this.saveError = err?.error?.message ?? 'Save failed';
-          this.saving    = false;
-          this.cdr.detectChanges();
-        }
-      });
+    this.saveError = null;
+
+    const req: MappingRuleRequest = {
+      sourceField: this.configConn.sourceField,
+      targetField: this.configConn.targetField,
+      mappingType: this.configMappingType,
+      expression:  this.configExpression,
+    };
+
+    // Use PUT update — preserves active status, no delete+recreate
+    this.mappingService.updateRule(this.pipelineId, this.configConn.ruleId, req).subscribe({
+      next: rule => {
+        this.connections = this.connections.map(c =>
+          c.id === this.configConn!.id
+            ? { ...c, ruleId: rule.id, mappingType: this.configMappingType, expression: this.configExpression }
+            : c
+        );
+        this.saving    = false;
+        this.configConn = null;
+        this.save$.next();
+        this.cdr.detectChanges();
+      },
+      error: err => {
+        this.saveError = err?.error?.message ?? 'Save failed';
+        this.saving    = false;
+        this.cdr.detectChanges();
+      }
     });
   }
 

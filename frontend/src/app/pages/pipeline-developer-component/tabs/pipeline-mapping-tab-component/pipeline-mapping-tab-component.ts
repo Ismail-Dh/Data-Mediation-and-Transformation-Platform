@@ -102,16 +102,19 @@ export class PipelineMappingTabComponent implements OnInit {
   // ── Validators ────────────────────────────────────────────────────────────
 
   private updateSourceFieldValidator(type: string): void {
-    const ctrl = this.mappingForm.get('sourceField')!;
-    if (type === 'CALCULATED_FIELD') {
-      ctrl.clearValidators();
-      ctrl.setValue('N/A');
-    } else {
-      ctrl.setValidators(Validators.required);
+  const ctrl = this.mappingForm.get('sourceField')!;
+  if (type === 'CALCULATED_FIELD') {
+    ctrl.clearValidators();
+    ctrl.setValue('N/A');
+  } else {
+    ctrl.setValidators(Validators.required);
+    // Preserve the selected value — only reset if it was set to N/A
+    if (ctrl.value === 'N/A') {
       ctrl.setValue('');
     }
-    ctrl.updateValueAndValidity();
   }
+  ctrl.updateValueAndValidity();
+}
 
   private updateTargetFieldValidator(): void {
     const ctrl = this.mappingForm.get('targetField')!;
@@ -181,11 +184,9 @@ export class PipelineMappingTabComponent implements OnInit {
     const val = this.mappingForm.value;
 
     if (this.editingRuleId !== null) {
-      this.mappingService.deleteRule(this.pipelineId, this.editingRuleId).subscribe(() => {
-        this.mappingService.createRule(this.pipelineId, val).subscribe(() => {
-          this.cancelEdit();
-          this.loadRules();
-        });
+      this.mappingService.updateRule(this.pipelineId, this.editingRuleId, val).subscribe(() => {
+        this.cancelEdit();
+        this.loadRules();
       });
     } else {
       this.mappingService.createRule(this.pipelineId, val).subscribe(() => {

@@ -32,8 +32,8 @@ export class PipelineFieldsTabComponent implements OnInit {
     this.fieldForm = this.fb.group({
       fieldPath: ['', Validators.required],
       fieldType: ['', Validators.required],
-      required:  [false],
-      nullable:  [false]
+      required:  [false]
+      // nullable is auto-computed by the backend as !required
     });
     this.loadFields();
   }
@@ -55,7 +55,7 @@ export class PipelineFieldsTabComponent implements OnInit {
       });
     } else {
       this.pipelineFieldService.addField(this.pipelineId, val).subscribe(() => {
-        this.fieldForm.reset({ required: false, nullable: false });
+        this.fieldForm.reset({ required: false });
         this.loadFields();
       });
     }
@@ -69,7 +69,7 @@ export class PipelineFieldsTabComponent implements OnInit {
 
   cancelEdit(): void {
     this.editingFieldId = null;
-    this.fieldForm.reset({ required: false, nullable: false });
+    this.fieldForm.reset({ required: false });
     this.cdr.detectChanges();
   }
 

@@ -29,6 +29,13 @@ export class MappingRuleService {
     return this.http.get<MappingRuleResponse[]>(`${this.base(pipelineId)}/all`);
   }
 
+  updateRule(pipelineId: number, ruleId: number, request: MappingRuleRequest): Observable<MappingRuleResponse> {
+  return this.http.put<MappingRuleResponse>(
+    `${environment.apiUrl}/api/pipelines/${pipelineId}/mappings/${ruleId}`,
+    request
+  );
+}
+
   /** DELETE /api/pipelines/{id}/mappings/{ruleId} — soft delete (active = false) */
   deleteRule(pipelineId: number, ruleId: number): Observable<void> {
     return this.http.delete<void>(`${this.base(pipelineId)}/${ruleId}`);
