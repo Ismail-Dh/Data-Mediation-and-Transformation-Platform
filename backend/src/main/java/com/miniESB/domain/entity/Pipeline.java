@@ -57,7 +57,7 @@ public class Pipeline {
     @Builder.Default
     private List<ValidationRule> validationRules = new ArrayList<>();
 
-    @OneToMany(mappedBy = "pipeline", cascade = CascadeType.PERSIST, orphanRemoval = false)
+    @OneToMany(mappedBy = "pipeline", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<MappingRule> mappingRules = new ArrayList<>();
 
