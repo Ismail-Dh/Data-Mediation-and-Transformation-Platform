@@ -6,6 +6,7 @@ import {
   CreatePipelineRequest,
   UpdatePipelineRequest
 } from '../../models/pipeline';
+
 import { environment } from '../../environments/environment';
 
 
@@ -40,4 +41,16 @@ export class PipelineService {
   delete(id: number): Observable<void> {
     return this.http.delete<void>(`${this.base}/${id}`);
   }
+  validatePipeline(pipelineId: number): Observable<Pipeline> {
+  return this.http.patch<Pipeline>(
+    `${environment.apiUrl}/api/pipelines/${pipelineId}/validate`, {}
+  );
+}
+
+revertPipeline(pipelineId: number): Observable<Pipeline> {
+  return this.http.patch<Pipeline>(
+    `${environment.apiUrl}/api/pipelines/${pipelineId}/revert`, {}
+  );
+}
+  
 }

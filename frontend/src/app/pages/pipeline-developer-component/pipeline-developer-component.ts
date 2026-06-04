@@ -10,6 +10,7 @@ import { PipelineFieldsTabComponent } from './tabs/pipeline-fields-tab/pipeline-
 import { PipelinePayloadsTabComponent } from './tabs/pipeline-payloads-tab/pipeline-payloads-tab.component';
 import { PipelineRulesTabComponent } from './tabs/pipeline-rules-tab/pipeline-rules-tab.component';
 import { PipelineMappingTabComponent } from './tabs/pipeline-mapping-tab-component/pipeline-mapping-tab-component';
+import { PipelineSandboxTabComponent } from '../sandbox/sandbox.component';
 
 type DetailTab = 'info' | 'fields' | 'payloads' | 'rules' | 'mapping';
 
@@ -23,6 +24,7 @@ type DetailTab = 'info' | 'fields' | 'payloads' | 'rules' | 'mapping';
     PipelineFieldsTabComponent,
     PipelinePayloadsTabComponent,
     PipelineRulesTabComponent,
+    PipelineSandboxTabComponent,
     PipelineMappingTabComponent
   ],
   templateUrl: './pipeline-developer-component.html',
@@ -42,6 +44,7 @@ export class PipelineDeveloperComponent implements OnInit {
   deletingPipeline: Pipeline | null = null;
   detailPipeline:   Pipeline | null = null;
   detailTab: DetailTab = 'info';
+  sandboxPipeline: Pipeline | null = null;
 
   form!: FormGroup;
 
@@ -161,6 +164,16 @@ export class PipelineDeveloperComponent implements OnInit {
     this.detailTab = tab;
     this.cdr.detectChanges();
   }
+  // Méthode
+  openSandbox(p: Pipeline): void {
+    this.sandboxPipeline = p;
+    this.cdr.detectChanges();
+  }
+
+  closeSandbox(): void {
+   this.sandboxPipeline = null;
+   this.cdr.detectChanges();
+ }
 
   trackById(_: number, p: Pipeline): number { return p.id; }
 }
