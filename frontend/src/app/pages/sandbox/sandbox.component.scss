@@ -9,11 +9,13 @@ $radius-md: 10px;
 $radius-lg: 14px;
 
 // ── Panel ─────────────────────────────────────────────────────────────────────
+
 .sandbox-panel {
   display: flex;
   flex-direction: column;
   gap: 1rem;
   padding: 1.5rem 2rem;
+  box-sizing: border-box;
 }
 
 // ── Section card ──────────────────────────────────────────────────────────────

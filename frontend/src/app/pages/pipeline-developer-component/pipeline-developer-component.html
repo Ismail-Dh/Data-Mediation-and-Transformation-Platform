@@ -227,7 +227,7 @@
 </div>
 
 <div class="modal-overlay" *ngIf="sandboxPipeline" (click)="closeSandbox()">
-  <div class="modal modal--wide" (click)="$event.stopPropagation()">
+  <div class="modal modal--sandbox" (click)="$event.stopPropagation()">
     <div class="modal-header">
       <div class="detail-title">
         <h2>Sandbox — {{ sandboxPipeline.name }}</h2>

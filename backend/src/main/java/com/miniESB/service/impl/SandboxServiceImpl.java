@@ -17,6 +17,10 @@ import com.miniESB.repository.PipelineRepository;
 import com.miniESB.service.MappingService;
 import com.miniESB.service.SandboxService;
 import com.miniESB.service.StructuralValidatorService;
+import com.miniESB.repository.ValidationRuleRepository;
+import com.miniESB.service.BusinessValidatorService;
+import com.miniESB.domain.entity.ValidationRule;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -34,7 +38,9 @@ public class SandboxServiceImpl implements SandboxService {
     private final PipelineRepository         pipelineRepository;
     private final PayloadRepository          payloadRepository;
     private final PipelineFieldRepository    pipelineFieldRepository;
+    private final ValidationRuleRepository   validationRuleRepository;   // ← ajout
     private final StructuralValidatorService structuralValidatorService;
+    private final BusinessValidatorService   businessValidatorService;   // ← ajout
     private final MappingService             mappingService;
 
     @Override
@@ -56,37 +62,40 @@ public class SandboxServiceImpl implements SandboxService {
                 .build());
         log.info("Sandbox payload received: id={}, pipeline={}", payload.getId(), pipelineId);
 
-        // 3 — validation structurelle
-        List<PipelineField> fields = pipelineFieldRepository.findAllByPipelineId(pipelineId);
+        List<PipelineField>  fields = pipelineFieldRepository.findAllByPipelineId(pipelineId);
+        List<ValidationRule> rules  = validationRuleRepository.findAllByPipelineIdAndActiveTrue(pipelineId);
         String validationMessage = "Validation passed";
 
+        // 3a — validation structurelle (niveau 1)
         if (fields.isEmpty()) {
-            validationMessage = "No schema defined — validation skipped";
-            log.warn("Pipeline id={} has no PipelineField defined — skipping validation", pipelineId);
+            validationMessage = "No schema defined — structural validation skipped";
+            log.warn("Pipeline id={} has no PipelineField defined — skipping structural validation", pipelineId);
         } else {
             try {
                 structuralValidatorService.validate(request.rawContent(), fields);
             } catch (PayloadValidationException pve) {
-                // payload → FAILED
                 payload.setStatus(PayloadStatus.FAILED);
                 payloadRepository.save(payload);
-                log.warn("Sandbox validation FAILED for pipeline={}", pipelineId);
-
-                return new SandboxResponse(
-                        pipelineId,
-                        payload.getId(),
-                        false,
-                        buildViolationMessage(pve),
-                        false,
-                        null,
-                        null,
-                        PayloadStatus.FAILED,
-                        pipeline.getStatus() // pipeline status unchanged
-                );
+                log.warn("Sandbox structural validation FAILED for pipeline={}", pipelineId);
+                return failResponse(pipeline, payload, pve);
             }
         }
 
-        // 4 — validation OK → payload VALIDATED
+        // 3b — validation métier (niveau 2 : règles globales + privées actives)
+        if (rules.isEmpty()) {
+            log.debug("Pipeline id={} has no active rules — skipping business validation", pipelineId);
+        } else {
+            try {
+                businessValidatorService.validate(request.rawContent(), rules);
+            } catch (PayloadValidationException pve) {
+                payload.setStatus(PayloadStatus.FAILED);
+                payloadRepository.save(payload);
+                log.warn("Sandbox business validation FAILED for pipeline={}", pipelineId);
+                return failResponse(pipeline, payload, pve);
+            }
+        }
+
+        // 4 — les deux niveaux OK → payload VALIDATED
         payload.setStatus(PayloadStatus.VALIDATED);
         payloadRepository.save(payload);
         log.info("Sandbox validation passed: payload={}", payload.getId());
@@ -96,7 +105,7 @@ public class SandboxServiceImpl implements SandboxService {
                 mappingService.applyMappingToPayload(pipelineId, payload.getId());
         log.info("Sandbox mapping applied: payload={}", payload.getId());
 
-        // 6 — pipeline status inchangé — c'est l'user qui valide manuellement
+        // 6 — pipeline status inchangé
         return new SandboxResponse(
                 pipelineId,
                 payload.getId(),
@@ -106,13 +115,26 @@ public class SandboxServiceImpl implements SandboxService {
                 mappingResult.original(),
                 mappingResult.mapped(),
                 PayloadStatus.MAPPED,
-                pipeline.getStatus() // retourne le statut actuel sans le modifier
+                pipeline.getStatus()
         );
     }
 
-    // -------------------------------------------------------------------------
-    // HELPER
-    // -------------------------------------------------------------------------
+    // ── HELPERS ───────────────────────────────────────────────────────────────
+
+    private SandboxResponse failResponse(Pipeline pipeline, Payload payload,
+                                         PayloadValidationException pve) {
+        return new SandboxResponse(
+                pipeline.getId(),
+                payload.getId(),
+                false,
+                buildViolationMessage(pve),
+                false,
+                null,
+                null,
+                PayloadStatus.FAILED,
+                pipeline.getStatus()
+        );
+    }
 
     private String buildViolationMessage(PayloadValidationException pve) {
         StringBuilder sb = new StringBuilder("Validation failed — ");
