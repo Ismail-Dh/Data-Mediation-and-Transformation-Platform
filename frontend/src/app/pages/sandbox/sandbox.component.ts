@@ -29,7 +29,7 @@ export class PipelineSandboxTabComponent {
   statusLoading = false;
   statusError:  string | null = null;
 
-  readonly FORMATS = ['JSON', 'XML', 'CSV', 'PLAIN_TEXT'];
+  readonly FORMATS = ['JSON'];
 
   constructor(
     private sandboxService:  SandboxService,
