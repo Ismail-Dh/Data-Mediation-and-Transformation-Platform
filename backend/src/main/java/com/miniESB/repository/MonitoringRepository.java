@@ -4,6 +4,7 @@ import com.miniESB.domain.entity.AuditLog;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
 import java.util.List;
@@ -12,6 +13,7 @@ import java.util.List;
  * Dedicated repository for monitoring/KPI aggregation queries.
  * Keeps monitoring concerns separate from the generic AuditLogRepository.
  */
+@Repository
 public interface MonitoringRepository extends JpaRepository<AuditLog, Long> {
 
     // ── Global counts ─────────────────────────────────────────────────────────

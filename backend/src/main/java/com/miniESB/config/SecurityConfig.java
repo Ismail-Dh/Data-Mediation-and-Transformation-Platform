@@ -1,5 +1,6 @@
 package com.miniESB.config;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -26,6 +27,7 @@ import java.util.List;
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
+@ConditionalOnProperty(name = "engine.mode", havingValue = "false", matchIfMissing = true)
 public class SecurityConfig {
 
     private final UserDetailsServiceImpl userDetailsService;

@@ -219,6 +219,11 @@
       [pipelineId]="detailPipeline!.id">
     </app-pipeline-mapping-tab>
 
+    <app-docker-image-button
+  [pipelineId]="detailPipeline.id"
+  [pipelineStatus]="detailPipeline!.status">
+</app-docker-image-button>
+
     <div class="modal-footer">
       <button class="btn btn--secondary" (click)="closeDetail()">Close</button>
       <button class="btn btn--primary" (click)="openEdit(detailPipeline!); closeDetail()">Edit Pipeline</button>

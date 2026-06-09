@@ -2,6 +2,7 @@ package com.miniESB.security;
 
 
 import com.miniESB.repository.UserRepository;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -11,6 +12,8 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 
 @Service
+@ConditionalOnProperty(name = "engine.mode", havingValue = "false", matchIfMissing = true)
+
 public class UserDetailsServiceImpl implements UserDetailsService {
 
     private final UserRepository userRepository;
