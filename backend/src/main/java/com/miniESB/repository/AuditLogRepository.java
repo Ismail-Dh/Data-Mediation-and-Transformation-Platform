@@ -10,7 +10,7 @@ import org.springframework.stereotype.Repository;
 import java.time.Instant;
 import java.util.List;
 @Repository
-@ConditionalOnProperty(name = "audit.enabled", havingValue = "true", matchIfMissing = false)
+@ConditionalOnProperty(name = "audit.enabled", havingValue = "true", matchIfMissing = true)
 
 public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
 

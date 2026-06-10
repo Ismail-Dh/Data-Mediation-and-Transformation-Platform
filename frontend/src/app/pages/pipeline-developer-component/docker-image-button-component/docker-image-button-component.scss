@@ -1,22 +1,266 @@
-.docker-image-section {
-  padding: 1rem 0;
+// ── Variables (identiques aux autres onglets) ─────────────────────────────────
+$primary:   #1565C0;
+$primary-h: #16213e;
+$accent:    #3b5bdb;
+$danger:    #e03131;
+$success:   #2e7d32;
+$warning:   #f57c00;
+$border:    #e8e8e8;
+$text-main: #1a1a2e;
+$text-sub:  #888;
+$radius-sm: 6px;
+$radius-md: 10px;
+
+// ── Tab panel ─────────────────────────────────────────────────────────────────
+.tab-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
 }
 
+// ── Section header (identique à .rules-section-title) ─────────────────────────
+.docker-section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.1rem;
+}
+
+.docker-section-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: $text-main;
+}
+
+.docker-section-sub {
+  font-size: 0.75rem;
+  color: #aaa;
+  font-style: italic;
+}
+
+// ── État désactivé ────────────────────────────────────────────────────────────
 .docker-disabled {
-  opacity: 0.7;
-}
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
 
-.docker-success {
-  .image-info {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 0.25rem;
+  .text-muted {
+    font-size: 0.78rem;
+    color: $text-sub;
   }
 }
 
-.usage-instructions pre {
-  font-size: 0.78rem;
+// ── Zone de génération (identique à .inline-form) ─────────────────────────────
+.docker-generate-box {
+  background: #f8f9fb;
+  border: 1px solid #eef0f4;
+  border-radius: $radius-md;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+// ── État BUILDING ─────────────────────────────────────────────────────────────
+.docker-building-info {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 0.85rem;
+  background: #e3f2fd;
+  border: 1px solid #bbdef5;
+  border-radius: $radius-sm;
+  font-size: 0.82rem;
+  color: $primary;
+}
+
+// ── Message d'erreur ──────────────────────────────────────────────────────────
+.docker-error-info {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 0.85rem;
+  background: #ffebee;
+  border: 1px solid #ffcdd2;
+  border-radius: $radius-sm;
+  font-size: 0.82rem;
+  color: $danger;
+}
+
+// ── État SUCCESS (identique à .fields-list) ───────────────────────────────────
+.docker-success-box {
+  border: 1px solid $border;
+  border-radius: $radius-md;
+  overflow: hidden;
+}
+
+.docker-success-header {
+  background: #f8f9fb;
+  border-bottom: 1px solid $border;
+  padding: 0.55rem 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.docker-success-body {
+  padding: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+// ── Badge SUCCESS ─────────────────────────────────────────────────────────────
+.bool-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  font-weight: 600;
+
+  &--success { background: #e8f5e9; color: $success; }
+  &--failed  { background: #ffebee; color: $danger; }
+  &--building { background: #e3f2fd; color: $primary; }
+}
+
+// ── Nom de l'image (identique au code dans la table) ─────────────────────────
+.image-name-code {
+  font-family: monospace;
+  font-size: 0.82rem;
+  background: #f0f0f0;
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: $primary-h;
+}
+
+.image-size-text {
+  font-size: 0.75rem;
+  color: $text-sub;
+}
+
+// ── Actions (identique à .inline-form-actions) ────────────────────────────────
+.docker-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+// ── Instructions d'utilisation ────────────────────────────────────────────────
+.usage-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.usage-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: $text-sub;
+}
+
+.usage-pre {
+  background: #1e1e2e;
+  color: #e2e8f0;
+  padding: 0.85rem;
+  border-radius: $radius-sm;
+  font-size: 0.75rem;
+  font-family: 'Courier New', monospace;
+  overflow-x: auto;
   white-space: pre-wrap;
   word-break: break-all;
+  margin: 0;
+
+  &::-webkit-scrollbar { height: 4px; }
+}
+
+// ── Boutons (identiques aux autres onglets) ───────────────────────────────────
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0.58rem 1.2rem;
+  border-radius: $radius-md;
+  font-size: 0.88rem;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  font-family: inherit;
+
+  &--primary {
+    background: $primary;
+    color: #fff;
+    &:hover:not(:disabled) { background: $primary-h; }
+    &:disabled { opacity: 0.5; cursor: not-allowed; }
+  }
+
+  &--warning {
+    background: $warning;
+    color: #fff;
+    &:hover:not(:disabled) { background: #e65100; }
+    &:disabled { opacity: 0.5; cursor: not-allowed; }
+  }
+
+  &--success {
+    background: $success;
+    color: #fff;
+    &:hover:not(:disabled) { background: #1b5e20; }
+  }
+
+  &--secondary {
+    background: #f0f0f0;
+    color: $text-main;
+    border: 1px solid $border;
+    &:hover:not(:disabled) { background: #e4e4e4; }
+    &:disabled { opacity: 0.5; cursor: not-allowed; }
+  }
+
+  &--sm { padding: 0.44rem 0.9rem; font-size: 0.82rem; }
+}
+
+// ── Spinner ───────────────────────────────────────────────────────────────────
+.spinner {
+  display: inline-block;
+  width: 0.8rem;
+  height: 0.8rem;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+// ── Empty state (identique à .tab-empty) ─────────────────────────────────────
+.tab-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 2.5rem 1rem;
+  color: #bbb;
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.tab-empty-icon { width: 32px; height: 32px; color: #ddd; }
+
+// ── Loading (identique à .tab-loading) ───────────────────────────────────────
+.tab-loading {
+  padding: 2rem;
+  text-align: center;
+  font-size: 0.85rem;
+  color: $text-sub;
+}
+
+// ── Responsive ───────────────────────────────────────────────────────────────
+@media (max-width: 640px) {
+  .docker-actions { flex-direction: column; }
+  .docker-success-header { flex-direction: column; align-items: flex-start; }
 }

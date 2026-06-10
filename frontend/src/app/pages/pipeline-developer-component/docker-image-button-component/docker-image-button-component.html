@@ -1,85 +1,95 @@
-<div class="docker-image-section">
+<div class="tab-panel">
 
-  <!-- Pipeline pas encore validé -->
+  <!-- ── Pipeline non validé ──────────────────────────────────────────────── -->
   <div *ngIf="!isValidated" class="docker-disabled">
-    <button class="btn btn-secondary" disabled title="Le pipeline doit être en statut VALIDATED">
-      <i class="bi bi-docker"></i> Générer l'image Docker
+    <div class="docker-section-title">
+      <span class="docker-section-label">Docker Image</span>
+      <span class="docker-section-sub">Only available for validated pipelines</span>
+    </div>
+    <button class="btn btn--secondary btn--sm" disabled>
+      🐳 Generate Docker Image
     </button>
-    <small class="text-muted d-block mt-1">
-      Disponible uniquement pour les pipelines validés
-    </small>
   </div>
 
-  <!-- Pipeline validé — pas encore d'image ou image échouée -->
-  <div *ngIf="isValidated && !imageExists">
+  <!-- ── Pipeline validé ───────────────────────────────────────────────────── -->
+  <ng-container *ngIf="isValidated">
 
-    <button
-      class="btn btn-primary"
-      [class.btn-warning]="isFailed"
-      [disabled]="isGenerating"
-      (click)="generateImage()"
-    >
-      <span *ngIf="!isGenerating">
-        <i class="bi bi-box-arrow-up"></i>
-        {{ isFailed ? 'Relancer la génération' : 'Générer l\'image Docker' }}
-      </span>
-      <span *ngIf="isGenerating">
-        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-        Génération en cours…
-      </span>
-    </button>
-
-    <!-- Statut BUILDING après lancement -->
-    <div *ngIf="imageInfo?.status === 'BUILDING'" class="alert alert-info mt-2 mb-0 py-2">
-      <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-      Build Docker en cours, veuillez patienter…
+    <!-- Header identique aux autres sections -->
+    <div class="docker-section-title">
+      <span class="docker-section-label">Docker Image</span>
+      <span class="docker-section-sub">Build and export a runnable image for this pipeline</span>
     </div>
 
-    <!-- Erreur -->
-    <div *ngIf="errorMessage" class="alert alert-danger mt-2 mb-0 py-2">
-      <i class="bi bi-exclamation-triangle me-1"></i> {{ errorMessage }}
-    </div>
-  </div>
+    <!-- Pas encore d'image ou image FAILED → zone de génération -->
+    <div class="docker-generate-box" *ngIf="!imageExists">
 
-  <!-- Image générée avec succès -->
-  <div *ngIf="imageExists" class="docker-success">
+      <div class="docker-actions">
+        <button
+          class="btn btn--sm"
+          [class.btn--primary]="!isFailed"
+          [class.btn--warning]="isFailed"
+          [disabled]="isGenerating"
+          (click)="generateImage()">
+          <span class="spinner" *ngIf="isGenerating"></span>
+          <ng-container *ngIf="!isGenerating">
+            {{ isFailed ? '🔄 Retry Generation' : '🐳 Generate Docker Image' }}
+          </ng-container>
+          <ng-container *ngIf="isGenerating">Generating…</ng-container>
+        </button>
+      </div>
 
-    <div class="image-info mb-2">
-      <span class="badge bg-success me-2">
-        <i class="bi bi-check-circle me-1"></i>Image prête
-      </span>
-      <code>{{ imageInfo!.imageName }}:{{ imageInfo!.tag }}</code>
-      <span *ngIf="imageSizeMb" class="text-muted ms-2 small">({{ imageSizeMb }})</span>
-    </div>
+      <!-- BUILDING -->
+      <div class="docker-building-info" *ngIf="imageInfo?.status === 'BUILDING'">
+        <span class="spinner"></span>
+        Docker build in progress, please wait…
+      </div>
 
-    <div class="d-flex gap-2 flex-wrap">
+      <!-- Erreur -->
+      <div class="docker-error-info" *ngIf="errorMessage">
+        ⚠️ {{ errorMessage }}
+      </div>
 
-      <!-- Télécharger le .tar -->
-      <button class="btn btn-success btn-sm" (click)="downloadImage()">
-        <i class="bi bi-download me-1"></i> Télécharger pipeline-{{ pipelineId }}.tar
-      </button>
-
-      <!-- Regénérer -->
-      <button
-        class="btn btn-outline-secondary btn-sm"
-        [disabled]="isGenerating"
-        (click)="generateImage()"
-      >
-        <i class="bi bi-arrow-repeat me-1"></i> Regénérer
-      </button>
     </div>
 
-    <!-- Instructions d'utilisation -->
-    <div class="usage-instructions mt-3">
-      <small class="text-muted fw-semibold">Déploiement sur une autre machine :</small>
-      <pre class="mt-1 bg-light border rounded p-2 small mb-0">docker load &lt; pipeline-{{ pipelineId }}.tar
+    <!-- Image prête → affichage table-style comme les autres onglets -->
+    <div class="docker-success-box" *ngIf="imageExists">
+
+      <div class="docker-success-header">
+        <span class="bool-badge bool-badge--success">✓ Image ready</span>
+        <code class="image-name-code">{{ imageInfo!.imageName }}:{{ imageInfo!.tag }}</code>
+        <span class="image-size-text" *ngIf="imageSizeMb">({{ imageSizeMb }})</span>
+      </div>
+
+      <div class="docker-success-body">
+
+        <!-- Actions -->
+        <div class="docker-actions">
+          <button class="btn btn--success btn--sm" (click)="downloadImage()">
+            ⬇️ Download pipeline-{{ pipelineId }}.tar
+          </button>
+          <button
+            class="btn btn--secondary btn--sm"
+            [disabled]="isGenerating"
+            (click)="generateImage()">
+            🔄 Regenerate
+          </button>
+        </div>
+
+        <!-- Instructions -->
+        <div class="usage-block">
+          <span class="usage-label">Deploy on another machine</span>
+          <pre class="usage-pre">docker load &lt; pipeline-{{ pipelineId }}.tar
 docker run -p 8080:8080 pipeline-{{ pipelineId }}:latest
 
-# Envoyer un payload :
+# Send a payload:
 POST http://localhost:8080/process
 Content-Type: application/json
 &#123; "rawContent": "&#123;...&#125;" &#125;</pre>
+        </div>
+
+      </div>
     </div>
 
-  </div>
+  </ng-container>
+
 </div>

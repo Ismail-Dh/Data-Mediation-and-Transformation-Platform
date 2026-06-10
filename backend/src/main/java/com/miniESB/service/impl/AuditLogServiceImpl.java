@@ -19,7 +19,7 @@ import java.util.List;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-@ConditionalOnProperty(name = "audit.enabled", havingValue = "true", matchIfMissing = false)
+@ConditionalOnProperty(name = "audit.enabled", havingValue = "true", matchIfMissing = true)
 
 public class AuditLogServiceImpl implements AuditLogService {
 

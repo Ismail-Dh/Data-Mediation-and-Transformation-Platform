@@ -13,7 +13,7 @@ import { PipelineMappingTabComponent } from './tabs/pipeline-mapping-tab-compone
 import { PipelineSandboxTabComponent } from '../sandbox/sandbox.component';
 import { DockerImageButtonComponent } from './docker-image-button-component/docker-image-button-component';
 
-type DetailTab = 'info' | 'fields' | 'payloads' | 'rules' | 'mapping';
+type DetailTab = 'info' | 'fields' | 'payloads' | 'rules' | 'mapping' | 'image_docker';
 
 @Component({
   selector: 'app-pipeline-developer',

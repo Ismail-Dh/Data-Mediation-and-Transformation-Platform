@@ -1,4 +1,7 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { 
+  ChangeDetectorRef, Component, Input, 
+  OnInit, OnChanges, SimpleChanges, OnDestroy  // ← ajouter
+} from '@angular/core';
 import { DockerImageService, DockerImageResponse } from '../../../services/image_docker/docker-image-service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -6,25 +9,67 @@ import { FormsModule } from '@angular/forms';
 @Component({
   selector: 'app-docker-image-button',
   imports: [CommonModule, FormsModule],
-
   templateUrl: './docker-image-button-component.html',
   styleUrls: ['./docker-image-button-component.scss']
 })
-export class DockerImageButtonComponent implements OnInit {
+export class DockerImageButtonComponent implements OnInit, OnChanges, OnDestroy {
 
   @Input() pipelineId!: number;
-  @Input() pipelineStatus!: string; // must be 'VALIDATED' to enable
+  @Input() pipelineStatus!: string;
 
   imageInfo: DockerImageResponse | null = null;
   isGenerating = false;
   errorMessage = '';
+  private pollInterval: any = null;  // ← garder référence pour cleanup
 
-  constructor(private dockerService: DockerImageService) {}
+  constructor(
+    private dockerService: DockerImageService,
+    private cdr: ChangeDetectorRef
+  ) {}
 
   ngOnInit(): void {
-    // On charge l'état de l'image si le pipeline est déjà validé
     if (this.pipelineStatus === 'VALIDATED') {
       this.loadImageInfo();
+    }
+  }
+
+  // ← AJOUT : réagir aux changements d'inputs
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['pipelineStatus']) {
+      const newStatus = changes['pipelineStatus'].currentValue;
+      const oldStatus = changes['pipelineStatus'].previousValue;
+
+      if (newStatus !== oldStatus) {
+        this.imageInfo = null;
+        this.errorMessage = '';
+        if (newStatus === 'VALIDATED') {
+          this.loadImageInfo();
+        }
+        this.cdr.detectChanges();
+      }
+    }
+
+    // Si pipelineId change aussi (navigation entre pipelines)
+    if (changes['pipelineId'] && !changes['pipelineId'].firstChange) {
+      this.imageInfo = null;
+      this.errorMessage = '';
+      this.stopPolling();
+      if (this.pipelineStatus === 'VALIDATED') {
+        this.loadImageInfo();
+      }
+      this.cdr.detectChanges();
+    }
+  }
+
+  // ← AJOUT : cleanup du polling quand composant détruit
+  ngOnDestroy(): void {
+    this.stopPolling();
+  }
+
+  private stopPolling(): void {
+    if (this.pollInterval) {
+      clearInterval(this.pollInterval);
+      this.pollInterval = null;
     }
   }
 
@@ -47,41 +92,51 @@ export class DockerImageButtonComponent implements OnInit {
 
   loadImageInfo(): void {
     this.dockerService.getImageInfo(this.pipelineId).subscribe({
-      next: (info) => this.imageInfo = info,
-      error: () => this.imageInfo = null // pas encore d'image — normal
+      next: (info) => {
+        this.imageInfo = info;
+        this.cdr.detectChanges();  // ← forcer la détection
+      },
+      error: () => {
+        this.imageInfo = null;
+        this.cdr.detectChanges();
+      }
     });
   }
 
   generateImage(): void {
     this.errorMessage = '';
     this.isGenerating = true;
+    this.cdr.detectChanges();
 
     this.dockerService.generateImage(this.pipelineId).subscribe({
-      next: (resp) => {
+      next: () => {
         this.isGenerating = false;
-        // Polling de l'état toutes les 2s jusqu'à SUCCESS ou FAILED
         this.pollImageStatus();
       },
       error: (err) => {
         this.isGenerating = false;
         this.errorMessage = err?.error?.message || 'Erreur lors de la génération.';
+        this.cdr.detectChanges();
       }
     });
   }
 
   private pollImageStatus(): void {
-    const interval = setInterval(() => {
+    this.stopPolling();  // ← éviter doublons
+    this.pollInterval = setInterval(() => {
       this.dockerService.getImageInfo(this.pipelineId).subscribe({
         next: (info) => {
           this.imageInfo = info;
+          this.cdr.detectChanges();  // ← forcer mise à jour UI
           if (info.status === 'SUCCESS' || info.status === 'FAILED') {
-            clearInterval(interval);
+            this.stopPolling();
             if (info.status === 'FAILED') {
               this.errorMessage = 'La génération a échoué. Vérifiez les logs.';
+              this.cdr.detectChanges();
             }
           }
         },
-        error: () => clearInterval(interval)
+        error: () => this.stopPolling()
       });
     }, 2000);
   }

@@ -21,7 +21,7 @@ import java.util.Arrays;
 @Component
 @RequiredArgsConstructor
 @Slf4j
-@ConditionalOnProperty(name = "audit.enabled", havingValue = "true", matchIfMissing = false)
+@ConditionalOnProperty(name = "audit.enabled", havingValue = "true", matchIfMissing = true)
 
 public class AuditAspect {
 

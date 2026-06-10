@@ -14,6 +14,7 @@ import com.miniESB.repository.ValidationTemplateRepository;
 import com.miniESB.service.TemplateService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,6 +23,8 @@ import java.util.List;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@ConditionalOnProperty(name = "audit.enabled", havingValue = "true", matchIfMissing = true)
+
 public class TemplateServiceImpl implements TemplateService {
 
     private final ValidationTemplateRepository validationRepo;
