@@ -18,7 +18,7 @@ $radius-md: 10px;
   gap: 1.25rem;
 }
 
-// ── Section header (identique à .rules-section-title) ─────────────────────────
+// ── Section header ────────────────────────────────────────────────────────────
 .docker-section-title {
   display: flex;
   align-items: center;
@@ -44,14 +44,9 @@ $radius-md: 10px;
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
-
-  .text-muted {
-    font-size: 0.78rem;
-    color: $text-sub;
-  }
 }
 
-// ── Zone de génération (identique à .inline-form) ─────────────────────────────
+// ── Zone de génération ────────────────────────────────────────────────────────
 .docker-generate-box {
   background: #f8f9fb;
   border: 1px solid #eef0f4;
@@ -88,7 +83,7 @@ $radius-md: 10px;
   color: $danger;
 }
 
-// ── État SUCCESS (identique à .fields-list) ───────────────────────────────────
+// ── SUCCESS box ───────────────────────────────────────────────────────────────
 .docker-success-box {
   border: 1px solid $border;
   border-radius: $radius-md;
@@ -112,7 +107,7 @@ $radius-md: 10px;
   gap: 0.75rem;
 }
 
-// ── Badge SUCCESS ─────────────────────────────────────────────────────────────
+// ── Badges ────────────────────────────────────────────────────────────────────
 .bool-badge {
   display: inline-block;
   padding: 2px 8px;
@@ -120,12 +115,11 @@ $radius-md: 10px;
   font-size: 0.72rem;
   font-weight: 600;
 
-  &--success { background: #e8f5e9; color: $success; }
-  &--failed  { background: #ffebee; color: $danger; }
+  &--success  { background: #e8f5e9; color: $success; }
+  &--failed   { background: #ffebee; color: $danger; }
   &--building { background: #e3f2fd; color: $primary; }
 }
 
-// ── Nom de l'image (identique au code dans la table) ─────────────────────────
 .image-name-code {
   font-family: monospace;
   font-size: 0.82rem;
@@ -140,14 +134,14 @@ $radius-md: 10px;
   color: $text-sub;
 }
 
-// ── Actions (identique à .inline-form-actions) ────────────────────────────────
+// ── Actions ───────────────────────────────────────────────────────────────────
 .docker-actions {
   display: flex;
   gap: 0.5rem;
   flex-wrap: wrap;
 }
 
-// ── Instructions d'utilisation ────────────────────────────────────────────────
+// ── Instructions ──────────────────────────────────────────────────────────────
 .usage-block {
   display: flex;
   flex-direction: column;
@@ -177,7 +171,78 @@ $radius-md: 10px;
   &::-webkit-scrollbar { height: 4px; }
 }
 
-// ── Boutons (identiques aux autres onglets) ───────────────────────────────────
+// ── Console SSE (nouveau) ─────────────────────────────────────────────────────
+.build-console {
+  border: 1px solid #2a2a3e;
+  border-radius: $radius-sm;
+  overflow: hidden;
+  font-family: 'Courier New', monospace;
+
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    background: #16213e;
+    color: #aab4c8;
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 0.35rem 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  &__body {
+    background: #0d0d1a;
+    color: #e2e8f0;
+    font-size: 0.75rem;
+    padding: 0.75rem;
+    max-height: 260px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+
+    &::-webkit-scrollbar       { width: 4px; }
+    &::-webkit-scrollbar-track { background: #0d0d1a; }
+    &::-webkit-scrollbar-thumb { background: #2a2a3e; border-radius: 2px; }
+  }
+
+  &__line {
+    line-height: 1.5;
+    word-break: break-all;
+    white-space: pre-wrap;
+    color: #c9d1d9;
+
+    &:empty::before { content: '\00a0'; } // garder la hauteur des lignes vides
+  }
+
+  &__cursor {
+    display: inline-block;
+    color: #58a6ff;
+    animation: blink 1s step-end infinite;
+  }
+
+  &__badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.68rem;
+    padding: 1px 6px;
+    border-radius: 3px;
+    background: rgba(255,255,255,0.08);
+    color: #aab4c8;
+
+    &--done { background: rgba(46,125,50,0.25); color: #81c784; }
+    &--fail { background: rgba(224,49,49,0.25); color: #ef9a9a; }
+  }
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+// ── Boutons ───────────────────────────────────────────────────────────────────
 .btn {
   display: inline-flex;
   align-items: center;
@@ -231,36 +296,19 @@ $radius-md: 10px;
   border-radius: 50%;
   animation: spin 0.6s linear infinite;
   flex-shrink: 0;
+
+  &--sm {
+    width: 0.6rem;
+    height: 0.6rem;
+    border-width: 1.5px;
+  }
 }
 
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
+@keyframes spin { to { transform: rotate(360deg); } }
 
-// ── Empty state (identique à .tab-empty) ─────────────────────────────────────
-.tab-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.6rem;
-  padding: 2.5rem 1rem;
-  color: #bbb;
-  font-size: 0.85rem;
-  text-align: center;
-}
-
-.tab-empty-icon { width: 32px; height: 32px; color: #ddd; }
-
-// ── Loading (identique à .tab-loading) ───────────────────────────────────────
-.tab-loading {
-  padding: 2rem;
-  text-align: center;
-  font-size: 0.85rem;
-  color: $text-sub;
-}
-
-// ── Responsive ───────────────────────────────────────────────────────────────
+// ── Responsive ────────────────────────────────────────────────────────────────
 @media (max-width: 640px) {
-  .docker-actions { flex-direction: column; }
+  .docker-actions        { flex-direction: column; }
   .docker-success-header { flex-direction: column; align-items: flex-start; }
+  .build-console__body   { max-height: 180px; }
 }
