@@ -10,6 +10,8 @@ import com.miniESB.exception.ResourceNotFoundException;
 import com.miniESB.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.MediaType;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -24,6 +26,8 @@ import java.util.*;
 
 @Slf4j
 @Service
+@ConditionalOnProperty(name = "engine.mode", havingValue = "false", matchIfMissing = true)
+
 @RequiredArgsConstructor
 public class DockerImageGeneratorService {
 

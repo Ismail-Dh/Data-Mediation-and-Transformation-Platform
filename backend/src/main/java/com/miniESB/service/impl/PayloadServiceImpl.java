@@ -1,4 +1,5 @@
 package com.miniESB.service.impl;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
 import com.miniESB.domain.entity.Payload;
 import com.miniESB.domain.entity.Pipeline;
@@ -23,6 +24,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Slf4j
+@ConditionalOnProperty(name = "engine.mode", havingValue = "false", matchIfMissing = true)
 @Service
 @RequiredArgsConstructor
 public class PayloadServiceImpl implements PayloadService {

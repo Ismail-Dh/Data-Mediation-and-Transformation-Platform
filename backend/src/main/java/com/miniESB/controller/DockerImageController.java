@@ -1,4 +1,5 @@
 package com.miniESB.controller;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
 import com.miniESB.dto.docker.DockerImageBuildResponse;
 import com.miniESB.dto.docker.DockerImageResponse;
@@ -13,6 +14,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @Tag(name = "Docker Image", description = "Generate and download Docker images for validated pipelines")
+@ConditionalOnProperty(name = "engine.mode", havingValue = "false", matchIfMissing = true)
 @RestController
 @RequestMapping("/api/pipelines/{pipelineId}/image")
 @PreAuthorize("hasAnyRole('DEVELOPER', 'ADMIN')")

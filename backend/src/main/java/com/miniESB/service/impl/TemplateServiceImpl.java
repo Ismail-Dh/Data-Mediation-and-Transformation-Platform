@@ -24,6 +24,8 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 @ConditionalOnProperty(name = "audit.enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(name = "engine.mode", havingValue = "false", matchIfMissing = true)
+
 
 public class TemplateServiceImpl implements TemplateService {
 

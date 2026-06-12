@@ -1,4 +1,5 @@
 package com.miniESB.controller;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
 import com.miniESB.service.impl.DockerImageGeneratorService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -16,6 +17,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
  * Endpoint : GET /api/pipelines/{pipelineId}/build-logs/stream
  */
 @Tag(name = "Build Monitor", description = "SSE streaming of Docker build logs in real time")
+@ConditionalOnProperty(name = "engine.mode", havingValue = "false", matchIfMissing = true)
 @RestController
 @RequestMapping("/api/pipelines/{pipelineId}/build-logs")
 @PreAuthorize("hasAnyRole('DEVELOPER', 'ADMIN')")

@@ -14,6 +14,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -36,6 +38,7 @@ import java.util.List;
                 + "Templates follow the lifecycle DRAFT → PUBLISHED → DISABLED. "
                 + "Updating a PUBLISHED template is immutable: a new DRAFT version is forked.")
 @RestController
+@ConditionalOnProperty(name = "engine.mode", havingValue = "false", matchIfMissing = true)
 @RequestMapping("/api/admin/templates")
 @PreAuthorize("hasRole('ADMIN')")
 @RequiredArgsConstructor

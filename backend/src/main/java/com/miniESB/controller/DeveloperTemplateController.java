@@ -1,4 +1,5 @@
 package com.miniESB.controller;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
 import com.miniESB.domain.enums.TemplateType;
 import com.miniESB.dto.template.TemplateResponse;
@@ -25,6 +26,7 @@ import java.util.List;
  */
 @Tag(name = "Developer – Templates",
         description = "Read-only access to PUBLISHED templates for use in pipeline configuration.")
+@ConditionalOnProperty(name = "engine.mode", havingValue = "false", matchIfMissing = true)
 @RestController
 @RequestMapping("/api/templates")
 @PreAuthorize("isAuthenticated()")

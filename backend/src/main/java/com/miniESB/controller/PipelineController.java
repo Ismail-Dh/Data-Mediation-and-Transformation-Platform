@@ -1,4 +1,5 @@
 package com.miniESB.controller;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
 import com.miniESB.audit.Auditable;
 import com.miniESB.dto.Pipeline.CreatePipelineRequest;
@@ -20,6 +21,7 @@ import java.security.Principal;
 import java.util.List;
 
 @Tag(name = "Pipelines", description = "Pipeline management")
+@ConditionalOnProperty(name = "engine.mode", havingValue = "false", matchIfMissing = true)
 @RestController
 @RequestMapping("/api/pipelines")
 public class PipelineController {
