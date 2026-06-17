@@ -1,4 +1,5 @@
 package com.miniESB.service.impl;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
 import com.miniESB.domain.enums.PayloadStatus;
 import com.miniESB.domain.enums.PipelineStatus;
@@ -17,6 +18,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 
+@ConditionalOnProperty(name = "engine.mode", havingValue = "false", matchIfMissing = true)
 @Service
 @RequiredArgsConstructor
 public class MonitoringServiceImpl implements MonitoringService {

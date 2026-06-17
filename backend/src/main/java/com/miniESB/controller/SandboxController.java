@@ -1,4 +1,5 @@
 package com.miniESB.controller;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
 import com.miniESB.dto.Pipeline.PipelineResponse;
 import com.miniESB.dto.sandbox.SandboxRequest;
@@ -13,6 +14,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @Tag(name = "Sandbox", description = "Test a pipeline end-to-end without sending to external systems")
+@ConditionalOnProperty(name = "engine.mode", havingValue = "false", matchIfMissing = true)
 @RestController
 @RequestMapping("/api/pipelines/{pipelineId}/sandbox")
 @PreAuthorize("hasAnyRole('DEVELOPER', 'ADMIN')")

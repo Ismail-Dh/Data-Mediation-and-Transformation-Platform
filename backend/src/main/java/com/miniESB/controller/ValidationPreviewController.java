@@ -1,4 +1,5 @@
 package com.miniESB.controller;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
 import com.miniESB.dto.validation.ValidationPreviewRequest;
 import com.miniESB.dto.validation.ValidationPreviewResponse;
@@ -27,6 +28,7 @@ import org.springframework.web.bind.annotation.*;
  */
 @Tag(name = "Validation Preview",
         description = "Dry-run structural validation (niveau 1) — no payload is persisted")
+@ConditionalOnProperty(name = "engine.mode", havingValue = "false", matchIfMissing = true)
 @RestController
 @RequestMapping("/api/pipelines/{pipelineId}/validation")
 @PreAuthorize("hasAnyRole('DEVELOPER', 'ADMIN')")

@@ -1,0 +1,144 @@
+<div class="tab-panel">
+
+  <!-- ── Pipeline non validé ──────────────────────────────────────────────── -->
+  <div *ngIf="!isValidated" class="docker-disabled">
+    <div class="docker-section-title">
+      <span class="docker-section-label">Docker Image</span>
+      <span class="docker-section-sub">Only available for validated pipelines</span>
+    </div>
+    <button class="btn btn--secondary btn--sm" disabled>
+      🐳 Generate Docker Image
+    </button>
+  </div>
+
+  <!-- ── Pipeline validé ───────────────────────────────────────────────────── -->
+  <ng-container *ngIf="isValidated">
+
+    <div class="docker-section-title">
+      <span class="docker-section-label">Docker Image</span>
+      <span class="docker-section-sub">Build and export a runnable image for this pipeline</span>
+    </div>
+
+    <!-- ── Zone génération (pas encore d'image ou FAILED) ───────────────────── -->
+    <div class="docker-generate-box" *ngIf="!imageExists">
+
+      <div class="docker-actions">
+        <button
+          class="btn btn--sm"
+          [class.btn--primary]="!isFailed"
+          [class.btn--warning]="isFailed"
+          [disabled]="isGenerating"
+          (click)="generateImage()">
+          <span class="spinner" *ngIf="isGenerating"></span>
+          <ng-container *ngIf="!isGenerating">
+            {{ isFailed ? '🔄 Retry Generation' : '🐳 Generate Docker Image' }}
+          </ng-container>
+          <ng-container *ngIf="isGenerating">Building…</ng-container>
+        </button>
+
+        <!-- Bouton toggle logs (visible dès qu'un build a été lancé) -->
+        <button
+          *ngIf="buildLogs.length > 0 || isGenerating"
+          class="btn btn--secondary btn--sm"
+          (click)="toggleLogs()">
+          {{ showLogs ? '🙈 Hide logs' : '📋 Show logs' }}
+        </button>
+      </div>
+
+      <!-- ── Console SSE ──────────────────────────────────────────────────── -->
+      <div class="build-console" *ngIf="showLogs && (buildLogs.length > 0 || isGenerating)">
+        <div class="build-console__header">
+          <span>Build Output</span>
+          <span class="build-console__badge" *ngIf="isGenerating">
+            <span class="spinner spinner--sm"></span> running…
+          </span>
+          <span class="build-console__badge build-console__badge--done" *ngIf="!isGenerating && !errorMessage">
+            ✓ done
+          </span>
+          <span class="build-console__badge build-console__badge--fail" *ngIf="!isGenerating && errorMessage">
+            ✗ failed
+          </span>
+        </div>
+        <div class="build-console__body" #logContainer>
+          <div class="build-console__line" *ngFor="let line of buildLogs">{{ line }}</div>
+          <div class="build-console__cursor" *ngIf="isGenerating">▌</div>
+        </div>
+      </div>
+
+      <!-- BUILDING (status intermédiaire sans SSE ouvert) -->
+      <div class="docker-building-info" *ngIf="imageInfo?.status === 'BUILDING' && !isGenerating">
+        <span class="spinner"></span>
+        Docker build in progress, please wait…
+      </div>
+
+      <!-- Erreur -->
+      <div class="docker-error-info" *ngIf="errorMessage">
+        ⚠️ {{ errorMessage }}
+      </div>
+
+    </div>
+
+    <!-- ── Image prête ────────────────────────────────────────────────────── -->
+    <div class="docker-success-box" *ngIf="imageExists">
+
+      <div class="docker-success-header">
+        <span class="bool-badge bool-badge--success">✓ Image ready</span>
+        <code class="image-name-code">{{ imageInfo!.imageName }}:{{ imageInfo!.tag }}</code>
+        <span class="image-size-text" *ngIf="imageSizeMb">({{ imageSizeMb }})</span>
+      </div>
+
+      <div class="docker-success-body">
+
+        <!-- Actions -->
+        <div class="docker-actions">
+          <button class="btn btn--success btn--sm" (click)="downloadImage()">
+            ⬇️ Download pipeline-{{ pipelineId }}.tar
+          </button>
+          <button
+            class="btn btn--secondary btn--sm"
+            [disabled]="isGenerating"
+            (click)="generateImage()">
+            🔄 Regenerate
+          </button>
+          <button
+            *ngIf="buildLogs.length > 0"
+            class="btn btn--secondary btn--sm"
+            (click)="toggleLogs()">
+            {{ showLogs ? '🙈 Hide logs' : '📋 Build logs' }}
+          </button>
+        </div>
+
+        <!-- Console SSE (rebuild en cours sur image existante) -->
+        <div class="build-console" *ngIf="showLogs && buildLogs.length > 0">
+          <div class="build-console__header">
+            <span>Build Output</span>
+            <span class="build-console__badge" *ngIf="isGenerating">
+              <span class="spinner spinner--sm"></span> running…
+            </span>
+            <span class="build-console__badge build-console__badge--done" *ngIf="!isGenerating">
+              ✓ done
+            </span>
+          </div>
+          <div class="build-console__body">
+            <div class="build-console__line" *ngFor="let line of buildLogs">{{ line }}</div>
+          </div>
+        </div>
+
+        <!-- Instructions -->
+        <div class="usage-block">
+          <span class="usage-label">Deploy on another machine</span>
+          <pre class="usage-pre">docker load &lt; pipeline-{{ pipelineId }}.tar
+docker run -p 8080:8080 pipeline-{{ pipelineId }}:latest
+
+# Send a payload:
+POST http://localhost:8080/process
+Content-Type: application/json
+&#123; "rawContent": "&#123;...&#125;" &#125;</pre>
+        </div>
+
+      </div>
+    </div>
+
+  </ng-container>
+
+</div>

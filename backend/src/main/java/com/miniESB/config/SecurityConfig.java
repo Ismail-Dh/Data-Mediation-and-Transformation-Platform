@@ -1,5 +1,6 @@
 package com.miniESB.config;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -26,6 +27,7 @@ import java.util.List;
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
+@ConditionalOnProperty(name = "engine.mode", havingValue = "false", matchIfMissing = true)
 public class SecurityConfig {
 
     private final UserDetailsServiceImpl userDetailsService;
@@ -40,38 +42,41 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-            // CORS branché dans Spring Security
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-
-            .csrf(AbstractHttpConfigurer::disable)
-            .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/auth/**", "/actuator/health","/api/users/add","/api/users/forgot-password","/api/users/reset-password","/api/users/verify-code","/api/users/verify-code",
-                                 "/swagger-ui/**",        
-                                 "/swagger-ui.html",     
-                                 "/api-docs/**",           
-                                 "/v3/api-docs/**" ).permitAll()
-                .anyRequest().authenticated()
-            )
-            .exceptionHandling(ex -> ex
-                .authenticationEntryPoint((req, res, e) -> {
-                    res.setStatus(401);
-                    res.setContentType("application/json");
-                    res.getWriter().write("{\"error\":\"Token absent ou invalide\"}");
-                })
-                .accessDeniedHandler((req, res, e) -> {
-                    res.setStatus(403);
-                    res.setContentType("application/json");
-                    res.getWriter().write("{\"error\":\"Accès refusé\"}");
-                })
-            )
-            .authenticationProvider(authenticationProvider())
-            .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .csrf(AbstractHttpConfigurer::disable)
+                .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/auth/**",
+                                "/actuator/health",
+                                "/api/users/add",
+                                "/api/users/forgot-password",
+                                "/api/users/reset-password",
+                                "/api/users/verify-code",
+                                "/swagger-ui/**",
+                                "/swagger-ui.html",
+                                "/api-docs/**",
+                                "/v3/api-docs/**",
+                                "/api/pipelines/*/build-logs/stream").permitAll()  // ← AJOUTER CETTE LIGNE
+                        .anyRequest().authenticated()
+                )
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint((req, res, e) -> {
+                            res.setStatus(401);
+                            res.setContentType("application/json");
+                            res.getWriter().write("{\"error\":\"Token absent ou invalide\"}");
+                        })
+                        .accessDeniedHandler((req, res, e) -> {
+                            res.setStatus(403);
+                            res.setContentType("application/json");
+                            res.getWriter().write("{\"error\":\"Accès refusé\"}");
+                        })
+                )
+                .authenticationProvider(authenticationProvider())
+                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
 
-    // 2. Bean CORS — autorise Angular en dev
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();

@@ -1,4 +1,5 @@
 package com.miniESB.controller;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
 import com.miniESB.dto.mapping.ApplyMappingRequest;
 import com.miniESB.dto.mapping.MappingResultResponse;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @Tag(name = "Mapping Rules", description = "Define and apply field mapping rules for a pipeline")
+@ConditionalOnProperty(name = "engine.mode", havingValue = "false", matchIfMissing = true)
 @RestController
 @RequestMapping("/api/pipelines/{pipelineId}/mappings")
 @PreAuthorize("hasAnyRole('DEVELOPER', 'ADMIN')")

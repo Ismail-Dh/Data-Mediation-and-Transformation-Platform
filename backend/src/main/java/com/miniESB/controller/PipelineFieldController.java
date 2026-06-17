@@ -1,4 +1,5 @@
 package com.miniESB.controller;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
 import com.miniESB.dto.pipelineField.PipelineFieldRequest;
 import com.miniESB.dto.pipelineField.PipelineFieldResponse;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @Tag(name = "Pipeline Fields", description = "Define the expected payload schema for a pipeline")
+@ConditionalOnProperty(name = "engine.mode", havingValue = "false", matchIfMissing = true)
 @RestController
 @RequestMapping("/api/pipelines/{pipelineId}/fields")
 @PreAuthorize("hasRole('DEVELOPER')")

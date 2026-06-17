@@ -7,7 +7,11 @@ services:
     volumes:
       - ./backend:/app
       - ~/.m2:/root/.m2
-    command: mvn spring-boot:run
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: >
+      sh -c "apt-get update -qq &&
+             apt-get install -y -qq docker.io &&
+             mvn spring-boot:run"
     environment:
       SPRING_PROFILES_ACTIVE: dev
 

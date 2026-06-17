@@ -1,4 +1,5 @@
 package com.miniESB.service.impl;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import com.miniESB.domain.entity.Provider;
 import com.miniESB.dto.provider.CreateProviderRequest;
 import com.miniESB.dto.provider.ProviderResponse;
@@ -13,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.stream.Collectors;
 
+@ConditionalOnProperty(name = "engine.mode", havingValue = "false", matchIfMissing = true)
 @Service
 @RequiredArgsConstructor
 public class ProviderServiceImpl implements ProviderService {

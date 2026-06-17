@@ -1,4 +1,5 @@
 package com.miniESB.controller;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
 import com.miniESB.dto.pipelineValidationRule.PipelineValidationRuleRequest;
 import com.miniESB.dto.pipelineValidationRule.PipelineValidationRuleResponse;
@@ -25,6 +26,7 @@ import java.util.List;
  */
 @Tag(name = "Pipeline Validation Rules",
         description = "Manage niveau-2 validation rules for a pipeline (attach global or create private)")
+@ConditionalOnProperty(name = "engine.mode", havingValue = "false", matchIfMissing = true)
 @RestController
 @RequestMapping("/api/pipelines/{pipelineId}/validation-rules")
 @PreAuthorize("hasAnyRole('DEVELOPER', 'ADMIN')")
