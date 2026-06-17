@@ -11,8 +11,9 @@ import { PipelinePayloadsTabComponent } from './tabs/pipeline-payloads-tab/pipel
 import { PipelineRulesTabComponent } from './tabs/pipeline-rules-tab/pipeline-rules-tab.component';
 import { PipelineMappingTabComponent } from './tabs/pipeline-mapping-tab-component/pipeline-mapping-tab-component';
 import { PipelineSandboxTabComponent } from '../sandbox/sandbox.component';
+import { DockerImageButtonComponent } from './docker-image-button-component/docker-image-button-component';
 
-type DetailTab = 'info' | 'fields' | 'payloads' | 'rules' | 'mapping';
+type DetailTab = 'info' | 'fields' | 'payloads' | 'rules' | 'mapping' | 'image_docker';
 
 @Component({
   selector: 'app-pipeline-developer',
@@ -25,7 +26,8 @@ type DetailTab = 'info' | 'fields' | 'payloads' | 'rules' | 'mapping';
     PipelinePayloadsTabComponent,
     PipelineRulesTabComponent,
     PipelineSandboxTabComponent,
-    PipelineMappingTabComponent
+    PipelineMappingTabComponent,
+    DockerImageButtonComponent
   ],
   templateUrl: './pipeline-developer-component.html',
   styleUrls: ['./pipeline-developer-component.scss']
@@ -45,7 +47,6 @@ export class PipelineDeveloperComponent implements OnInit {
   detailPipeline:   Pipeline | null = null;
   detailTab: DetailTab = 'info';
   sandboxPipeline: Pipeline | null = null;
-
   form!: FormGroup;
 
   readonly FORMATS  = ['JSON', 'XML', 'CSV', 'PLAIN_TEXT'];

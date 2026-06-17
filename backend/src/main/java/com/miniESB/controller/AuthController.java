@@ -1,4 +1,5 @@
 package com.miniESB.controller;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
 import com.miniESB.dto.auth.AuthResponse;
 import com.miniESB.dto.auth.LoginRequest;
@@ -23,6 +24,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 @Tag(name = "Auth", description = "Authentication and registration")
+@ConditionalOnProperty(name = "engine.mode", havingValue = "false", matchIfMissing = true)
 @RestController
 @RequestMapping("/auth")
 public class AuthController {

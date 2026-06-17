@@ -19,3 +19,7 @@ server:
 jwt:
   secret: ${JWT_SECRET}
   expiration: ${JWT_EXPIRATION}
+
+engine:
+  mode: false
+  rules-file: /app/rules.json

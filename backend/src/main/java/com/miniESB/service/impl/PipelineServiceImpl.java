@@ -1,4 +1,5 @@
 package com.miniESB.service.impl;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
 import com.miniESB.domain.entity.Pipeline;
 import com.miniESB.domain.entity.Provider;
@@ -23,6 +24,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 @Slf4j
+@ConditionalOnProperty(name = "engine.mode", havingValue = "false", matchIfMissing = true)
 @Service
 @RequiredArgsConstructor
 public class PipelineServiceImpl implements PipelineService {

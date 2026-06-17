@@ -1,4 +1,5 @@
 package com.miniESB.controller;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
 import com.miniESB.audit.Auditable;
 import com.miniESB.dto.user.CreateUserRequest;
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @Tag(name = "Users", description = "User management")
+@ConditionalOnProperty(name = "engine.mode", havingValue = "false", matchIfMissing = true)
 @RestController
 @RequestMapping("/api/users")
 public class UserController {

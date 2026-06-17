@@ -1,4 +1,5 @@
 package com.miniESB.service.impl;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -28,6 +29,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Slf4j
+@ConditionalOnProperty(name = "engine.mode", havingValue = "false", matchIfMissing = true)
 @Service
 @RequiredArgsConstructor
 public class MappingServiceImpl implements MappingService {

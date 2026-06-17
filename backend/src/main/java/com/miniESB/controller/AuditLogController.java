@@ -1,4 +1,5 @@
 package com.miniESB.controller;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
 import com.miniESB.dto.auditlog.AuditLogResponse;
 import com.miniESB.service.AuditLogService;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @Tag(name = "Audit Logs", description = "Audit log consultation")
+@ConditionalOnProperty(name = "engine.mode", havingValue = "false", matchIfMissing = true)
 @RestController
 @RequestMapping("/api/audit-logs")
 @RequiredArgsConstructor

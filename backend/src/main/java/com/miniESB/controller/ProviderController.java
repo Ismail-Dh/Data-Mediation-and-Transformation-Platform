@@ -1,4 +1,5 @@
 package com.miniESB.controller;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
 import com.miniESB.audit.Auditable;
 import com.miniESB.dto.provider.CreateProviderRequest;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @Tag(name = "Providers", description = "Provider management")
+@ConditionalOnProperty(name = "engine.mode", havingValue = "false", matchIfMissing = true)
 @RestController
 @RequestMapping("/api/providers")
 @RequiredArgsConstructor

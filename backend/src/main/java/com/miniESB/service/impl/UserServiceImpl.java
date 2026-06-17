@@ -10,6 +10,7 @@ import com.miniESB.repository.UserRepository;
 import com.miniESB.config.EmailService;
 import com.miniESB.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -20,6 +21,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
+@ConditionalOnProperty(name = "audit.enabled", havingValue = "true", matchIfMissing = true)
+
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;

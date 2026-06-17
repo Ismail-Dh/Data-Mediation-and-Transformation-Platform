@@ -1,4 +1,5 @@
 package com.miniESB.controller;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
 
 
@@ -24,6 +25,7 @@ import java.util.List;
 
 @Tag(name = "Admin – Global Validation Rules",
         description = "CRUD operations on reusable global validation rules (ADMIN only)")
+@ConditionalOnProperty(name = "engine.mode", havingValue = "false", matchIfMissing = true)
 @RestController
 @RequestMapping("/api/admin/rules")
 @PreAuthorize("hasAnyRole('DEVELOPER','ADMIN')")

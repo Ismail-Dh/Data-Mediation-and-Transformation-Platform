@@ -1,4 +1,5 @@
 package com.miniESB.controller;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
 import com.miniESB.dto.payload.PayloadRequest;
 import com.miniESB.dto.payload.PayloadResponse;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @Tag(name = "Payloads", description = "Submit and retrieve payloads for a pipeline")
+@ConditionalOnProperty(name = "engine.mode", havingValue = "false", matchIfMissing = true)
 @RestController
 @RequestMapping("/api/pipelines/{pipelineId}/payloads")
 @PreAuthorize("hasAnyRole('DEVELOPER', 'ADMIN')")
