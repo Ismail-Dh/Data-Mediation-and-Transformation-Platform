@@ -2,7 +2,9 @@ package com.miniESB.dto.sandbox;
 
 import com.miniESB.domain.enums.PayloadStatus;
 import com.miniESB.domain.enums.PipelineStatus;
+import com.miniESB.exception.FieldViolation;
 
+import java.util.List;
 import java.util.Map;
 
 // Full detail of each step — shown to the user after sandbox execution
@@ -21,5 +23,7 @@ public record SandboxResponse(
 
     // Final statuses
     PayloadStatus  payloadStatus,
-    PipelineStatus pipelineStatus
+    PipelineStatus pipelineStatus,
+    List<FieldViolation>     violations,
+    List<MappingRuleSummary> mappingSummary 
 ) {}
