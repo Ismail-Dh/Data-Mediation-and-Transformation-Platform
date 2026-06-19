@@ -1,6 +1,6 @@
 <div class="sandbox-panel">
 
-  <!-- ── Pipeline status ─────────────────────────────────────────────────── -->
+  <!-- ── Pipeline status ──────────────────────────────────────────────────── -->
   <div class="sandbox-section">
     <div class="section-header">
       <div class="section-icon section-icon--status">
@@ -11,36 +11,26 @@
         <span class="section-sub">Manually validate or revert after sandbox testing</span>
       </div>
     </div>
-
     <div class="status-bar">
       <div class="status-display">
         <span class="status-label">Current status</span>
-        <span class="badge badge--{{ pipeline?.status?.toLowerCase() }}">
-          {{ pipeline?.status }}
-        </span>
+        <span class="badge badge--{{ pipeline?.status?.toLowerCase() }}">{{ pipeline?.status }}</span>
       </div>
       <div class="status-btns">
-        <button
-          class="btn btn--validate"
-          [disabled]="!canValidate || statusLoading"
-          (click)="validate()">
+        <button class="btn btn--validate" [disabled]="!canValidate || statusLoading" (click)="validate()">
           <svg viewBox="0 0 16 16"><path d="M3 8l3 3 7-7" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
           Mark as Validated
         </button>
-        <button
-          class="btn btn--revert"
-          [disabled]="!canRevert || statusLoading"
-          (click)="revert()">
+        <button class="btn btn--revert" [disabled]="!canRevert || statusLoading" (click)="revert()">
           <svg viewBox="0 0 16 16"><path d="M3 8a5 5 0 1 0 1.5-3.5L3 6V3H6" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
           Revert to Configured
         </button>
       </div>
     </div>
-
     <div class="status-error" *ngIf="statusError">{{ statusError }}</div>
   </div>
 
-  <!-- ── Sandbox test ─────────────────────────────────────────────────────── -->
+  <!-- ── Sandbox test ──────────────────────────────────────────────────────── -->
   <div class="sandbox-section">
     <div class="section-header">
       <div class="section-icon section-icon--run">
@@ -48,41 +38,26 @@
       </div>
       <div>
         <span class="section-title">Sandbox test</span>
-        <span class="section-sub">Submit a payload through validation + mapping — nothing sent to external systems</span>
+        <span class="section-sub">Submit a payload through validation + mapping</span>
       </div>
     </div>
-
     <div class="sandbox-form">
       <div class="format-row">
         <label class="form-label">Format</label>
         <div class="format-pills">
-          <button
-            *ngFor="let f of FORMATS"
-            class="format-pill"
-            [class.format-pill--active]="format === f"
-            (click)="format = f">
+          <button *ngFor="let f of FORMATS" class="format-pill"
+                  [class.format-pill--active]="format === f" (click)="format = f">
             {{ f }}
           </button>
         </div>
       </div>
-
       <div class="payload-field">
         <label class="form-label">Raw payload</label>
-        <textarea
-          class="payload-textarea"
-          [(ngModel)]="rawContent"
-          placeholder='{"client_id": "123", "montant": 500}'
-          rows="5">
-        </textarea>
+        <textarea class="payload-textarea" [(ngModel)]="rawContent"
+                  placeholder='{"id": 1, "name": "Ahmed"}' rows="5"></textarea>
       </div>
-
-      <button
-        class="btn btn--run"
-        [disabled]="!rawContent.trim() || loading"
-        (click)="run()">
-        <svg viewBox="0 0 16 16" *ngIf="!loading">
-          <polygon points="4,2 14,8 4,14" fill="currentColor"/>
-        </svg>
+      <button class="btn btn--run" [disabled]="!rawContent.trim() || loading" (click)="run()">
+        <svg viewBox="0 0 16 16" *ngIf="!loading"><polygon points="4,2 14,8 4,14" fill="currentColor"/></svg>
         <span class="spinner" *ngIf="loading"></span>
         {{ loading ? 'Running…' : 'Run Sandbox' }}
       </button>
@@ -93,7 +68,7 @@
   <div class="sandbox-section sandbox-section--result" *ngIf="result">
     <div class="section-header">
       <div class="section-icon section-icon--result">
-        <svg viewBox="0 0 20 20"><rect x="3" y="3" width="14" height="14" rx="3" stroke="currentColor" stroke-width="1.5" fill="none"/><path d="M7 10h6M10 7v6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <svg viewBox="0 0 20 20"><rect x="3" y="3" width="14" height="14" rx="3" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
       </div>
       <div>
         <span class="section-title">Result</span>
@@ -101,69 +76,340 @@
       </div>
     </div>
 
-    <!-- Steps -->
     <div class="steps">
+      <!-- Structural -->
       <div class="step" [class.step--ok]="result.validationPassed" [class.step--fail]="!result.validationPassed">
         <div class="step-dot">
-          <svg viewBox="0 0 12 12" *ngIf="result.validationPassed"><path d="M2 6l2.5 2.5L10 3" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <svg viewBox="0 0 12 12" *ngIf="result.validationPassed"><path d="M2 6l2.5 2.5L10 3" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>
           <svg viewBox="0 0 12 12" *ngIf="!result.validationPassed"><line x1="3" y1="3" x2="9" y2="9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="9" y1="3" x2="3" y2="9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
         </div>
         <div class="step-content">
-          <span class="step-name">Structural Validation</span>
+          <span class="step-name">Validation</span>
           <span class="step-msg">{{ result.validationMessage }}</span>
         </div>
-        <span class="step-badge step-badge--ok" *ngIf="result.validationPassed">VALIDATED</span>
+        <span class="step-badge step-badge--ok"   *ngIf="result.validationPassed">PASSED</span>
         <span class="step-badge step-badge--fail" *ngIf="!result.validationPassed">FAILED</span>
+      </div>
+
+      <!-- Violations inline -->
+      <div class="violations-inline" *ngIf="!result.validationPassed && result.violations?.length">
+        <div class="violation-item" *ngFor="let v of result.violations">
+          <div class="violation-header">
+            <span class="violation-field">{{ v.fieldPath }}</span>
+            <span class="violation-code">{{ errorTypeLabel(v.errorType) }}</span>
+          </div>
+          <div class="violation-msg">{{ v.message }}</div>
+        </div>
       </div>
 
       <div class="step-connector" *ngIf="result.validationPassed"></div>
 
+      <!-- Mapping -->
       <div class="step step--ok" *ngIf="result.mappingApplied">
         <div class="step-dot">
-          <svg viewBox="0 0 12 12"><path d="M2 6l2.5 2.5L10 3" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <svg viewBox="0 0 12 12"><path d="M2 6l2.5 2.5L10 3" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>
         </div>
         <div class="step-content">
           <span class="step-name">Mapping</span>
-          <span class="step-msg">Rules applied successfully</span>
+          <span class="step-msg">{{ result.mappingSummary?.length }} rule(s) applied</span>
         </div>
         <span class="step-badge step-badge--mapped">MAPPED</span>
       </div>
-
-      <div class="step step--skip" *ngIf="!result.mappingApplied && result.validationPassed">
-        <div class="step-dot step-dot--skip">—</div>
-        <div class="step-content">
-          <span class="step-name">Mapping</span>
-          <span class="step-msg">No mapping rules defined for this pipeline</span>
-        </div>
-      </div>
     </div>
 
-    <!-- Payload diff -->
+    <!-- Diff global -->
     <div class="payload-diff" *ngIf="result.mappingApplied && result.originalPayload">
       <div class="diff-col">
-        <div class="diff-label diff-label--original">
-          <svg viewBox="0 0 12 12"><circle cx="6" cy="6" r="4" stroke="currentColor" stroke-width="1.2" fill="none"/></svg>
-          Original
-        </div>
+        <div class="diff-label diff-label--original">Original</div>
         <pre class="diff-pre">{{ result.originalPayload | json }}</pre>
       </div>
       <div class="diff-arrow">
-        <svg viewBox="0 0 24 24"><path d="M5 12h14M14 7l5 5-5 5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <svg viewBox="0 0 24 24"><path d="M5 12h14M14 7l5 5-5 5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>
       </div>
       <div class="diff-col">
-        <div class="diff-label diff-label--mapped">
-          <svg viewBox="0 0 12 12"><path d="M2 6l2.5 2.5L10 3" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          Mapped
-        </div>
+        <div class="diff-label diff-label--mapped">Mapped</div>
         <pre class="diff-pre diff-pre--mapped">{{ result.mappedPayload | json }}</pre>
+      </div>
+    </div>
+
+    <!-- Mapping par règle -->
+    <div class="mapping-rules-section" *ngIf="result.mappingApplied && result.mappingSummary?.length">
+      <div class="mapping-rules-title">Rules detail</div>
+      <div class="mapping-list">
+        <div class="mapping-item mapping-item--applied" *ngFor="let m of result.mappingSummary">
+          <div class="mapping-item-header">
+            <span class="mapping-type-badge">{{ mappingTypeLabel(m.mappingType) }}</span>
+            <span class="mapping-status mapping-status--ok">APPLIED</span>
+          </div>
+          <div class="mapping-fields">
+            <span class="mapping-src">{{ m.sourceField }}</span>
+            <svg viewBox="0 0 16 16" style="width:12px;height:12px;color:#bbb;flex-shrink:0">
+              <path d="M3 8h10M9 5l4 3-4 3" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+            </svg>
+            <span class="mapping-tgt">{{ m.targetField }}</span>
+          </div>
+          <div class="mapping-expr" *ngIf="m.expression">
+            <span class="expr-label">expr:</span> {{ m.expression }}
+          </div>
+          <div class="mapping-diff" *ngIf="m.valueBefore || m.valueAfter">
+            <span class="mapping-before">{{ m.valueBefore ?? '—' }}</span>
+            <svg viewBox="0 0 16 16" style="width:10px;height:10px;color:#bbb;flex-shrink:0">
+              <path d="M3 8h10M9 5l4 3-4 3" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+            </svg>
+            <span class="mapping-after">{{ m.valueAfter ?? '—' }}</span>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- ── Error ─────────────────────────────────────────────────────────────── -->
-  <div class="sandbox-error" *ngIf="error">
-    <svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.4" fill="none"/><line x1="8" y1="5" x2="8" y2="9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="8" cy="11" r="0.7" fill="currentColor"/></svg>
-    {{ error }}
+  <!-- ── Error ──────────────────────────────────────────────────────────────── -->
+  <div class="sandbox-error" *ngIf="error">{{ error }}</div>
+
+  <!-- ── Historique ────────────────────────────────────────────────────────── -->
+  <div class="sandbox-section">
+    <div class="section-header logs-header" (click)="toggleLogs()">
+      <div class="section-icon section-icon--history">
+        <svg viewBox="0 0 20 20">
+          <path d="M10 6v4l3 3" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+          <circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="1.5" fill="none"/>
+        </svg>
+      </div>
+      <div style="flex:1">
+        <span class="section-title">Execution history</span>
+        <span class="section-sub">{{ logsTotalItems }} execution(s) — click a row to inspect</span>
+      </div>
+      <svg class="toggle-arrow" [class.toggle-arrow--open]="showLogs" viewBox="0 0 16 16">
+        <path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+      </svg>
+    </div>
+
+    <div *ngIf="showLogs" class="logs-body">
+      <div *ngIf="logsLoading" class="logs-empty">Loading…</div>
+      <div *ngIf="!logsLoading && logs.length === 0" class="logs-empty">
+        No executions yet — run the sandbox to see history.
+      </div>
+
+      <table *ngIf="!logsLoading && logs.length > 0" class="logs-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Date</th>
+            <th>Structural</th>
+            <th>Rules</th>
+            <th>Mapping</th>
+            <th>Duration</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let log of logs" class="logs-row" (click)="openLog(log)">
+            <td class="logs-id">#{{ log.payloadId ?? log.id }}</td>
+            <td class="logs-date">{{ formatDate(log.executedAt) }}</td>
+            <td>
+              <span class="log-badge"
+                    [class.log-badge--ok]="log.failureStep !== 'STRUCTURAL'"
+                    [class.log-badge--fail]="log.failureStep === 'STRUCTURAL'">
+                {{ log.failureStep === 'STRUCTURAL' ? 'FAILED' : 'PASSED' }}
+              </span>
+            </td>
+            <td>
+              <span class="log-badge"
+                    [class.log-badge--ok]="log.validationPassed"
+                    [class.log-badge--fail]="log.failureStep === 'RULES'"
+                    [class.log-badge--skip]="log.failureStep === 'STRUCTURAL'">
+                {{ log.failureStep === 'STRUCTURAL' ? '—' : log.failureStep === 'RULES' ? 'FAILED' : 'PASSED' }}
+              </span>
+            </td>
+            <td>
+              <span class="log-badge"
+                    [class.log-badge--ok]="log.mappingApplied"
+                    [class.log-badge--skip]="!log.mappingApplied">
+                {{ log.mappingApplied ? 'APPLIED' : '—' }}
+              </span>
+            </td>
+            <td class="logs-duration">{{ formatDuration(log.durationMs) }}</td>
+            <td>
+              <button class="btn-inspect" (click)="openLog(log); $event.stopPropagation()">Inspect</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="logs-pagination" *ngIf="logsTotalPages > 1">
+        <button class="page-btn" [disabled]="logsPage === 0" (click)="prevPage()">‹</button>
+        <span class="page-info">{{ logsPage + 1 }} / {{ logsTotalPages }}</span>
+        <button class="page-btn" [disabled]="logsPage >= logsTotalPages - 1" (click)="nextPage()">›</button>
+      </div>
+    </div>
   </div>
 
+</div>
+
+<!-- ── Modal ──────────────────────────────────────────────────────────────────── -->
+<div class="modal-overlay" *ngIf="selectedLog" (click)="closeModal()">
+  <div class="modal" (click)="$event.stopPropagation()">
+
+    <div class="modal-header">
+      <div class="modal-title-row">
+        <span class="modal-title">Execution #{{ selectedLog.log.payloadId ?? selectedLog.log.id }}</span>
+        <span class="modal-date">{{ formatDate(selectedLog.log.executedAt) }}</span>
+      </div>
+      <div class="modal-status-row">
+        <span class="modal-pill"
+              [class.modal-pill--ok]="selectedLog.log.failureStep !== 'STRUCTURAL'"
+              [class.modal-pill--fail]="selectedLog.log.failureStep === 'STRUCTURAL'">
+          Structural: {{ selectedLog.log.failureStep === 'STRUCTURAL' ? 'FAILED' : 'PASSED' }}
+        </span>
+        <span class="modal-pill"
+              [class.modal-pill--ok]="selectedLog.log.validationPassed"
+              [class.modal-pill--fail]="selectedLog.log.failureStep === 'RULES'"
+              [class.modal-pill--skip]="selectedLog.log.failureStep === 'STRUCTURAL'">
+          Rules: {{ selectedLog.log.failureStep === 'STRUCTURAL' ? '—' : selectedLog.log.failureStep === 'RULES' ? 'FAILED' : 'PASSED' }}
+        </span>
+        <span class="modal-pill"
+              [class.modal-pill--ok]="selectedLog.log.mappingApplied"
+              [class.modal-pill--skip]="!selectedLog.log.mappingApplied">
+          Mapping: {{ selectedLog.log.mappingApplied ? 'APPLIED' : '—' }}
+        </span>
+        <span class="modal-duration">{{ formatDuration(selectedLog.log.durationMs) }}</span>
+      </div>
+      <button class="modal-close" (click)="closeModal()">✕</button>
+    </div>
+
+    <div class="modal-tabs">
+      <button class="modal-tab" [class.modal-tab--active]="activeTab === 'payload'"
+              (click)="setTab('payload')">Payload</button>
+      <button class="modal-tab" [class.modal-tab--active]="activeTab === 'violations'"
+              (click)="setTab('violations')"
+              [class.modal-tab--error]="!selectedLog.log.validationPassed">
+        Violations
+        <span class="tab-count tab-count--error" *ngIf="selectedLog.violations.length > 0">
+          {{ selectedLog.violations.length }}
+        </span>
+      </button>
+      <button class="modal-tab" [class.modal-tab--active]="activeTab === 'mapping'"
+              (click)="setTab('mapping')">
+        Mapping
+        <span class="tab-count" *ngIf="selectedLog.mappingSummary.length > 0">
+          {{ selectedLog.mappingSummary.length }}
+        </span>
+      </button>
+    </div>
+
+    <div class="modal-body">
+
+      <!-- Payload tab -->
+      <div *ngIf="activeTab === 'payload'">
+        <div class="modal-sub">Raw payload sent</div>
+        <pre class="modal-pre">{{ selectedLog.log.rawContent }}</pre>
+
+        <div *ngIf="selectedLog.originalPayload && selectedLog.mappedPayload"
+             class="payload-diff" style="margin-top:1rem">
+          <div class="diff-col">
+            <div class="diff-label diff-label--original">Original</div>
+            <pre class="diff-pre">{{ formatJson(selectedLog.originalPayload) }}</pre>
+          </div>
+          <div class="diff-arrow">
+            <svg viewBox="0 0 24 24"><path d="M5 12h14M14 7l5 5-5 5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>
+          </div>
+          <div class="diff-col">
+            <div class="diff-label diff-label--mapped">Mapped</div>
+            <pre class="diff-pre diff-pre--mapped">{{ formatJson(selectedLog.mappedPayload) }}</pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- Violations tab -->
+      <div *ngIf="activeTab === 'violations'">
+        <div *ngIf="selectedLog.violations.length === 0" class="modal-empty">
+          No violations — validation passed.
+        </div>
+        <div *ngIf="selectedLog.violations.length > 0">
+          <div class="modal-sub">
+            Failed at:
+            <span class="step-tag"
+                  [class.step-tag--structural]="selectedLog.log.failureStep === 'STRUCTURAL'"
+                  [class.step-tag--rules]="selectedLog.log.failureStep === 'RULES'">
+              {{ selectedLog.log.failureStep === 'STRUCTURAL' ? 'Structural validation' : 'Rules validation' }}
+            </span>
+          </div>
+          <div class="violations-list">
+            <div class="violation-item" *ngFor="let v of selectedLog.violations">
+              <div class="violation-header">
+                <span class="violation-field">{{ v.fieldPath }}</span>
+                <span class="violation-code">{{ errorTypeLabel(v.errorType) }}</span>
+              </div>
+              <div class="violation-msg">{{ v.message }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mapping tab -->
+      <div *ngIf="activeTab === 'mapping'">
+        <div *ngIf="selectedLog.mappingSummary.length === 0" class="modal-empty">
+          No mapping rules defined for this pipeline.
+        </div>
+        <div *ngIf="selectedLog.mappingSummary.length > 0">
+          <div class="modal-sub">
+            {{ selectedLog.log.mappingApplied ? selectedLog.mappingSummary.length + ' rule(s) applied' : 'Rules not reached — validation failed first' }}
+          </div>
+
+          <!-- Diff global si mapping appliqué -->
+          <div *ngIf="selectedLog.log.mappingApplied && selectedLog.originalPayload"
+               class="payload-diff" style="margin-bottom:1rem">
+            <div class="diff-col">
+              <div class="diff-label diff-label--original">Original</div>
+              <pre class="diff-pre">{{ formatJson(selectedLog.originalPayload) }}</pre>
+            </div>
+            <div class="diff-arrow">
+              <svg viewBox="0 0 24 24"><path d="M5 12h14M14 7l5 5-5 5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>
+            </div>
+            <div class="diff-col">
+              <div class="diff-label diff-label--mapped">Mapped</div>
+              <pre class="diff-pre diff-pre--mapped">{{ formatJson(selectedLog.mappedPayload) }}</pre>
+            </div>
+          </div>
+
+          <!-- Par règle -->
+          <div class="mapping-list">
+            <div class="mapping-item"
+                 [class.mapping-item--applied]="m.applied"
+                 [class.mapping-item--skipped]="!m.applied"
+                 *ngFor="let m of selectedLog.mappingSummary">
+              <div class="mapping-item-header">
+                <span class="mapping-type-badge" [class.mapping-type-badge--skipped]="!m.applied">
+                  {{ mappingTypeLabel(m.mappingType) }}
+                </span>
+                <span class="mapping-status"
+                      [class.mapping-status--ok]="m.applied"
+                      [class.mapping-status--skip]="!m.applied">
+                  {{ m.applied ? 'APPLIED' : 'NOT REACHED' }}
+                </span>
+              </div>
+              <div class="mapping-fields">
+                <span class="mapping-src">{{ m.sourceField }}</span>
+                <svg viewBox="0 0 16 16" style="width:12px;height:12px;color:#bbb;flex-shrink:0">
+                  <path d="M3 8h10M9 5l4 3-4 3" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+                </svg>
+                <span class="mapping-tgt">{{ m.targetField }}</span>
+              </div>
+              <div class="mapping-expr" *ngIf="m.expression">
+                <span class="expr-label">expr:</span> {{ m.expression }}
+              </div>
+              <div class="mapping-diff" *ngIf="m.applied && (m.valueBefore || m.valueAfter)">
+                <span class="mapping-before">{{ m.valueBefore ?? '—' }}</span>
+                <svg viewBox="0 0 16 16" style="width:10px;height:10px;color:#bbb;flex-shrink:0">
+                  <path d="M3 8h10M9 5l4 3-4 3" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+                </svg>
+                <span class="mapping-after">{{ m.valueAfter ?? '—' }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
 </div>
