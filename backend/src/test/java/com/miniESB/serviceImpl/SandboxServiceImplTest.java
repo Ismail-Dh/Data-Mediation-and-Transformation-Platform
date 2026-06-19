@@ -20,6 +20,8 @@ import com.miniESB.service.BusinessValidatorService;
 import com.miniESB.service.MappingService;
 import com.miniESB.service.StructuralValidatorService;
 import com.miniESB.service.impl.SandboxServiceImpl;
+import com.miniESB.domain.entity.SandboxLog;
+import com.miniESB.repository.SandboxLogRepository;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -49,6 +51,8 @@ class SandboxServiceImplTest {
     @Mock StructuralValidatorService structuralValidatorService;
     @Mock BusinessValidatorService   businessValidatorService;
     @Mock MappingService             mappingService;
+    @Mock SandboxLogRepository sandboxLogRepository;
+
 
     @InjectMocks
     SandboxServiceImpl service;
@@ -249,4 +253,72 @@ class SandboxServiceImplTest {
             verifyNoInteractions(businessValidatorService);
         }
     }
+    // ── Timing ────────────────────────────────────────────────────────────────
+
+@Nested
+@DisplayName("Timing")
+class Timing {
+
+    @Test
+    @DisplayName("s'exécute en moins de 2 secondes")
+    void run_completesWithinReasonableTime() {
+        when(pipelineRepository.findById(PIPELINE_ID)).thenReturn(Optional.of(pipeline()));
+        when(payloadRepository.save(any())).thenReturn(savedPayload());
+        when(pipelineFieldRepository.findAllByPipelineId(PIPELINE_ID)).thenReturn(List.of());
+        when(validationRuleRepository.findAllByPipelineIdAndActiveTrue(PIPELINE_ID))
+                .thenReturn(List.of());
+        when(mappingService.applyMappingToPayload(PIPELINE_ID, PAYLOAD_ID))
+                .thenReturn(mappingResult());
+
+        long start = System.currentTimeMillis();
+        service.run(PIPELINE_ID, request());
+        long duration = System.currentTimeMillis() - start;
+
+        assertThat(duration).isLessThan(2000);
+    }
+}
+
+// ── Sandbox log ───────────────────────────────────────────────────────────
+
+@Nested
+@DisplayName("Sandbox logging async")
+class SandboxLogging {
+
+    @Test
+    @DisplayName("sauvegarde un log après exécution réussie")
+    void saves_log_after_success() throws InterruptedException {
+        when(pipelineRepository.findById(PIPELINE_ID)).thenReturn(Optional.of(pipeline()));
+        when(payloadRepository.save(any())).thenReturn(savedPayload());
+        when(pipelineFieldRepository.findAllByPipelineId(PIPELINE_ID)).thenReturn(List.of());
+        when(validationRuleRepository.findAllByPipelineIdAndActiveTrue(PIPELINE_ID))
+                .thenReturn(List.of());
+        when(mappingService.applyMappingToPayload(PIPELINE_ID, PAYLOAD_ID))
+                .thenReturn(mappingResult());
+
+        service.run(PIPELINE_ID, request());
+        Thread.sleep(300); // attend @Async
+
+        verify(sandboxLogRepository, atLeastOnce()).save(any(SandboxLog.class));
+    }
+
+    @Test
+    @DisplayName("sauvegarde un log même après échec de validation")
+    void saves_log_after_failure() throws InterruptedException {
+        PayloadValidationException pve = new PayloadValidationException(
+                List.of(new FieldViolation("name", "MISSING_FIELD", "champ requis")));
+
+        when(pipelineRepository.findById(PIPELINE_ID)).thenReturn(Optional.of(pipeline()));
+        when(payloadRepository.save(any())).thenReturn(savedPayload());
+        when(pipelineFieldRepository.findAllByPipelineId(PIPELINE_ID))
+                .thenReturn(List.of(new PipelineField()));
+        when(validationRuleRepository.findAllByPipelineIdAndActiveTrue(PIPELINE_ID))
+                .thenReturn(List.of());
+        doThrow(pve).when(structuralValidatorService).validate(any(), any());
+
+        service.run(PIPELINE_ID, request());
+        Thread.sleep(300);
+
+        verify(sandboxLogRepository, atLeastOnce()).save(any(SandboxLog.class));
+    }
+}
 }
