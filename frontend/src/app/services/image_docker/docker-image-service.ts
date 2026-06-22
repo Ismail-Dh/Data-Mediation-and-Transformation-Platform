@@ -19,6 +19,15 @@ export interface DockerImageResponse {
   builtAt: string | null;
   pipelineId: number;
 }
+export interface BuildLogEntryResponse {
+  id:              number;
+  tag:             string;
+  version:         string | null;
+  status:          'SUCCESS' | 'FAILED' | 'BUILDING' | 'PENDING';
+  startTime:       string | null;
+  endTime:         string | null;
+  durationSeconds: number | null;
+}
 
 
 
@@ -54,6 +63,11 @@ export class DockerImageService {
     return this.http.get<DockerImageResponse>(
       `${this.baseUrl}/${pipelineId}/image`
     );
+  }
+  getVersionHistory(pipelineId: number): Observable<BuildLogEntryResponse[]> {
+  return this.http.get<BuildLogEntryResponse[]>(
+    `${this.baseUrl}/${pipelineId}/image/versions`
+  );
   }
 
   downloadImage(pipelineId: number): void {
