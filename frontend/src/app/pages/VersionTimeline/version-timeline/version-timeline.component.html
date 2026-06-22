@@ -1,0 +1,77 @@
+<div class="timeline-panel">
+
+  <div class="timeline-header">
+    <div class="timeline-header-left">
+      <span class="timeline-title">Version History</span>
+      <span class="timeline-sub">{{ versions.length }} build(s) recorded</span>
+    </div>
+    <button class="btn-refresh" (click)="load()" [disabled]="loading">
+      <span *ngIf="!loading">↻ Refresh</span>
+      <span *ngIf="loading">Loading…</span>
+    </button>
+  </div>
+
+  <!-- Empty -->
+  <div *ngIf="!loading && versions.length === 0" class="timeline-empty">
+    No builds yet — generate an image to see version history.
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="loading" class="timeline-empty">Loading…</div>
+
+  <!-- Timeline -->
+  <div *ngIf="!loading && versions.length > 0" class="timeline">
+    <div class="timeline-item" *ngFor="let v of displayed; let i = index"
+         [class.timeline-item--success]="v.status === 'SUCCESS'"
+         [class.timeline-item--failed]="v.status === 'FAILED'">
+
+      <!-- Dot + line -->
+      <div class="timeline-dot-col">
+        <div class="timeline-dot"
+             [class.timeline-dot--success]="v.status === 'SUCCESS'"
+             [class.timeline-dot--failed]="v.status === 'FAILED'"
+             [class.timeline-dot--pending]="v.status === 'BUILDING' || v.status === 'PENDING'">
+          {{ statusIcon(v.status) }}
+        </div>
+        <div class="timeline-line" *ngIf="i < displayed.length - 1"></div>
+      </div>
+
+      <!-- Content -->
+      <div class="timeline-content">
+        <div class="timeline-content-header">
+          <code class="timeline-tag">{{ v.tag }}</code>
+          <span class="timeline-badge"
+                [class.timeline-badge--success]="v.status === 'SUCCESS'"
+                [class.timeline-badge--failed]="v.status === 'FAILED'"
+                [class.timeline-badge--building]="v.status === 'BUILDING' || v.status === 'PENDING'">
+            {{ v.status }}
+          </span>
+          <span class="timeline-date">{{ formatDate(v.startTime) }}</span>
+          <span class="timeline-duration" *ngIf="v.durationSeconds !== null">
+            ⏱ {{ formatDuration(v.durationSeconds) }}
+          </span>
+        </div>
+
+        <!-- Actions -->
+        <div class="timeline-actions" *ngIf="v.status === 'SUCCESS'">
+          <button class="btn-action btn-action--download" (click)="download(v)">
+            ⬇ Download .tar
+          </button>
+        </div>
+
+        <div class="timeline-failed-msg" *ngIf="v.status === 'FAILED'">
+          Build failed — check logs or retry generation.
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Show more -->
+  <div class="timeline-more" *ngIf="versions.length > 5">
+    <button class="btn-more" (click)="toggleShowAll()">
+      {{ showAll ? 'Show less ↑' : 'Show all ' + versions.length + ' versions ↓' }}
+    </button>
+  </div>
+
+</div>

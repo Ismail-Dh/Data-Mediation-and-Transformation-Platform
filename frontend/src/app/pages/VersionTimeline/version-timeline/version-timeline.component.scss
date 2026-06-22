@@ -1,0 +1,145 @@
+$green:     #2e7d32;
+$danger:    #c62828;
+$blue:      #1565c0;
+$accent:    #3b5bdb;
+$border:    #e8e8e8;
+$text-main: #1a1a2e;
+$text-sub:  #6b7280;
+$radius-md: 10px;
+$radius-lg: 14px;
+
+.timeline-panel {
+  background: #fff;
+  border: 1px solid $border;
+  border-radius: $radius-lg;
+  padding: 1.25rem 1.5rem;
+}
+
+.timeline-header {
+  display: flex; align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+}
+
+.timeline-header-left {
+  display: flex; flex-direction: column; gap: 2px;
+}
+
+.timeline-title {
+  font-size: 0.9rem; font-weight: 600; color: $text-main;
+}
+
+.timeline-sub {
+  font-size: 0.75rem; color: $text-sub;
+}
+
+.btn-refresh {
+  padding: 5px 12px; border-radius: 8px;
+  border: 1px solid $border; background: #f5f5f5;
+  font-size: 0.78rem; color: $text-sub;
+  cursor: pointer; font-family: inherit;
+  &:hover:not(:disabled) { background: #ebebeb; color: $text-main; }
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
+}
+
+.timeline-empty {
+  text-align: center; color: $text-sub;
+  font-size: 0.82rem; padding: 2rem 0;
+}
+
+// ── Timeline ──────────────────────────────────────────────────────────────────
+.timeline {
+  display: flex; flex-direction: column; gap: 0;
+}
+
+.timeline-item {
+  display: flex; gap: 1rem; align-items: flex-start;
+}
+
+.timeline-dot-col {
+  display: flex; flex-direction: column;
+  align-items: center; flex-shrink: 0;
+}
+
+.timeline-dot {
+  width: 32px; height: 32px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.85rem; flex-shrink: 0;
+  border: 2px solid $border; background: #f5f5f5;
+
+  &--success { background: #e8f5e9; border-color: #a5d6a7; }
+  &--failed  { background: #fce4ec; border-color: #ef9a9a; }
+  &--pending { background: #fff3e0; border-color: #ffcc80; }
+}
+
+.timeline-line {
+  width: 2px; flex: 1; min-height: 16px;
+  background: $border; margin: 4px 0;
+}
+
+.timeline-content {
+  flex: 1; padding-bottom: 1.25rem;
+}
+
+.timeline-content-header {
+  display: flex; align-items: center;
+  gap: 0.6rem; flex-wrap: wrap; margin-bottom: 0.5rem;
+}
+
+.timeline-tag {
+  font-family: monospace; font-size: 0.88rem;
+  font-weight: 700; color: $text-main;
+  background: #f0f4ff; padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.timeline-badge {
+  padding: 2px 8px; border-radius: 12px;
+  font-size: 0.68rem; font-weight: 700; letter-spacing: 0.04em;
+  &--success  { background: #e8f5e9; color: $green; }
+  &--failed   { background: #fce4ec; color: $danger; }
+  &--building { background: #fff3e0; color: #e65100; }
+}
+
+.timeline-date {
+  font-size: 0.75rem; color: $text-sub; white-space: nowrap;
+}
+
+.timeline-duration {
+  font-size: 0.75rem; color: $text-sub;
+  font-family: monospace;
+}
+
+.timeline-actions {
+  display: flex; gap: 0.5rem; flex-wrap: wrap;
+}
+
+.btn-action {
+  padding: 4px 12px; border-radius: 8px;
+  font-size: 0.78rem; font-weight: 500;
+  cursor: pointer; font-family: inherit;
+  border: none; transition: all 0.15s;
+
+  &--download {
+    background: #e8f5e9; color: $green;
+    border: 1px solid #a5d6a7;
+    &:hover { background: #d7eed8; }
+  }
+}
+
+.timeline-failed-msg {
+  font-size: 0.76rem; color: $danger;
+  margin-top: 4px;
+}
+
+.timeline-more {
+  text-align: center; padding-top: 1rem;
+  border-top: 1px solid $border; margin-top: 0.5rem;
+}
+
+.btn-more {
+  background: none; border: none;
+  font-size: 0.8rem; color: $accent;
+  cursor: pointer; font-family: inherit;
+  &:hover { text-decoration: underline; }
+}

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.miniESB.domain.entity.*;
 import com.miniESB.domain.enums.ImageStatus;
 import com.miniESB.domain.enums.PipelineStatus;
+import com.miniESB.dto.docker.BuildLogEntryResponse;
 import com.miniESB.dto.docker.DockerImageBuildResponse;
 import com.miniESB.dto.docker.DockerImageResponse;
 import com.miniESB.exception.DockerBuildException;
@@ -12,6 +13,7 @@ import com.miniESB.exception.ResourceNotFoundException;
 import com.miniESB.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import com.miniESB.service.ImageVersionService;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.MediaType;
@@ -39,6 +41,8 @@ public class DockerImageGeneratorService {
     private final DockerImageRepository    dockerImageRepository;
     private final BuildLogEntryRepository  buildLogEntryRepository;
     private final ObjectMapper             objectMapper;
+    // Ajouter dans les champs injectés
+    private final ImageVersionService      imageVersionService;
 
     // ══════════════════════════════════════════════════════════════════════════
     //  SSE streaming build  (tâche 5.4 + error handling renforcé)
@@ -85,14 +89,19 @@ public class DockerImageGeneratorService {
 
         // ── 2. Créer / mettre à jour l'entrée DockerImage ────────────────────
         String imageName = "pipeline-" + pipelineId;
-        String tag       = pipeline.getVersion() != null ? pipeline.getVersion() : "latest";
+        String currentPipelineVersion = pipeline.getVersion() != null
+                ? pipeline.getVersion()
+                : "1.0";
 
         DockerImage dockerImage = dockerImageRepository
                 .findByPipelineId(pipelineId)
                 .orElse(DockerImage.builder().pipeline(pipeline).build());
 
+        // Calcul du prochain tag sémantique
+        String nextTag = imageVersionService.computeNextTag(dockerImage, pipeline);
+
         dockerImage.setImageName(imageName);
-        dockerImage.setTag(tag);
+        dockerImage.setTag(nextTag);
         dockerImage.setStatus(ImageStatus.BUILDING);
         dockerImage.setBuiltAt(null);
         dockerImageRepository.save(dockerImage);
@@ -105,7 +114,7 @@ public class DockerImageGeneratorService {
             generateRulesJson(pipelineId, buildDir);
             generateDockerfile(buildDir);
 
-            String fullImageName = imageName + ":" + tag;
+            String fullImageName = imageName + ":" + nextTag;
 
             // ── 3a. Vérifier que le daemon Docker répond ──────────────────────
             checkDockerDaemon();
@@ -148,8 +157,11 @@ public class DockerImageGeneratorService {
             }
 
             // ── 4. Succès ─────────────────────────────────────────────────────
-            Long sizeBytes = getImageSize(fullImageName);
+            Long sizeBytes = getImageSize(imageName + ":" + nextTag);
             LocalDateTime endTime = LocalDateTime.now();
+
+            // Appliquer la version sémantique sur l'entité
+            imageVersionService.applyNextVersion(dockerImage, nextTag, currentPipelineVersion);
 
             dockerImage.setStatus(ImageStatus.SUCCESS);
             dockerImage.setBuiltAt(endTime);
@@ -163,6 +175,7 @@ public class DockerImageGeneratorService {
             Map<String, Object> completeEvent = new LinkedHashMap<>();
             completeEvent.put("type",     "BUILD_COMPLETE");
             completeEvent.put("imageId",  dockerImage.getId());
+            completeEvent.put("tag",      nextTag);               // ← tag sémantique
             completeEvent.put("size",     sizeBytes != null ? sizeBytes : 0L);
             completeEvent.put("duration", durationSec);
 
@@ -240,14 +253,19 @@ public class DockerImageGeneratorService {
         }
 
         String imageName = "pipeline-" + pipelineId;
-        String tag       = "latest";
+        String currentPipelineVersion = pipeline.getVersion() != null
+                ? pipeline.getVersion()
+                : "1.0";
 
         DockerImage dockerImage = dockerImageRepository
                 .findByPipelineId(pipelineId)
                 .orElse(DockerImage.builder().pipeline(pipeline).build());
 
+        // Calcul du prochain tag sémantique
+        String nextTag = imageVersionService.computeNextTag(dockerImage, pipeline);
+
         dockerImage.setImageName(imageName);
-        dockerImage.setTag(tag);
+        dockerImage.setTag(nextTag);
         dockerImage.setStatus(ImageStatus.PENDING);
         dockerImage.setBuiltAt(null);
         dockerImageRepository.save(dockerImage);
@@ -265,19 +283,22 @@ public class DockerImageGeneratorService {
             dockerImage.setStatus(ImageStatus.BUILDING);
             dockerImageRepository.save(dockerImage);
 
-            buildDockerImage(imageName, tag, buildDir);
+            buildDockerImage(imageName, nextTag, buildDir);
 
-            Long sizeBytes = getImageSize(imageName + ":" + tag);
+            Long sizeBytes = getImageSize(imageName + ":" + nextTag);
+
+            // Appliquer la version sémantique sur l'entité
+            imageVersionService.applyNextVersion(dockerImage, nextTag, currentPipelineVersion);
 
             dockerImage.setStatus(ImageStatus.SUCCESS);
             dockerImage.setBuiltAt(LocalDateTime.now());
             dockerImage.setSizeBytes(sizeBytes);
             dockerImageRepository.save(dockerImage);
 
-            log.info("Docker image generated successfully: {}:{}", imageName, tag);
+            log.info("Docker image generated successfully: {}:{}", imageName, nextTag);
 
             return new DockerImageBuildResponse(
-                    dockerImage.getId(), imageName, tag, "SUCCESS", "Image built successfully");
+                    dockerImage.getId(), imageName, nextTag, "SUCCESS", "Image built successfully");
 
         } catch (DockerDaemonException e) {
             // Daemon injoignable — pipeline reste VALIDATED
@@ -623,5 +644,20 @@ public class DockerImageGeneratorService {
                 image.getBuiltAt(),
                 image.getPipeline().getId()
         );
+    }
+    public List<BuildLogEntryResponse> getVersionHistory(Long pipelineId) {
+    return buildLogEntryRepository.findByPipelineIdOrderByStartTimeDesc(pipelineId)
+            .stream()
+            .map(e -> new BuildLogEntryResponse(
+                    e.getId(),
+                    e.getVersion() != null ? e.getVersion() : "—",
+                    e.getVersion(),
+                    e.getStatus(),
+                    e.getStartTime(),
+                    e.getEndTime(),
+                    e.getStartTime() != null && e.getEndTime() != null
+                            ? Duration.between(e.getStartTime(), e.getEndTime()).toSeconds()
+                            : null
+            )).toList();
     }
 }

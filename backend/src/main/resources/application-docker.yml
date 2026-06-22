@@ -23,3 +23,6 @@ jwt:
 engine:
   mode: false
   rules-file: /app/rules.json
+
+aes:
+  key: ${AES_KEY}
