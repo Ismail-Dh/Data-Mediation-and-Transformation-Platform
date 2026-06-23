@@ -26,6 +26,8 @@ public class Registry {
 
     @Column(name = "encrypted_password", nullable = false)
     private String encryptedPassword;
+    @Column(name = "name", nullable = false, length = 150)
+    private String name;
 
     @OneToMany(mappedBy = "registry")
     @Builder.Default

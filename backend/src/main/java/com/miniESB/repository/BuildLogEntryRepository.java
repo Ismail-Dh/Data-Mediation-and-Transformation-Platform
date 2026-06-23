@@ -18,4 +18,5 @@ public interface BuildLogEntryRepository extends JpaRepository<BuildLogEntry, Lo
 
     /** Dernière entrée d'un pipeline avec un statut donné. */
     List<BuildLogEntry> findByPipelineIdAndStatus(Long pipelineId, ImageStatus status);
+
 }
