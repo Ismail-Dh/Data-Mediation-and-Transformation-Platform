@@ -1,10 +1,13 @@
 package com.miniESB.controller;
 
-import com.miniESB.dto.docker.DockerImageBuildResponse;
-import com.miniESB.dto.docker.DockerImageResponse;
+import com.miniESB.domain.entity.DockerImage;
+import com.miniESB.dto.docker.*;
 import com.miniESB.exception.DockerBuildException;
 import com.miniESB.exception.DockerDaemonException;
+import com.miniESB.exception.ResourceNotFoundException;
+import com.miniESB.repository.DockerImageRepository;
 import com.miniESB.service.impl.DockerImageGeneratorService;
+import com.miniESB.service.ImageVersionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
@@ -12,6 +15,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpHeaders;
@@ -22,6 +26,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -49,6 +54,8 @@ import java.util.Map;
 public class DockerImageController {
 
     private final DockerImageGeneratorService generatorService;
+    private final ImageVersionService         imageVersionService;
+    private final DockerImageRepository       dockerImageRepository;
 
     // ── POST /generate ────────────────────────────────────────────────────────
 
@@ -141,6 +148,50 @@ public class DockerImageController {
                 .body(imageBytes);
     }
 
+    // ── POST /version/bump ────────────────────────────────────────────────────
+
+    /**
+     * Bump manuel de version MINOR ou MAJOR sur le pipeline.
+     * Le patch sera automatiquement remis à 0 au prochain build.
+     *
+     * POST /api/pipelines/{pipelineId}/image/version/bump
+     */
+    @Operation(summary = "Manually bump MINOR or MAJOR version for a pipeline image")
+    @PostMapping("/version/bump")
+    public ResponseEntity<VersionBumpResponse> bumpVersion(
+            @PathVariable Long pipelineId,
+            @RequestBody @Valid VersionBumpRequest request) {
+
+        VersionBumpResponse response = imageVersionService.bumpVersion(pipelineId, request);
+        return ResponseEntity.ok(response);
+    }
+
+    // ── GET /version ──────────────────────────────────────────────────────────
+
+    /**
+     * Retourne la version sémantique actuelle de l'image d'un pipeline.
+     *
+     * GET /api/pipelines/{pipelineId}/image/version
+     */
+    @Operation(summary = "Get the current semantic version of a pipeline image")
+    @GetMapping("/version")
+    public ResponseEntity<Map<String, Object>> getCurrentVersion(
+            @PathVariable Long pipelineId) {
+
+        DockerImage image = dockerImageRepository.findByPipelineId(pipelineId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "No image found for pipeline id=" + pipelineId));
+
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("pipelineId",          pipelineId);
+        response.put("currentTag",          image.getTag());
+        response.put("pipelineVersion",     image.getPipeline().getVersion());
+        response.put("patch",               image.getVersionPatch());
+        response.put("lastPipelineVersion", image.getLastPipelineVersion());
+
+        return ResponseEntity.ok(response);
+    }
+
     // ── Private helpers ───────────────────────────────────────────────────────
 
     private Map<String, Object> buildDaemonErrorBody(DockerDaemonException e) {
@@ -166,4 +217,11 @@ public class DockerImageController {
         body.put("timestamp", java.time.Instant.now().toString());
         return body;
     }
+    @Operation(summary = "Get version history for a pipeline")
+    @GetMapping("/versions")
+    public ResponseEntity<List<BuildLogEntryResponse>> getVersionHistory(
+        @PathVariable Long pipelineId) {
+      return ResponseEntity.ok(generatorService.getVersionHistory(pipelineId));
+    }
+
 }

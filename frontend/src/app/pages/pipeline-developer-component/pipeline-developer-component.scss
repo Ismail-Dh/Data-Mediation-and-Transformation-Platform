@@ -527,7 +527,7 @@ $shadow-hov:0 6px 24px rgba(0, 0, 0, 0.11);
 .tab-panel {
   min-height: 160px;
   flex: 1;
-  overflow-y: auto;
+  overflow-y: visible;
   padding-right: 2px; // avoid scrollbar overlap
 
   // scrollbar styling
