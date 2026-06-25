@@ -7,6 +7,7 @@ import com.miniESB.exception.DockerDaemonException;
 import com.miniESB.exception.ResourceNotFoundException;
 import com.miniESB.repository.DockerImageRepository;
 import com.miniESB.service.impl.DockerImageGeneratorService;
+import com.miniESB.service.impl.DockerImagePushService;
 import com.miniESB.service.ImageVersionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -56,6 +57,8 @@ public class DockerImageController {
     private final DockerImageGeneratorService generatorService;
     private final ImageVersionService         imageVersionService;
     private final DockerImageRepository       dockerImageRepository;
+    private final DockerImagePushService pushService; 
+
 
     // ── POST /generate ────────────────────────────────────────────────────────
 
@@ -223,5 +226,22 @@ public class DockerImageController {
         @PathVariable Long pipelineId) {
       return ResponseEntity.ok(generatorService.getVersionHistory(pipelineId));
     }
+    @Operation(summary = "Push pipeline image to a Docker registry")
+@PostMapping("/push")
+public ResponseEntity<?> push(
+        @PathVariable Long pipelineId,
+        @Valid @RequestBody PushImageRequest request) {
+    try {
+        return ResponseEntity.ok(
+                pushService.pushImage(pipelineId, request.registryId()));
+    } catch (IllegalStateException e) {
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
+                .body(Map.of("error", e.getMessage(), "errorType", "IMAGE_NOT_READY"));
+    } catch (Exception e) {
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "Push failed: " + e.getMessage(),
+                             "errorType", "PUSH_FAILED"));
+    }
+}
 
 }

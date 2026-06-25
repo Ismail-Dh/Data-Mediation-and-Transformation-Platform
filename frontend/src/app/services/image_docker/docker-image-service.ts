@@ -31,6 +31,7 @@ export interface BuildLogEntryResponse {
 
 
 
+
 /** Événement final SSE BUILD_COMPLETE */
 export interface BuildCompleteEvent {
   type:     'BUILD_COMPLETE';
