@@ -7,7 +7,7 @@
       <span class="docker-section-sub">Only available for validated pipelines</span>
     </div>
     <button class="btn btn--secondary btn--sm" disabled>
-      🐳 Generate Docker Image
+       Generate Docker Image
     </button>
   </div>
 
@@ -32,7 +32,7 @@
           (click)="generateImage()">
           <span class="spinner" *ngIf="isGenerating"></span>
           <ng-container *ngIf="!isGenerating">
-            {{ isFailed ? '🔄 Retry Generation' : '🐳 Generate Docker Image' }}
+            {{ isFailed ? '🔄 Retry Generation' : ' Generate Docker Image' }}
           </ng-container>
           <ng-container *ngIf="isGenerating">Building…</ng-container>
         </button>
@@ -141,5 +141,49 @@ Content-Type: application/json
     </div>
 
   </ng-container>
+  <!-- ── Push to Registry ─────────────────────────────────────────────────── -->
+<div class="push-section">
+
+  <button
+    class="btn btn--secondary btn--sm"
+    (click)="togglePushPanel()"
+    *ngIf="registries.length > 0">
+    {{ showPushPanel ? '✕ Cancel push' : ' Push to Registry' }}
+  </button>
+
+  <div class="push-panel" *ngIf="showPushPanel">
+
+    <div class="push-form">
+      <select class="push-select" [(ngModel)]="selectedRegistry">
+        <option *ngFor="let r of registries" [value]="r.id">
+          {{ r.name }} — {{ r.username }}
+        </option>
+      </select>
+
+      <button
+        class="btn btn--primary btn--sm"
+        [disabled]="!selectedRegistry || isPushing"
+        (click)="pushImage()">
+        <span class="spinner spinner--sm" *ngIf="isPushing"></span>
+        {{ isPushing ? 'Pushing…' : ' Push' }}
+      </button>
+    </div>
+
+    <!-- Succès -->
+    <div class="push-result push-result--success" *ngIf="pushResult?.status === 'SUCCESS'">
+      <span> Pushed successfully</span>
+      <code class="push-image-name">{{ pushResult!.imageFullName }}</code>
+      <span class="push-hint">
+        docker pull {{ pushResult!.imageFullName }}
+      </span>
+    </div>
+
+    <!-- Erreur -->
+    <div class="push-result push-result--error" *ngIf="pushError">
+      ⚠️ {{ pushError }}
+    </div>
+
+  </div>
+</div>
 
 </div>
