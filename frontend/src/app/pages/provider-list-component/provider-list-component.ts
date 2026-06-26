@@ -29,7 +29,7 @@ export class ProviderListComponent implements OnInit {
 
   form!: FormGroup;
 
-  readonly PROTOCOLS = ['REST', 'SOAP', 'MQTT', 'AMQP', 'GRPC'];
+  readonly PROTOCOLS = ['REST', 'SOAP', 'MQTT', 'AMQP', 'GRPC','HTTPS'];
 
   constructor(
     private providerService: ProviderService,
