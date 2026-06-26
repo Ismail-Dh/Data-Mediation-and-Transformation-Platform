@@ -1,1 +1,334 @@
-<p>dashboard-content works!</p>
+<div class="dash">
+
+  <!-- ── Header ──────────────────────────────────────────────────────────────── -->
+  <div class="dash-header">
+    <div class="dash-header__left">
+      <p class="dash-header__greeting"><span>👋</span> Bonjour, <strong>{{ username }}</strong></p>
+      <h1 class="dash-header__title">
+        <span *ngIf="isAdmin">Vue plateforme</span>
+        <span *ngIf="!isAdmin">Mon espace dev</span>
+      </h1>
+      <p class="dash-header__date">{{ today }}</p>
+    </div>
+    <div class="dash-header__right">
+      <span class="role-chip" [class.role-chip--admin]="isAdmin" [class.role-chip--dev]="!isAdmin">
+        <span class="role-chip__dot"></span>{{ isAdmin ? 'Admin' : 'Developer' }}
+      </span>
+      <button class="btn-refresh" (click)="ngOnInit()">
+        <span class="material-icons">refresh</span>Actualiser
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Loading ──────────────────────────────────────────────────────────────── -->
+  <div class="state-box" *ngIf="loading">
+    <span class="material-icons spin">sync</span>
+    <p>Chargement des données…</p>
+  </div>
+
+  <!-- ── Error ────────────────────────────────────────────────────────────────── -->
+  <div class="state-box state-box--error" *ngIf="!loading && error">
+    <span class="material-icons">error_outline</span>
+    <p>Impossible de charger les données du monitoring.</p>
+  </div>
+
+  <ng-container *ngIf="!loading && !error">
+
+    <!-- ── KPI grid ────────────────────────────────────────────────────────────── -->
+    <div class="kpi-grid">
+      <div class="kpi-card"
+        *ngFor="let k of kpis"
+        [class.kpi-card--success]="k.color === 'success'"
+        [class.kpi-card--danger]="k.color === 'danger'"
+        [class.kpi-card--info]="k.color === 'info'">
+        <div class="kpi-card__top">
+          <span class="kpi-card__label">{{ k.label }}</span>
+          <span class="material-icons kpi-card__icon">{{ k.icon }}</span>
+        </div>
+        <div class="kpi-card__value">{{ k.value }}</div>
+        <div class="kpi-card__bottom">
+          <span class="kpi-card__sub">{{ k.sub }}</span>
+          <span class="kpi-trend kpi-trend--up"   *ngIf="k.trend === 'up'">▲ {{ k.trendVal }}</span>
+          <span class="kpi-trend kpi-trend--down" *ngIf="k.trend === 'down'">▼ {{ k.trendVal }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════ ADMIN ══════════════════════════════════ -->
+    <ng-container *ngIf="isAdmin">
+
+      <!-- Row 1 : chart 24h + actions -->
+      <div class="row-2">
+
+        <div class="panel">
+          <div class="panel__header">
+            <span class="material-icons panel__icon">bar_chart</span>
+            <div>
+              <p class="panel__title">Activité des 24 dernières heures</p>
+              <p class="panel__sub">Requêtes totales et erreurs par heure</p>
+            </div>
+          </div>
+          <div class="chart-legend">
+            <span class="legend-dot legend-dot--req"></span><span class="legend-txt">Requests</span>
+            <span class="legend-dot legend-dot--err"></span><span class="legend-txt">Errors</span>
+          </div>
+          <div class="timeline">
+            <div class="timeline__col" *ngFor="let h of hourly">
+              <div class="timeline__bars">
+                <div class="timeline__bar timeline__bar--req" [style.height]="barH(h.requests)"></div>
+                <div class="timeline__bar timeline__bar--err" [style.height]="errBarH(h.errors)"></div>
+              </div>
+              <span class="timeline__lbl">
+                {{ (h.hour === '0h' || h.hour === '6h' || h.hour === '12h' || h.hour === '18h' || h.hour === '23h') ? h.hour : '' }}
+              </span>
+            </div>
+          </div>
+          <p class="source-tag"><span class="material-icons">storage</span>GET /api/admin/monitoring/stats → requestsByHour / errorsByHour</p>
+        </div>
+
+        <div class="panel">
+          <div class="panel__header">
+            <span class="material-icons panel__icon">assignment</span>
+            <div>
+              <p class="panel__title">Actions les plus fréquentes</p>
+              <p class="panel__sub">Répartition depuis l'audit log</p>
+            </div>
+          </div>
+          <div class="empty-state" *ngIf="actions.length === 0">Aucune donnée disponible.</div>
+          <div class="action-list" *ngIf="actions.length > 0">
+            <div class="action-row" *ngFor="let a of actions">
+              <span class="action-row__label">{{ a.action }}</span>
+              <div class="bar-track"><div class="bar-fill" [style.width.%]="a.pct"></div></div>
+              <span class="action-row__count">{{ a.total | number }}</span>
+              <span class="action-row__err">{{ a.errors }} err</span>
+            </div>
+          </div>
+          <p class="source-tag"><span class="material-icons">storage</span>GET /api/admin/monitoring/stats → requestsByAction</p>
+        </div>
+      </div>
+
+      <!-- Row 2 : pipeline breakdown + payload breakdown -->
+      <div class="row-2">
+
+        <div class="panel">
+          <div class="panel__header">
+            <span class="material-icons panel__icon">device_hub</span>
+            <div>
+              <p class="panel__title">Pipelines — répartition</p>
+              <p class="panel__sub">Tous les pipelines de la plateforme</p>
+            </div>
+          </div>
+          <div class="status-list">
+            <div class="status-row" *ngFor="let p of pipelineBreakdown">
+              <span class="status-pill"
+                [class.status-pill--validated]="p.status === 'VALIDATED'"
+                [class.status-pill--draft]="p.status === 'DRAFT'">{{ p.status }}</span>
+              <div class="bar-track">
+                <div class="bar-fill"
+                  [class.bar-fill--green]="p.status === 'VALIDATED'"
+                  [class.bar-fill--gray]="p.status === 'DRAFT'"
+                  [style.width.%]="p.pct"></div>
+              </div>
+              <span class="status-row__count">{{ p.count }}</span>
+            </div>
+          </div>
+          <p class="source-tag"><span class="material-icons">storage</span>GET /api/admin/monitoring/stats → totalPipelines / configuredPipelines</p>
+        </div>
+
+        <div class="panel">
+          <div class="panel__header">
+            <span class="material-icons panel__icon">inbox</span>
+            <div>
+              <p class="panel__title">Payloads — répartition</p>
+              <p class="panel__sub">Sur l'ensemble des pipelines</p>
+            </div>
+          </div>
+          <div class="status-list">
+            <div class="status-row" *ngFor="let p of payloadBreakdown">
+              <span class="status-pill"
+                [class.status-pill--mapped]="p.status === 'SENT/MAPPED'"
+                [class.status-pill--failed]="p.status === 'FAILED'"
+                [class.status-pill--received]="p.status === 'PENDING'">{{ p.status }}</span>
+              <div class="bar-track">
+                <div class="bar-fill"
+                  [class.bar-fill--green]="p.status === 'SENT/MAPPED'"
+                  [class.bar-fill--red]="p.status === 'FAILED'"
+                  [class.bar-fill--gray]="p.status === 'PENDING'"
+                  [style.width.%]="p.pct"></div>
+              </div>
+              <span class="status-row__count">{{ p.count | number }}</span>
+            </div>
+          </div>
+          <p class="source-tag"><span class="material-icons">storage</span>GET /api/admin/monitoring/stats → successfulPayloads / failedPayloads</p>
+        </div>
+      </div>
+
+      <!-- Row 3 : audit feed -->
+      <div class="panel">
+        <div class="panel__header">
+          <span class="material-icons panel__icon">manage_search</span>
+          <div>
+            <p class="panel__title">Activité récente</p>
+            <p class="panel__sub">Dernières entrées du journal d'audit</p>
+          </div>
+        </div>
+        <div class="empty-state" *ngIf="activityFeed.length === 0">Aucune activité récente.</div>
+        <div class="feed" *ngIf="activityFeed.length > 0">
+          <div class="feed-item" *ngFor="let a of activityFeed">
+            <span class="feed-dot"
+              [class.feed-dot--ok]="a.outcome === 'ok'"
+              [class.feed-dot--warn]="a.outcome === 'warn'"
+              [class.feed-dot--err]="a.outcome === 'error'"></span>
+            <div class="feed-body">
+              <span class="feed-label">{{ a.label }}</span>
+              <span class="feed-sub">{{ a.sub }}</span>
+            </div>
+            <span class="feed-time">{{ a.timeAgo }}</span>
+          </div>
+        </div>
+        <p class="source-tag"><span class="material-icons">storage</span>GET /api/audit-logs/admin</p>
+      </div>
+
+    </ng-container>
+
+    <!-- ══════════════════════════════ DEVELOPER ══════════════════════════════ -->
+    <ng-container *ngIf="!isAdmin">
+
+      <!-- Row 1 : pipelines + sandbox runs -->
+      <div class="row-2">
+
+        <div class="panel">
+          <div class="panel__header">
+            <span class="material-icons panel__icon">device_hub</span>
+            <div>
+              <p class="panel__title">Mes pipelines</p>
+              <p class="panel__sub">{{ myPipelines.length }} pipeline{{ myPipelines.length !== 1 ? 's' : '' }} créé{{ myPipelines.length !== 1 ? 's' : '' }}</p>
+            </div>
+          </div>
+          <div class="empty-state" *ngIf="myPipelines.length === 0">Aucun pipeline créé.</div>
+          <div class="pipe-list" *ngIf="myPipelines.length > 0">
+            <div class="pipe-row" *ngFor="let p of myPipelines">
+              <div class="pipe-row__left">
+                <span class="pipe-name">{{ p.name }}</span>
+                <span class="pipe-formats">{{ p.inputFormat }} → {{ p.outputFormat }}</span>
+              </div>
+              <div class="pipe-row__right">
+                <span class="status-pill"
+                  [class.status-pill--validated]="p.status === 'VALIDATED'"
+                  [class.status-pill--configured]="p.status === 'CONFIGURED'"
+                  [class.status-pill--draft]="p.status === 'DRAFT'">{{ p.status }}</span>
+                <span class="pipe-time">v{{ p.version }} · {{ pipelineTimeAgo(p) }}</span>
+              </div>
+            </div>
+          </div>
+          <p class="source-tag"><span class="material-icons">storage</span>GET /api/pipelines/my</p>
+        </div>
+
+        <!-- Sandbox runs — utilise SandboxLogResponse -->
+        <div class="panel">
+          <div class="panel__header">
+            <span class="material-icons panel__icon">science</span>
+            <div>
+              <p class="panel__title">Derniers tests sandbox</p>
+              <p class="panel__sub">Historique de vos runs récents</p>
+            </div>
+          </div>
+          <div class="empty-state" *ngIf="sandboxRuns.length === 0">Aucun test sandbox effectué.</div>
+          <div class="sandbox-list" *ngIf="sandboxRuns.length > 0">
+            <div class="sandbox-row" *ngFor="let r of sandboxRuns">
+
+              <!-- Icône statut -->
+              <span class="sandbox-row__icon material-icons"
+                [class.sandbox-row__icon--ok]="sandboxRunOutcome(r) === 'ok'"
+                [class.sandbox-row__icon--warn]="sandboxRunOutcome(r) === 'warn'"
+                [class.sandbox-row__icon--err]="sandboxRunOutcome(r) === 'error'">
+                {{ sandboxRunOutcome(r) === 'ok' ? 'check_circle' : sandboxRunOutcome(r) === 'warn' ? 'warning' : 'cancel' }}
+              </span>
+
+              <div class="sandbox-row__body">
+                <!-- id + format depuis SandboxLogResponse -->
+                <span class="sandbox-row__name">
+                  Run #{{ r.id }}
+                  <span class="format-chip">{{ r.inputFormat }}</span>
+                </span>
+                <span class="sandbox-row__detail">{{ sandboxRunLabel(r) }}</span>
+                <!-- failureStep si présent -->
+                <span class="sandbox-row__fail" *ngIf="r.failureStep">
+                  Échec : {{ r.failureStep === 'STRUCTURAL' ? 'Validation structurelle' : 'Règles métier' }}
+                </span>
+              </div>
+
+              <div class="sandbox-row__right">
+                <!-- durée depuis durationMs -->
+                <span class="sandbox-row__duration" *ngIf="r.durationMs !== null">{{ r.durationMs }} ms</span>
+                <!-- time depuis executedAt -->
+                <span class="pipe-time">{{ runTimeAgo(r) }}</span>
+              </div>
+            </div>
+          </div>
+          <p class="source-tag"><span class="material-icons">storage</span>GET /api/pipelines/{{ '{' }}id{{ '}' }}/sandbox/history → SandboxLogsPage.content</p>
+        </div>
+      </div>
+
+      <!-- Row 2 : payload breakdown + activity feed -->
+      <div class="row-2">
+
+        <div class="panel">
+          <div class="panel__header">
+            <span class="material-icons panel__icon">inbox</span>
+            <div>
+              <p class="panel__title">Payloads — mes pipelines</p>
+              <p class="panel__sub">Agrégé sur mes 3 derniers pipelines</p>
+            </div>
+          </div>
+          <div class="empty-state" *ngIf="payloadBreakdown.length === 0">Aucun payload trouvé.</div>
+          <div class="status-list" *ngIf="payloadBreakdown.length > 0">
+            <div class="status-row" *ngFor="let p of payloadBreakdown">
+              <span class="status-pill"
+                [class.status-pill--mapped]="p.status === 'MAPPED' || p.status === 'SENT'"
+                [class.status-pill--failed]="p.status === 'FAILED'"
+                [class.status-pill--received]="p.status === 'RECEIVED'"
+                [class.status-pill--validated]="p.status === 'VALIDATED'">{{ p.status }}</span>
+              <div class="bar-track">
+                <div class="bar-fill"
+                  [class.bar-fill--green]="p.status === 'MAPPED' || p.status === 'SENT'"
+                  [class.bar-fill--red]="p.status === 'FAILED'"
+                  [class.bar-fill--gray]="p.status === 'RECEIVED' || p.status === 'VALIDATED'"
+                  [style.width.%]="p.pct"></div>
+              </div>
+              <span class="status-row__count">{{ p.count }}</span>
+            </div>
+          </div>
+          <p class="source-tag"><span class="material-icons">storage</span>GET /api/pipelines/{{ '{' }}id{{ '}' }}/payloads</p>
+        </div>
+
+        <div class="panel">
+          <div class="panel__header">
+            <span class="material-icons panel__icon">history</span>
+            <div>
+              <p class="panel__title">Mes actions récentes</p>
+              <p class="panel__sub">Journal d'activité personnel</p>
+            </div>
+          </div>
+          <div class="empty-state" *ngIf="activityFeed.length === 0">Aucune activité enregistrée.</div>
+          <div class="feed" *ngIf="activityFeed.length > 0">
+            <div class="feed-item" *ngFor="let a of activityFeed">
+              <span class="feed-dot"
+                [class.feed-dot--ok]="a.outcome === 'ok'"
+                [class.feed-dot--warn]="a.outcome === 'warn'"
+                [class.feed-dot--err]="a.outcome === 'error'"></span>
+              <div class="feed-body">
+                <span class="feed-label">{{ a.label }}</span>
+                <span class="feed-sub">{{ a.sub }}</span>
+              </div>
+              <span class="feed-time">{{ a.timeAgo }}</span>
+            </div>
+          </div>
+          <p class="source-tag"><span class="material-icons">storage</span>GET /api/audit-logs/me</p>
+        </div>
+      </div>
+
+    </ng-container>
+
+  </ng-container>
+</div>

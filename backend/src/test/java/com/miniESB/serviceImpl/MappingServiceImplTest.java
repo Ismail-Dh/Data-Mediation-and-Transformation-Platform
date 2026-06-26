@@ -10,6 +10,7 @@ import com.miniESB.dto.mapping.MappingRuleResponse;
 import com.miniESB.exception.ResourceNotFoundException;
 import com.miniESB.repository.MappingRuleRepository;
 import com.miniESB.repository.PipelineRepository;
+import com.miniESB.service.ProviderDispatchService;
 import com.miniESB.service.impl.MappingServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -34,7 +35,8 @@ class MappingServiceImplTest {
     @Mock private MappingRuleRepository mappingRuleRepository;
     @Mock private PipelineRepository    pipelineRepository;
     @Mock private PayloadRepository     payloadRepository;
-
+    @Mock
+    private ProviderDispatchService providerDispatchService;
     private MappingServiceImpl mappingService;
 
     private Pipeline pipeline;
@@ -46,7 +48,8 @@ class MappingServiceImplTest {
            mappingRuleRepository,
            pipelineRepository,
            new ObjectMapper(), 
-           payloadRepository
+           payloadRepository,
+                providerDispatchService
        );
 
         pipeline = Pipeline.builder().id(1L).build();

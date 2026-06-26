@@ -9,7 +9,18 @@ import {
   UpdateRegistryRequest
 } from '../../models/registry.model';
 import { environment } from '../../environments/environment';
+export interface PushImageRequest {
+  registryId: number;
+}
 
+export interface PushImageResponse {
+  pipelineId:    number;
+  registryId:    number;
+  registryName:  string;
+  imageFullName: string;
+  status:        string;
+  message:       string;
+}
 @Injectable({ providedIn: 'root' })
 export class RegistryService {
   private readonly base = `${environment.apiUrl}/api/registries`;
@@ -35,4 +46,10 @@ export class RegistryService {
   delete(id: number): Observable<void> {
     return this.http.delete<void>(`${this.base}/${id}`);
   }
+  pushImage(pipelineId: number, registryId: number): Observable<PushImageResponse> {
+  return this.http.post<PushImageResponse>(
+    `${environment.apiUrl}/api/pipelines/${pipelineId}/image/push`,
+    { registryId }
+  );
+}
 }
