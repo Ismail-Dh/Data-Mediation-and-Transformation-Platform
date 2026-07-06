@@ -37,8 +37,14 @@ public class Payload {
     @JoinColumn(name = "pipeline_id", nullable = false)
     private Pipeline pipeline;
 
-    @OneToOne(mappedBy = "payload", cascade = CascadeType.ALL, orphanRemoval = true)
-    private ProviderResponse providerResponse;
+    /**
+     * Réponses des providers pour ce payload.
+     * Migré de @OneToOne vers @OneToMany : un payload peut désormais être
+     * dispatché vers plusieurs providers, chacun produisant sa propre réponse.
+     */
+    @OneToMany(mappedBy = "payload", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private java.util.List<ProviderResponse> providerResponses = new java.util.ArrayList<>();
 
     @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "exchange_log_id", unique = true)

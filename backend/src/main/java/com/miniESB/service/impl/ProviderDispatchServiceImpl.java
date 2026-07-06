@@ -1,6 +1,7 @@
 package com.miniESB.service.impl;
 
 import com.miniESB.domain.entity.*;
+import com.miniESB.domain.enums.DataFormat;
 import com.miniESB.domain.enums.PayloadStatus;
 import com.miniESB.dto.dispatch.ProviderDispatchResult;
 import com.miniESB.exception.ResourceNotFoundException;
@@ -8,7 +9,6 @@ import com.miniESB.repository.*;
 import com.miniESB.service.ProviderDispatchService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -23,27 +23,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Envoie le payload mappé à chaque provider attaché au pipeline via HTTP POST.
- *
- * <p><b>Ce que fait ce service :</b></p>
- * <ol>
- *   <li>Charge le pipeline et récupère son provider (ou la liste si multi-provider à terme).</li>
- *   <li>Pour chaque provider, construit un RestTemplate avec le timeout configuré sur l'entité.</li>
- *   <li>Envoie le payload en POST avec Content-Type adapté au outputFormat du pipeline.</li>
- *   <li>Mesure la durée en millisecondes.</li>
- *   <li>Persiste la réponse dans {@code ProviderResponse} et trace dans {@code ExchangeLog}.</li>
- *   <li>Met à jour le statut du {@code Payload} (DISPATCHED ou FAILED).</li>
- *   <li>Retourne un {@code ProviderDispatchResult} par provider.</li>
- * </ol>
- *
- * <p>Les erreurs réseau (timeout, DNS, connexion refusée) sont capturées et
- * retournées comme résultat avec {@code httpStatus=0} — elles ne propagent
- * pas d'exception pour que les autres providers soient toujours appelés.</p>
+ * T5 — Dispatche le payload mappé vers TOUS les providers du pipeline
+ * (relation @ManyToMany depuis V23) et persiste une {@link ProviderResponse}
+ * par provider pour traçabilité complète.
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
-@ConditionalOnProperty(name = "engine.mode", havingValue = "false", matchIfMissing = true)
 public class ProviderDispatchServiceImpl implements ProviderDispatchService {
 
     private final PipelineRepository         pipelineRepository;
@@ -52,37 +38,24 @@ public class ProviderDispatchServiceImpl implements ProviderDispatchService {
     private final ExchangeLogRepository      exchangeLogRepository;
     private final RestTemplateBuilder        restTemplateBuilder;
 
-    // -------------------------------------------------------------------------
-    // Public API
-    // -------------------------------------------------------------------------
-
     @Override
     @Transactional
     public List<ProviderDispatchResult> dispatch(Long pipelineId,
                                                  Long payloadId,
                                                  String mappedPayload) {
 
-        // 1 — Charger le pipeline
         Pipeline pipeline = pipelineRepository.findById(pipelineId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Pipeline not found with id=" + pipelineId));
+                .orElseThrow(() -> new ResourceNotFoundException("Pipeline not found: " + pipelineId));
 
-        // 2 — Charger le payload
         Payload payload = payloadRepository.findById(payloadId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Payload not found with id=" + payloadId));
+                .orElseThrow(() -> new ResourceNotFoundException("Payload not found: " + payloadId));
 
-        // 3 — Collecter les providers attachés au pipeline
-        //     Actuellement, un pipeline a un seul provider (@ManyToOne).
-        //     On wrap dans une liste pour rester cohérent avec l'interface.
-        List<Provider> providers = collectProviders(pipeline);
-
-        if (providers.isEmpty()) {
-            log.warn("Pipeline id={} has no provider attached — nothing dispatched", pipelineId);
+        List<Provider> providers = pipeline.getProviders();
+        if (providers == null || providers.isEmpty()) {
+            log.warn("Pipeline id={} has no provider attached — dispatch skipped", pipelineId);
             return List.of();
         }
 
-        // 4 — Dispatcher vers chaque provider
         List<ProviderDispatchResult> results = new ArrayList<>();
         boolean anySuccess = false;
 
@@ -92,133 +65,107 @@ public class ProviderDispatchServiceImpl implements ProviderDispatchService {
             if (result.success()) anySuccess = true;
         }
 
-        // 5 — Mettre à jour le statut du payload
         payload.setStatus(anySuccess ? PayloadStatus.SENT : PayloadStatus.FAILED);
         payloadRepository.save(payload);
 
-        log.info("Dispatch complete for payload={}, pipeline={}: {} provider(s), anySuccess={}",
+        log.info("Dispatch done — payload={} pipeline={} providers={} anySuccess={}",
                 payloadId, pipelineId, results.size(), anySuccess);
 
         return results;
     }
 
-    // -------------------------------------------------------------------------
-    // Dispatch vers un provider
-    // -------------------------------------------------------------------------
+    // ── Appel HTTP vers un provider ──────────────────────────────────────────
 
     private ProviderDispatchResult callProvider(Provider provider,
                                                 Pipeline pipeline,
                                                 Payload payload,
                                                 String mappedPayload) {
-
         String endpoint = provider.getEndpoint();
         long startMs = System.currentTimeMillis();
 
-        log.info("Dispatching payload={} → provider='{}' ({})", payload.getId(), provider.getName(), endpoint);
+        log.info("POST {} → provider='{}' payload={}", endpoint, provider.getName(), payload.getId());
 
         try {
-            // RestTemplate avec timeout configuré par provider (en secondes → ms)
-            RestTemplate restTemplate = buildRestTemplate(provider.getTimeout());
+            RestTemplate rt = buildRestTemplate(provider.getTimeout());
+            HttpEntity<String> req = new HttpEntity<>(mappedPayload, buildHeaders(pipeline));
+            ResponseEntity<String> resp = rt.exchange(endpoint, HttpMethod.POST, req, String.class);
 
-            // Construire la requête HTTP
-            HttpHeaders headers = buildHeaders(pipeline);
-            HttpEntity<String> request = new HttpEntity<>(mappedPayload, headers);
+            long dur = System.currentTimeMillis() - startMs;
+            int  st  = resp.getStatusCode().value();
+            String body = resp.getBody();
+            boolean ok = resp.getStatusCode().is2xxSuccessful();
 
-            // POST
-            ResponseEntity<String> response = restTemplate.exchange(
-                    endpoint,
-                    HttpMethod.POST,
-                    request,
-                    String.class
-            );
+            log.info("Provider '{}' → HTTP {} in {}ms", provider.getName(), st, dur);
 
-            long durationMs = System.currentTimeMillis() - startMs;
-            int status = response.getStatusCode().value();
-            String body = response.getBody();
-            boolean success = response.getStatusCode().is2xxSuccessful();
+            persistProviderResponse(payload, provider, st, body, ok, dur);
+            persistExchangeLog(pipeline, st, body, dur, null);
 
-            log.info("Provider '{}' responded: status={}, duration={}ms", provider.getName(), status, durationMs);
-
-            // Persister réponse + log
-            persistProviderResponse(payload, status, body, success);
-            persistExchangeLog(pipeline, status, body, durationMs, null);
-
-            return success
-                    ? ProviderDispatchResult.ok(provider.getId(), provider.getName(), endpoint, status, body, durationMs)
-                    : ProviderDispatchResult.httpError(provider.getId(), provider.getName(), endpoint, status, body, durationMs);
+            return ok
+                    ? ProviderDispatchResult.ok(provider.getId(), provider.getName(), endpoint, st, body, dur)
+                    : ProviderDispatchResult.httpError(provider.getId(), provider.getName(), endpoint, st, body, dur);
 
         } catch (HttpStatusCodeException ex) {
-            // Erreur HTTP 4xx / 5xx — on a quand même un status et un body
-            long durationMs = System.currentTimeMillis() - startMs;
-            int status = ex.getStatusCode().value();
+            long dur  = System.currentTimeMillis() - startMs;
+            int  st   = ex.getStatusCode().value();
             String body = ex.getResponseBodyAsString();
 
-            log.warn("Provider '{}' returned HTTP {}: {}", provider.getName(), status, body);
-
-            persistProviderResponse(payload, status, body, false);
-            persistExchangeLog(pipeline, status, body, durationMs, ex.getMessage());
+            log.warn("Provider '{}' HTTP {} — {}", provider.getName(), st, body);
+            persistProviderResponse(payload, provider, st, body, false, dur);
+            persistExchangeLog(pipeline, st, body, dur, ex.getMessage());
 
             return ProviderDispatchResult.httpError(
-                    provider.getId(), provider.getName(), endpoint, status, body, durationMs);
+                    provider.getId(), provider.getName(), endpoint, st, body, dur);
 
         } catch (ResourceAccessException ex) {
-            // Timeout, DNS, connexion refusée
-            long durationMs = System.currentTimeMillis() - startMs;
-            String errorMsg = "Network error calling provider '" + provider.getName() + "': " + ex.getMessage();
+            long dur = System.currentTimeMillis() - startMs;
+            String msg = "Network error → " + provider.getName() + ": " + ex.getMessage();
 
-            log.error(errorMsg);
-
-            persistProviderResponse(payload, 0, null, false);
-            persistExchangeLog(pipeline, 0, null, durationMs, errorMsg);
+            log.error(msg);
+            persistProviderResponse(payload, provider, 0, null, false, dur);
+            persistExchangeLog(pipeline, 0, null, dur, msg);
 
             return ProviderDispatchResult.networkError(
-                    provider.getId(), provider.getName(), endpoint, durationMs, errorMsg);
+                    provider.getId(), provider.getName(), endpoint, dur, msg);
 
         } catch (Exception ex) {
-            // Toute autre erreur inattendue
-            long durationMs = System.currentTimeMillis() - startMs;
-            String errorMsg = "Unexpected error calling provider '" + provider.getName() + "': " + ex.getMessage();
+            long dur = System.currentTimeMillis() - startMs;
+            String msg = "Unexpected error → " + provider.getName() + ": " + ex.getMessage();
 
-            log.error(errorMsg, ex);
-
-            persistProviderResponse(payload, 0, null, false);
-            persistExchangeLog(pipeline, 0, null, durationMs, errorMsg);
+            log.error(msg, ex);
+            persistProviderResponse(payload, provider, 0, null, false, dur);
+            persistExchangeLog(pipeline, 0, null, dur, msg);
 
             return ProviderDispatchResult.networkError(
-                    provider.getId(), provider.getName(), endpoint, durationMs, errorMsg);
+                    provider.getId(), provider.getName(), endpoint, dur, msg);
         }
     }
 
-    // -------------------------------------------------------------------------
-    // Persistence helpers
-    // -------------------------------------------------------------------------
+    // ── Persistence T5 ───────────────────────────────────────────────────────
 
     /**
-     * Persiste (ou met à jour) la {@link ProviderResponse} liée au payload.
-     * Un payload n'a qu'une seule ProviderResponse (@OneToOne unique=true).
-     * Si une réponse existe déjà (re-dispatch), on la met à jour.
+     * Persiste (ou met à jour) la ProviderResponse pour le couple (payload, provider).
+     * Gère le re-dispatch : si une réponse existe déjà pour ce couple, elle est mise à jour.
      */
-    private void persistProviderResponse(Payload payload, int httpStatus,
-                                         String rawBody, boolean success) {
+    private void persistProviderResponse(Payload payload, Provider provider,
+                                         int httpStatus, String rawBody,
+                                         boolean success, long durationMs) {
         ProviderResponse pr = providerResponseRepository
-                .findByPayloadId(payload.getId())
+                .findByPayloadIdAndProviderId(payload.getId(), provider.getId())
                 .orElseGet(() -> ProviderResponse.builder()
                         .payload(payload)
+                        .provider(provider)
                         .build());
 
         pr.setHttpStatus(httpStatus);
         pr.setRawContent(rawBody != null ? rawBody : "");
         pr.setSuccess(success);
         pr.setReceivedAt(LocalDateTime.now());
+        pr.setDurationMs(durationMs);
         providerResponseRepository.save(pr);
     }
 
-    /**
-     * Persiste un {@link ExchangeLog} pour traçabilité complète de l'échange.
-     */
     private void persistExchangeLog(Pipeline pipeline, int httpStatus,
-                                    String message, long durationMs,
-                                    String errorDetail) {
+                                    String message, long durationMs, String errorDetail) {
         ExchangeLog log = ExchangeLog.builder()
                 .pipeline(pipeline)
                 .timestamp(LocalDateTime.now())
@@ -230,54 +177,22 @@ public class ProviderDispatchServiceImpl implements ProviderDispatchService {
         exchangeLogRepository.save(log);
     }
 
-    // -------------------------------------------------------------------------
-    // Utility helpers
-    // -------------------------------------------------------------------------
+    // ── Helpers ──────────────────────────────────────────────────────────────
 
-    /**
-     * Collecte les providers du pipeline.
-     * Actuellement un pipeline est lié à un seul provider.
-     * Cette méthode centralise la logique pour faciliter la migration
-     * vers une relation @ManyToMany sans toucher au code appelant.
-     */
-    private List<Provider> collectProviders(Pipeline pipeline) {
-        if (pipeline.getProvider() == null) {
-            return List.of();
-        }
-        return List.of(pipeline.getProvider());
+    private RestTemplate buildRestTemplate(int timeoutSec) {
+        Duration t = Duration.ofSeconds(timeoutSec > 0 ? timeoutSec : 30);
+        return restTemplateBuilder.connectTimeout(t).readTimeout(t).build();
     }
 
-    /**
-     * Construit un {@link RestTemplate} avec le timeout (en secondes) du provider.
-     * Chaque appel crée son propre RestTemplate pour isoler les timeouts.
-     */
-    private RestTemplate buildRestTemplate(int timeoutSeconds) {
-        Duration timeout = Duration.ofSeconds(timeoutSeconds > 0 ? timeoutSeconds : 30);
-        return restTemplateBuilder
-                .connectTimeout(timeout)
-                .readTimeout(timeout)
-                .build();
-    }
-
-    /**
-     * Construit les headers HTTP.
-     * Le Content-Type est déterminé par le {@code outputFormat} du pipeline.
-     */
     private HttpHeaders buildHeaders(Pipeline pipeline) {
-        HttpHeaders headers = new HttpHeaders();
-        MediaType contentType = switch (pipeline.getOutputFormat()) {
-            case XML  -> MediaType.APPLICATION_XML;
-            case JSON -> MediaType.APPLICATION_JSON;
-            default   -> MediaType.APPLICATION_JSON;
-        };
-        headers.setContentType(contentType);
-        headers.setAccept(List.of(MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML, MediaType.ALL));
-        return headers;
+        HttpHeaders h = new HttpHeaders();
+        h.setContentType(pipeline.getOutputFormat() == DataFormat.XML
+                ? MediaType.APPLICATION_XML : MediaType.APPLICATION_JSON);
+        h.setAccept(List.of(MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML, MediaType.ALL));
+        return h;
     }
 
-    /** Tronque une chaîne pour éviter de dépasser les limites de colonne TEXT. */
-    private String truncate(String value, int maxLength) {
-        if (value == null) return null;
-        return value.length() <= maxLength ? value : value.substring(0, maxLength);
+    private String truncate(String s, int max) {
+        return s.length() <= max ? s : s.substring(0, max);
     }
 }

@@ -38,14 +38,15 @@
         <svg class="flow-arrow" viewBox="0 0 24 8"><path d="M0 4h20M16 1l4 3-4 3" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
         <div class="format-box"><span class="format-label">OUT</span><span class="format-value">{{ p.outputFormat }}</span></div>
       </div>
-      <div class="card-provider" *ngIf="p.providerName">
+      <div class="card-provider" *ngIf="p.providers.length > 0">
         <svg class="prov-icon" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5" fill="none"/><path d="M8 5v3l2 2" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>
         <div class="prov-info">
-          <span class="prov-name">{{ p.providerName }}</span>
-          <span class="prov-ep">{{ p.providerEndpoint }}</span>
+          <span class="prov-name">{{ providerNames(p) }}</span>
+          <span class="prov-ep" *ngIf="p.providers.length === 1">{{ p.providers[0].endpoint }}</span>
+          <span class="prov-ep" *ngIf="p.providers.length > 1">{{ p.providers.length }} providers</span>
         </div>
       </div>
-      <div class="card-provider card-provider--empty" *ngIf="!p.providerName">
+      <div class="card-provider card-provider--empty" *ngIf="!p.providers.length">
         <span class="prov-empty">No provider linked</span>
       </div>
       <div class="card-footer">
@@ -104,11 +105,22 @@
         </div>
       </div>
       <div class="field">
-        <label>Provider <span class="optional">(optional)</span></label>
-        <select formControlName="providerId">
-          <option [ngValue]="null">No provider</option>
-          <option *ngFor="let pv of providers" [ngValue]="pv.id">{{ pv.name }} — {{ pv.protocol }} — {{ pv.endpoint }}</option>
-        </select>
+        <label>Providers <span class="optional">(optional)</span></label>
+        <div class="provider-checklist">
+          <label *ngFor="let pv of providers" class="provider-check-item">
+            <input
+              type="checkbox"
+              [checked]="isProviderSelected(pv.id)"
+              (change)="toggleProvider(pv.id, $event)"
+            />
+            <span class="pcheck-dot"></span>
+            <span class="pcheck-info">
+              <span class="pcheck-name">{{ pv.name }}</span>
+              <span class="pcheck-meta">{{ pv.protocol }} — {{ pv.endpoint }}</span>
+            </span>
+          </label>
+          <p class="provider-empty-hint" *ngIf="providers.length === 0">No providers available.</p>
+        </div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn--secondary" (click)="closeModal()">Cancel</button>
@@ -159,74 +171,94 @@
           <span class="fmt-tag">{{ detailPipeline.outputFormat }}</span>
         </span>
       </div>
-      <div class="detail-kv" *ngIf="detailPipeline.providerName">
-        <span class="detail-label">Provider</span>
-        <span class="detail-val">{{ detailPipeline.providerName }}</span>
+      <div class="detail-kv" *ngIf="detailPipeline.providers.length">
+        <span class="detail-label">Provider(s)</span>
+        <span class="detail-val">{{ providerNames(detailPipeline) }}</span>
       </div>
-      <div class="detail-kv" *ngIf="detailPipeline.providerEndpoint">
+      <div class="detail-kv" *ngIf="detailPipeline.providers.length === 1">
         <span class="detail-label">Endpoint</span>
-        <span class="detail-val"><code style="font-size:.8rem">{{ detailPipeline.providerEndpoint }}</code></span>
+        <span class="detail-val"><code style="font-size:.8rem">{{ detailPipeline.providers[0].endpoint }}</code></span>
       </div>
     </div>
 
     <div class="detail-tabs">
-      <button class="tab-btn" [class.tab-btn--active]="detailTab === 'info'"     (click)="setDetailTab('info')">Overview</button>
-      <button class="tab-btn" [class.tab-btn--active]="detailTab === 'fields'"   (click)="setDetailTab('fields')">Schema Fields</button>
-      <button class="tab-btn" [class.tab-btn--active]="detailTab === 'payloads'" (click)="setDetailTab('payloads')">Payloads</button>
-      <button class="tab-btn" [class.tab-btn--active]="detailTab === 'rules'"    (click)="setDetailTab('rules')">Validation Rules</button>
-      <button class="tab-btn" [class.tab-btn--active]="detailTab === 'mapping'"  (click)="setDetailTab('mapping')">Mapping Rules</button>
-      <button class="tab-btn" [class.tab-btn--active]="detailTab === 'image_docker'"     (click)="setDetailTab('image_docker')">Docker Image</button>
+      <button class="tab-btn" [class.tab-btn--active]="detailTab === 'info'"           (click)="setDetailTab('info')">Overview</button>
+      <button class="tab-btn" [class.tab-btn--active]="detailTab === 'fields'"         (click)="setDetailTab('fields')">Schema Fields</button>
+      <button class="tab-btn" [class.tab-btn--active]="detailTab === 'payloads'"       (click)="setDetailTab('payloads')">Payloads</button>
+      <button class="tab-btn" [class.tab-btn--active]="detailTab === 'rules'"          (click)="setDetailTab('rules')">Validation Rules</button>
+      <button class="tab-btn" [class.tab-btn--active]="detailTab === 'mapping'"        (click)="setDetailTab('mapping')">Mapping Rules</button>
+      <button class="tab-btn" [class.tab-btn--active]="detailTab === 'response-rules'" (click)="setDetailTab('response-rules')">Response Rules</button>
+      <button class="tab-btn" [class.tab-btn--active]="detailTab === 'process'"        (click)="setDetailTab('process')">▶ Process</button>
+      <button class="tab-btn" [class.tab-btn--active]="detailTab === 'image_docker'"   (click)="setDetailTab('image_docker')">Docker Image</button>
     </div>
 
-    <div class="tab-panel" *ngIf="detailTab === 'info'">
-      <div class="detail-body">
-        <div class="detail-row"><span class="detail-label">Version</span><span class="detail-val">{{ detailPipeline.version || '—' }}</span></div>
-        <div class="detail-row"><span class="detail-label">Created</span><span class="detail-val">{{ detailPipeline.createdAt | date:'dd MMM yyyy, HH:mm' }}</span></div>
-        <div class="detail-row">
-          <span class="detail-label">Input → Output</span>
-          <span class="detail-val fmt-inline">
-            <span class="fmt-tag">{{ detailPipeline.inputFormat }}</span>
-            <span class="fmt-arrow-sm">→</span>
-            <span class="fmt-tag">{{ detailPipeline.outputFormat }}</span>
-          </span>
-        </div>
-        <div class="detail-row" *ngIf="detailPipeline.providerName">
-          <span class="detail-label">Provider</span>
-          <div class="detail-val">
-            <span class="prov-name-detail">{{ detailPipeline.providerName }}</span>
-            <span class="prov-ep-detail">{{ detailPipeline.providerEndpoint }}</span>
+    <!-- Zone scrollable : contient tout le contenu des onglets -->
+    <!-- flex: 1 + overflow-y: auto permet au contenu de grandir sans cacher les boutons -->
+    <div class="tab-scroll-area">
+
+      <div class="tab-panel" *ngIf="detailTab === 'info'">
+        <div class="detail-body">
+          <div class="detail-row"><span class="detail-label">Version</span><span class="detail-val">{{ detailPipeline.version || '—' }}</span></div>
+          <div class="detail-row"><span class="detail-label">Created</span><span class="detail-val">{{ detailPipeline.createdAt | date:'dd MMM yyyy, HH:mm' }}</span></div>
+          <div class="detail-row">
+            <span class="detail-label">Input → Output</span>
+            <span class="detail-val fmt-inline">
+              <span class="fmt-tag">{{ detailPipeline.inputFormat }}</span>
+              <span class="fmt-arrow-sm">→</span>
+              <span class="fmt-tag">{{ detailPipeline.outputFormat }}</span>
+            </span>
+          </div>
+          <div class="detail-row" *ngIf="detailPipeline.providers.length">
+            <span class="detail-label">Provider(s)</span>
+            <div class="detail-val">
+              <div *ngFor="let pr of detailPipeline.providers" class="prov-item">
+                <span class="prov-name-detail">{{ pr.name }}</span>
+                <span class="prov-ep-detail">{{ pr.endpoint }}</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <app-pipeline-fields-tab
-      *ngIf="detailTab === 'fields'"
-      [pipelineId]="detailPipeline!.id">
-    </app-pipeline-fields-tab>
+      <app-pipeline-fields-tab
+        *ngIf="detailTab === 'fields'"
+        [pipelineId]="detailPipeline!.id">
+      </app-pipeline-fields-tab>
 
-    <app-pipeline-rules-tab
-      *ngIf="detailTab === 'rules'"
-      [pipelineId]="detailPipeline!.id">
-    </app-pipeline-rules-tab>
+      <app-pipeline-rules-tab
+        *ngIf="detailTab === 'rules'"
+        [pipelineId]="detailPipeline!.id">
+      </app-pipeline-rules-tab>
 
-    <app-pipeline-payloads-tab
-      *ngIf="detailTab === 'payloads'"
-      [pipelineId]="detailPipeline!.id">
-    </app-pipeline-payloads-tab>
+      <app-pipeline-payloads-tab
+        *ngIf="detailTab === 'payloads'"
+        [pipelineId]="detailPipeline!.id">
+      </app-pipeline-payloads-tab>
 
-    <app-pipeline-mapping-tab
-      *ngIf="detailTab === 'mapping'"
-      [pipelineId]="detailPipeline!.id">
-    </app-pipeline-mapping-tab>
+      <app-pipeline-mapping-tab
+        *ngIf="detailTab === 'mapping'"
+        [pipelineId]="detailPipeline!.id">
+      </app-pipeline-mapping-tab>
 
-    <app-docker-image-button
-      *ngIf="detailTab === 'image_docker'"
-      [pipelineId]="detailPipeline!.id"
-       [pipelineStatus]="detailPipeline!.status">
-    </app-docker-image-button>
+      <!-- T6 — Response Mapping Rules -->
+      <app-pipeline-response-rules-tab
+        *ngIf="detailTab === 'response-rules'"
+        [pipelineId]="detailPipeline!.id">
+      </app-pipeline-response-rules-tab>
 
-    
+      <!-- T7 — Full Process Flow -->
+      <app-pipeline-process-tab
+        *ngIf="detailTab === 'process'"
+        [pipelineId]="detailPipeline!.id">
+      </app-pipeline-process-tab>
+
+      <app-docker-image-button
+        *ngIf="detailTab === 'image_docker'"
+        [pipelineId]="detailPipeline!.id"
+        [pipelineStatus]="detailPipeline!.status">
+      </app-docker-image-button>
+
+    </div><!-- /tab-scroll-area -->
 
     <div class="modal-footer">
       <button class="btn btn--secondary" (click)="closeDetail()">Close</button>

@@ -20,4 +20,10 @@ public interface MappingService {
     MappingResultResponse applyMappingToPayload(Long pipelineId, String rawContent);
     MappingResultResponse applyMappingToPayload(Long pipelineId, Long payloadId);
 
+    /**
+     * Applique le mapping et retourne directement le corps mappé sérialisé en JSON.
+     * Utilisé par {@code ProcessOrchestrationService} pour récupérer le payload
+     * mappé sans passer par le dispatch automatique.
+     */
+    String applyAndReturnMapped(Long pipelineId, Long payloadId);
 }

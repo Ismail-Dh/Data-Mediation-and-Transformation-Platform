@@ -49,9 +49,20 @@ public class Pipeline {
     @JoinColumn(name = "user_id", nullable = false)
     private User createdBy;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "provider_id", nullable = true)
-    private Provider provider;
+    /**
+     * Providers attachés à ce pipeline.
+     * Migré de @ManyToOne (un seul provider) vers @ManyToMany pour permettre
+     * à un pipeline de dispatcher son payload mappé vers plusieurs providers
+     * en parallèle, chacun avec sa propre réponse tracée (voir ProviderResponse).
+     */
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "pipeline_providers",
+            joinColumns = @JoinColumn(name = "pipeline_id"),
+            inverseJoinColumns = @JoinColumn(name = "provider_id")
+    )
+    @Builder.Default
+    private List<Provider> providers = new ArrayList<>();
 
     @OneToMany(mappedBy = "pipeline",cascade = CascadeType.ALL,orphanRemoval = true)
     @Builder.Default
@@ -96,4 +107,12 @@ public class Pipeline {
     @OneToMany(mappedBy = "pipeline", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<PipelineField> fields = new ArrayList<>();
+
+    /**
+     * Règles de validation/transformation appliquées aux réponses des providers (T6).
+     * Distinctes de mappingRules, qui s'appliquent sur le payload ENTRANT.
+     */
+    @OneToMany(mappedBy = "pipeline", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<ResponseMappingRule> responseMappingRules = new ArrayList<>();
 }

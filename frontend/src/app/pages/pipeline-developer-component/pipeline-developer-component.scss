@@ -426,6 +426,143 @@ $shadow-hov:0 6px 24px rgba(0, 0, 0, 0.11);
 .optional    { font-size: 0.75rem; color: #bbb; font-weight: 400; }
 .field-error { font-size: 0.75rem; color: $danger; }
 
+// ── Multi-provider checkbox list ───────────────────────────────────────────────
+
+.provider-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 220px;
+  overflow-y: auto;
+  padding: 4px 2px;
+
+  &::-webkit-scrollbar       { width: 4px; }
+  &::-webkit-scrollbar-track { background: transparent; }
+  &::-webkit-scrollbar-thumb { background: #dde; border-radius: 4px; }
+}
+
+// Chaque item = label cliquable en entier
+.provider-check-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1.5px solid $border;
+  border-radius: $radius-md;
+  cursor: pointer;
+  background: #fff;
+  transition: border-color .15s, background .15s, box-shadow .15s;
+  position: relative;
+
+  &:hover {
+    border-color: rgba($accent, .4);
+    background: #f8f9ff;
+  }
+
+  // État coché — détecté via le sibling input:checked
+  &:has(input:checked) {
+    border-color: $accent;
+    background: #f0f4ff;
+    box-shadow: 0 0 0 3px rgba($accent, .08);
+
+    .pcheck-name { color: $accent; }
+    .pcheck-dot  { background: $accent; }
+  }
+}
+
+// Checkbox native cachée — remplacée par .pcheck-dot
+.provider-check-item input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+// Indicateur visuel custom (rond à gauche)
+.pcheck-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid $border;
+  background: #fff;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color .15s, background .15s;
+
+  // Checkmark SVG inline via pseudo
+  &::after {
+    content: '';
+    display: block;
+    width: 8px;
+    height: 5px;
+    border-left: 2px solid #fff;
+    border-bottom: 2px solid #fff;
+    transform: rotate(-45deg) translateY(-1px);
+    opacity: 0;
+    transition: opacity .1s;
+  }
+}
+
+// Quand coché : dot devient plein + checkmark visible
+.provider-check-item:has(input:checked) .pcheck-dot {
+  border-color: $accent;
+  background: $accent;
+  &::after { opacity: 1; }
+}
+
+// Infos texte
+.pcheck-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.pcheck-name {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: $text-main;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color .15s;
+}
+
+.pcheck-meta {
+  font-size: 0.72rem;
+  color: $text-sub;
+  font-family: 'JetBrains Mono', 'Fira Mono', monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+// Badge count sélectionnés (facultatif, affiché dans le label)
+.pcheck-count {
+  margin-left: auto;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: $accent;
+  background: #e7edff;
+  padding: 2px 8px;
+  border-radius: 99px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.provider-empty-hint {
+  font-size: 0.8rem;
+  color: $text-sub;
+  padding: 12px 10px;
+  margin: 0;
+  font-style: italic;
+  text-align: center;
+}
+
 // ── Detail info row ───────────────────────────────────────────────────────────
 .detail-info-row {
   display: flex;
@@ -524,16 +661,26 @@ $shadow-hov:0 6px 24px rgba(0, 0, 0, 0.11);
   font-weight: 700;
 }
 
-.tab-panel {
-  min-height: 160px;
+// ── Zone scrollable des onglets ───────────────────────────────────────────────
+// flex: 1 + overflow-y: auto permet au contenu de grandir librement
+// sans jamais déborder hors de la modal height: 92vh.
+// Le modal-footer reste collé en bas car il est hors de ce wrapper.
+.tab-scroll-area {
   flex: 1;
-  overflow-y: visible;
-  padding-right: 2px; // avoid scrollbar overlap
+  overflow-y: auto;
+  min-height: 0;           // requis en flexbox pour que overflow-y fonctionne
+  padding-bottom: 0.5rem;
 
-  // scrollbar styling
+  // scrollbar discrète
   &::-webkit-scrollbar       { width: 5px; }
   &::-webkit-scrollbar-track { background: transparent; }
-  &::-webkit-scrollbar-thumb { background: #ddd; border-radius: 4px; &:hover { background: #bbb; } }
+  &::-webkit-scrollbar-thumb { background: #ddd; border-radius: 4px;
+    &:hover { background: #bbb; } }
+}
+
+.tab-panel {
+  min-height: 160px;
+  padding-right: 2px;
 }
 
 .tab-empty {

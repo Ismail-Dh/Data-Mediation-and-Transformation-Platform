@@ -1,0 +1,137 @@
+<!-- pipeline-process-tab.component.html -->
+<div class="process-tab">
+
+  <!-- ── Formulaire ──────────────────────────────────────────────────────── -->
+  <div class="section-card">
+    <div class="section-header">
+      <h3 class="section-title">Run Full Flow</h3>
+      <p class="section-desc">Validate → Map → Dispatch to all providers → Aggregate responses</p>
+    </div>
+
+    <div class="form-row">
+      <label class="form-label">Input Format</label>
+      <select class="form-select" [(ngModel)]="inputFormat">
+        <option *ngFor="let f of FORMATS" [value]="f">{{ f }}</option>
+      </select>
+    </div>
+
+    <div class="form-row">
+      <label class="form-label">Raw Payload</label>
+      <textarea class="code-input" rows="6" [(ngModel)]="rawContent"
+        placeholder='{"amount": 250}'></textarea>
+    </div>
+
+    <button class="btn btn--primary" (click)="runProcess()" [disabled]="loading || !rawContent.trim()">
+      <span *ngIf="!loading">▶ &nbsp;Execute Pipeline</span>
+      <span *ngIf="loading" class="spinner-text">⏳ &nbsp;Processing…</span>
+    </button>
+  </div>
+
+  <!-- ── Erreur ──────────────────────────────────────────────────────────── -->
+  <div *ngIf="error" class="alert alert--error">
+    <strong>Error:</strong> {{ error }}
+  </div>
+
+  <!-- ── Résultats ───────────────────────────────────────────────────────── -->
+  <div *ngIf="result" class="result-block">
+
+    <!-- Bannière -->
+    <div class="result-banner" [class.result-banner--ok]="result.overallSuccess"
+         [class.result-banner--ko]="!result.overallSuccess">
+      <div class="banner-icon">{{ result.overallSuccess ? '✅' : '❌' }}</div>
+      <div>
+        <div class="banner-title">
+          {{ result.overallSuccess ? 'Pipeline executed successfully' : 'Pipeline completed with errors' }}
+        </div>
+        <div class="banner-meta">
+          Payload #{{ result.payloadId }} &nbsp;·&nbsp;
+          {{ result.successCount }}/{{ result.providerCount }} provider(s) OK &nbsp;·&nbsp;
+          {{ result.processedAt | date:'dd/MM/yyyy HH:mm:ss' }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Onglets -->
+    <div class="tab-strip">
+      <button class="tab-btn" [class.tab-btn--active]="activeTab==='summary'"
+        (click)="setTab('summary')">Summary</button>
+      <button class="tab-btn" [class.tab-btn--active]="activeTab==='providers'"
+        (click)="setTab('providers')">
+        Providers
+        <span class="tab-count">{{ result.providerCount }}</span>
+      </button>
+      <button class="tab-btn" [class.tab-btn--active]="activeTab==='aggregated'"
+        (click)="setTab('aggregated')">Aggregated Body</button>
+    </div>
+
+    <!-- Summary -->
+    <div *ngIf="activeTab==='summary'" class="tab-panel">
+      <div class="stats-row">
+        <div class="stat-box">
+          <span class="stat-val">{{ result.providerCount }}</span>
+          <span class="stat-lbl">Providers called</span>
+        </div>
+        <div class="stat-box stat-box--ok">
+          <span class="stat-val">{{ result.successCount }}</span>
+          <span class="stat-lbl">Validations passed</span>
+        </div>
+        <div class="stat-box" [class.stat-box--ko]="result.providerCount - result.successCount > 0">
+          <span class="stat-val">{{ result.providerCount - result.successCount }}</span>
+          <span class="stat-lbl">Failures</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Providers -->
+    <div *ngIf="activeTab==='providers'" class="tab-panel">
+      <div *ngFor="let d of result.providerDetails; let i = index"
+           class="provider-card"
+           [class.provider-card--ok]="d.validationPassed && d.dispatchSuccess"
+           [class.provider-card--ko]="!d.dispatchSuccess || !d.validationPassed">
+
+        <div class="provider-head" (click)="toggleProvider(i)">
+          <div class="provider-head-left">
+            <span class="prov-name">{{ d.providerName }}</span>
+            <span class="badge" [ngClass]="httpBadge(d.httpStatus)">HTTP {{ d.httpStatus }}</span>
+            <span class="badge" [ngClass]="statusClass(d)">{{ statusLabel(d) }}</span>
+            <span class="prov-dur">{{ d.durationMs }} ms</span>
+          </div>
+          <span class="chevron">{{ isExpanded(i) ? '▲' : '▼' }}</span>
+        </div>
+
+        <div *ngIf="isExpanded(i)" class="provider-body">
+
+          <!-- Erreurs de validation -->
+          <div *ngIf="d.validationErrors.length > 0" class="validation-errors">
+            <p class="errors-title">Validation errors</p>
+            <ul>
+              <li *ngFor="let e of d.validationErrors" class="error-item">{{ e }}</li>
+            </ul>
+          </div>
+
+          <!-- Réponse brute -->
+          <div class="detail-block">
+            <p class="detail-label">Raw response body</p>
+            <pre class="code-block">{{ d.rawBody ?? '(no body — network error)' }}</pre>
+          </div>
+
+          <!-- Corps mappé -->
+          <div class="detail-block" *ngIf="d.mappedBody && objectEntries(d.mappedBody).length > 0">
+            <p class="detail-label">Mapped body (after ResponseMappingRules)</p>
+            <pre class="code-block">{{ json(d.mappedBody) }}</pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Aggregated -->
+    <div *ngIf="activeTab==='aggregated'" class="tab-panel">
+      <p class="agg-desc">
+        Final body returned to the consumer — union of all validated provider responses.
+        In case of key collision, the second provider's field is prefixed with its name.
+      </p>
+      <pre class="code-block code-block--large">{{ json(result.aggregatedBody) }}</pre>
+    </div>
+
+  </div>
+</div>
