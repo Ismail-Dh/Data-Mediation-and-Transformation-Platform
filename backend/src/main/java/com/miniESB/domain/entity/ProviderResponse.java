@@ -29,9 +29,22 @@ public class ProviderResponse {
     @Column(name = "success", nullable = false)
     private boolean success;
 
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "payload_id", nullable = false, unique = true)
+    @Column(name = "duration_ms")
+    private Long durationMs;
+
+    /**
+     * Lien vers le payload d'origine.
+     * unique=true a été retiré : un payload peut désormais avoir une
+     * ProviderResponse par provider attaché au pipeline (multi-provider).
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "payload_id", nullable = false)
     private Payload payload;
+
+    /** Provider qui a produit cette réponse — permet de distinguer les réponses entre elles. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "provider_id")
+    private Provider provider;
 
     @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "exchange_log_id", unique = true)

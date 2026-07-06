@@ -4,7 +4,7 @@ import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angula
 import { FormsModule } from '@angular/forms';
 import { PipelineService } from '../../services/pipeline/pipeline-service';
 import { ProviderService } from '../../services/provider/provider-service';
-import { Pipeline } from '../../models/pipeline';
+import { Pipeline, providerNames, firstProvider } from '../../models/pipeline';
 import { Provider } from '../../models/provider';
 import { PipelineFieldsTabComponent } from './tabs/pipeline-fields-tab/pipeline-fields-tab.component';
 import { PipelinePayloadsTabComponent } from './tabs/pipeline-payloads-tab/pipeline-payloads-tab.component';
@@ -12,8 +12,10 @@ import { PipelineRulesTabComponent } from './tabs/pipeline-rules-tab/pipeline-ru
 import { PipelineMappingTabComponent } from './tabs/pipeline-mapping-tab-component/pipeline-mapping-tab-component';
 import { PipelineSandboxTabComponent } from '../sandbox/sandbox.component';
 import { DockerImageButtonComponent } from './docker-image-button-component/docker-image-button-component';
+import { PipelineProcessTabComponent } from './tabs/pipeline-process-tab-component/pipeline-process-tab-component';
+import { PipelineResponseRulesTabComponent } from './tabs/pipeline-response-rules-tab-component/pipeline-response-rules-tab-component';
 
-type DetailTab = 'info' | 'fields' | 'payloads' | 'rules' | 'mapping' | 'image_docker';
+type DetailTab = 'info' | 'fields' | 'payloads' | 'rules' | 'mapping' | 'response-rules' | 'process' | 'image_docker';
 
 @Component({
   selector: 'app-pipeline-developer',
@@ -27,7 +29,9 @@ type DetailTab = 'info' | 'fields' | 'payloads' | 'rules' | 'mapping' | 'image_d
     PipelineRulesTabComponent,
     PipelineSandboxTabComponent,
     PipelineMappingTabComponent,
-    DockerImageButtonComponent
+    DockerImageButtonComponent,
+    PipelineProcessTabComponent,
+    PipelineResponseRulesTabComponent,
   ],
   templateUrl: './pipeline-developer-component.html',
   styleUrls: ['./pipeline-developer-component.scss']
@@ -52,6 +56,10 @@ export class PipelineDeveloperComponent implements OnInit {
   readonly FORMATS  = ['JSON', 'XML', 'CSV', 'PLAIN_TEXT'];
   readonly STATUSES = ['DRAFT', 'CONFIGURED', 'VALIDATED'];
 
+  // Helpers multi-provider exposés au template
+  readonly providerNames = providerNames;
+  readonly firstProvider = firstProvider;
+
   constructor(
     private pipelineService: PipelineService,
     private providerService: ProviderService,
@@ -74,7 +82,8 @@ export class PipelineDeveloperComponent implements OnInit {
       version:      [''],
       inputFormat:  ['', Validators.required],
       outputFormat: ['', Validators.required],
-      providerId:   [null]
+      // Multi-provider : tableau d'IDs (remplace le champ singulier providerId)
+      providerIds:  [[]]
     });
   }
 
@@ -91,7 +100,7 @@ export class PipelineDeveloperComponent implements OnInit {
     const q = this.searchQuery.trim().toLowerCase();
     if (q) result = result.filter(p =>
       p.name.toLowerCase().includes(q) ||
-      (p.providerName ?? '').toLowerCase().includes(q)
+      (p.providers ?? []).some(pr => pr.name.toLowerCase().includes(q))
     );
     if (this.filterStatus) result = result.filter(p => p.status === this.filterStatus);
     this.filtered = result;
@@ -109,11 +118,37 @@ export class PipelineDeveloperComponent implements OnInit {
   openEdit(p: Pipeline): void {
     this.editingId = p.id;
     this.form.patchValue({
-      name: p.name, version: p.version,
-      inputFormat: p.inputFormat, outputFormat: p.outputFormat,
-      providerId: p.providerId ?? null
+      name:         p.name,
+      version:      p.version,
+      inputFormat:  p.inputFormat,
+      outputFormat: p.outputFormat,
+      providerIds:  (p.providers ?? []).map(pr => pr.id)
     });
     this.showModal = true;
+    this.cdr.detectChanges();
+  }
+
+  // ── Helpers pour la sélection multi-provider via checkboxes ───────────────
+
+  /** Retourne true si le provider est dans la liste sélectionnée du formulaire. */
+  isProviderSelected(providerId: number): boolean {
+    const ids: number[] = this.form.get('providerIds')?.value ?? [];
+    return ids.includes(providerId);
+  }
+
+  /** Coche / décoche un provider dans le FormControl providerIds. */
+  toggleProvider(providerId: number, event: Event): void {
+    const checked = (event.target as HTMLInputElement).checked;
+    const current: number[] = [...(this.form.get('providerIds')?.value ?? [])];
+
+    if (checked && !current.includes(providerId)) {
+      current.push(providerId);
+    } else if (!checked) {
+      const idx = current.indexOf(providerId);
+      if (idx > -1) current.splice(idx, 1);
+    }
+
+    this.form.get('providerIds')?.setValue(current);
     this.cdr.detectChanges();
   }
 
