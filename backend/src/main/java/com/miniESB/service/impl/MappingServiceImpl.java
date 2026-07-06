@@ -164,21 +164,30 @@ public class MappingServiceImpl implements MappingService {
         payloadRepository.save(payload);
         log.info("Payload mapped: id={}, pipeline={}", payloadId, pipelineId);
 
-        // ── Dispatch vers le provider ──────────────────────────────────────────
-        // Sérialise le résultat mappé en JSON et l'envoie au provider attaché.
-        // Si le pipeline n'a pas de provider, dispatch() retourne une liste vide
-        // sans erreur — le payload reste à MAPPED.
-        try {
-            String mappedJson = objectMapper.writeValueAsString(mapped);
-            providerDispatchService.dispatch(pipelineId, payloadId, mappedJson);
-        } catch (Exception e) {
-            // On logue sans bloquer la réponse : le payload est déjà MAPPED en base.
-            // Le statut final (SENT / FAILED) est géré dans ProviderDispatchServiceImpl.
-            log.error("Dispatch failed after mapping — payload={}, pipeline={}: {}",
-                    payloadId, pipelineId, e.getMessage());
-        }
+        // Le dispatch N'est PLUS appelé automatiquement ici.
+        // Il est désormais piloté par ProcessOrchestrationService (T7),
+        // qui contrôle l'ordre des étapes et l'agrégation des réponses.
+        // Appeler applyMappingToPayload seul ne déclenche donc plus d'envoi HTTP.
 
         return new MappingResultResponse(pipelineId, input, mapped);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public String applyAndReturnMapped(Long pipelineId, Long payloadId) {
+        Payload payload = payloadRepository.findById(payloadId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Payload not found: " + payloadId));
+
+        Map<String, Object> input  = parseRawContent(payload.getRawContent());
+        Map<String, Object> mapped = applyMapping(pipelineId, input);
+
+        try {
+            return objectMapper.writeValueAsString(mapped);
+        } catch (Exception e) {
+            log.error("Failed to serialize mapped payload id={}: {}", payloadId, e.getMessage());
+            return "{}";
+        }
     }
 
     @Override

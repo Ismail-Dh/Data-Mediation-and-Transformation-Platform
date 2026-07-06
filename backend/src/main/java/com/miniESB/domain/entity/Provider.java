@@ -30,7 +30,8 @@ public class Provider {
     @Column(name = "timeout", nullable = false)
     private int timeout;
 
-    @OneToMany(mappedBy = "provider", cascade = CascadeType.ALL, orphanRemoval = false)
+    /** Pipelines auxquels ce provider est attaché (côté inverse du @ManyToMany). */
+    @ManyToMany(mappedBy = "providers", fetch = FetchType.LAZY)
     @Builder.Default
     private List<Pipeline> pipelines = new ArrayList<>();
 }

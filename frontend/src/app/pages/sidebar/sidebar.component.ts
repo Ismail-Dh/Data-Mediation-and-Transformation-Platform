@@ -19,17 +19,21 @@ export class SidebarComponent {
   sidebarOpen = signal(true);
 
   navItems = [
-    { label: 'Dashboard',        icon: 'dashboard',      route: '/dashboard',           adminOnly: false, developerOnly: false },
-    { label: 'Users',            icon: 'people',          route: '/users',               adminOnly: true,  developerOnly: false },
-    { label: 'Providers',        icon: 'inventory_2',     route: '/provider',            adminOnly: true,  developerOnly: false },
-    { label: 'Registries',       icon: 'registry',   route: 'developer/registries',    adminOnly: false,  developerOnly: true }, // ← NEW
-    { label: 'Validation Rules', icon: 'rule',            route: '/validationRules',     adminOnly: true,  developerOnly: false },
-    { label: 'Templates',        icon: 'description',     route: '/admin/templates',     adminOnly: true,  developerOnly: false },
-    { label: 'Pipelines',        icon: 'build',           route: '/admin/pipelines',     adminOnly: true,  developerOnly: false },
-    { label: 'My Pipelines',     icon: 'build',           route: '/developer/pipelines', adminOnly: false, developerOnly: true  },
-    { label: 'Audit Logs',       icon: 'manage_search',   route: '/admin/audit-logs',    adminOnly: true,  developerOnly: false },
-    { label: 'My Activity',      icon: 'history',         route: '/my-logs',             adminOnly: false, developerOnly: true  },
-    { label: 'Monitoring',       icon: 'monitor_heart',   route: '/admin/monitoring',    adminOnly: true,  developerOnly: false },
+    { label: 'Dashboard',        icon: 'dashboard',      route: '/dashboard',            adminOnly: false, developerOnly: false },
+    { label: 'Users',            icon: 'people',          route: '/users',                adminOnly: true,  developerOnly: false },
+    { label: 'Providers',        icon: 'inventory_2',     route: '/provider',             adminOnly: true,  developerOnly: false },
+    { label: 'Registries',       icon: 'storage',         route: 'developer/registries',  adminOnly: false, developerOnly: true  },
+    { label: 'Validation Rules', icon: 'rule',            route: '/validationRules',      adminOnly: true,  developerOnly: false },
+    { label: 'Templates',        icon: 'description',     route: '/admin/templates',      adminOnly: true,  developerOnly: false },
+    //{ label: 'Pipelines',        icon: 'build',           route: '/admin/pipelines',      adminOnly: true,  developerOnly: false },
+    { label: 'My Pipelines',     icon: 'build',           route: '/developer/pipelines',  adminOnly: false, developerOnly: true  },
+    // ── Process & Response Rules : accessibles depuis l'onglet pipeline ──────
+    // Ces entrées de sidebar servent de raccourcis visuels (optional — les onglets
+    // sont intégrés dans le detail panel du pipeline, pas des pages séparées)
+    { label: 'Audit Logs',       icon: 'manage_search',   route: '/admin/audit-logs',     adminOnly: true,  developerOnly: false },
+    { label: 'My Activity',      icon: 'history',         route: '/my-logs',              adminOnly: false, developerOnly: true  },
+    { label: 'Monitoring',       icon: 'monitor_heart',   route: '/admin/monitoring',     adminOnly: true,  developerOnly: false },
+    { label: 'My Templates',     icon: 'folder_special',  route: '/developer/templates',  adminOnly: false, developerOnly: true  },
   ];
 
   constructor(private authService: AuthService, private router: Router) {

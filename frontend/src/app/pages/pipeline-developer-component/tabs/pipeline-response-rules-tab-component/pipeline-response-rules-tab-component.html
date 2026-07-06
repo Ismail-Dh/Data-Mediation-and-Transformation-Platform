@@ -1,0 +1,285 @@
+<!-- pipeline-response-rules-tab.component.html -->
+<div class="rr-tab">
+
+  <!-- ── En-tête ─────────────────────────────────────────────────────────── -->
+  <div class="rr-header">
+    <div class="rr-header-text">
+      <h3 class="rr-title">Response Mapping Rules</h3>
+      <p class="rr-desc">
+     
+      </p>
+    </div>
+    <button class="btn btn--primary btn--sm" (click)="openCreate()">
+      <svg viewBox="0 0 16 16" class="btn-icon"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      Add Rule
+    </button>
+  </div>
+
+  <!-- ── Messages ────────────────────────────────────────────────────────── -->
+  <div *ngIf="success" class="alert alert--success">
+    <svg viewBox="0 0 16 16" class="alert-icon"><path d="M3 8l3.5 3.5L13 5" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    {{ success }}
+  </div>
+  <div *ngIf="error" class="alert alert--error">
+    <svg viewBox="0 0 16 16" class="alert-icon"><path d="M8 5v4M8 11v1" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.3" fill="none"/></svg>
+    {{ error }}
+  </div>
+
+  <!-- ── Formulaire création / édition ────────────────────────────────────── -->
+  <div *ngIf="showForm" class="form-card" [formGroup]="form">
+
+    <div class="form-card-header">
+      <span class="form-title">{{ editingId !== null ? 'Edit Rule' : 'New Response Mapping Rule' }}</span>
+      <button class="icon-btn icon-btn--close" (click)="cancelForm()" title="Cancel">
+        <svg viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+
+    <!-- Type selector — en premier car il pilote les autres champs -->
+    <div class="form-grid">
+
+      <div class="field field--full">
+        <label class="field-label">Mapping Type <span class="req">*</span></label>
+        <div class="type-pills">
+          <button
+            *ngFor="let t of mappingTypes"
+            type="button"
+            class="type-pill"
+            [class.type-pill--active]="form.get('mappingType')?.value === t"
+            (click)="form.get('mappingType')?.setValue(t)">
+            <span class="pill-name">{{ typeLabel(t) }}</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Source Field — masqué pour CALCULATED_FIELD -->
+      <div class="field" [class.field--disabled]="sourceHidden">
+        <label class="field-label">
+          Source Field <span class="req" *ngIf="!sourceHidden">*</span>
+        </label>
+        <input
+          *ngIf="!sourceHidden"
+          type="text"
+          class="field-input"
+          formControlName="sourceField"
+          placeholder="e.g. status, amount, transactionId" />
+        <div *ngIf="sourceHidden" class="field-hint-box">
+          <svg viewBox="0 0 16 16" class="hint-icon"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.3" fill="none"/><path d="M8 7v5M8 5v1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          Source fields are defined in the expression below (CONCAT mode)
+        </div>
+        <span class="field-error"
+          *ngIf="!sourceHidden && form.get('sourceField')?.touched && form.get('sourceField')?.invalid">
+          Required
+        </span>
+      </div>
+
+      <!-- Target Field -->
+      <div class="field">
+        <label class="field-label">Target Field <span class="req">*</span></label>
+        <input
+          type="text"
+          class="field-input"
+          formControlName="targetField"
+          placeholder="e.g. paymentStatus, totalAmount" />
+        <span class="field-error"
+          *ngIf="form.get('targetField')?.touched && form.get('targetField')?.invalid">
+          Required
+        </span>
+      </div>
+
+      <!-- Expression — visible selon le type -->
+      <div class="field field--full" *ngIf="needsExpression">
+        <label class="field-label">
+          Expression <span class="req">*</span>
+        </label>
+        <input
+          type="text"
+          class="field-input field-input--mono"
+          formControlName="expression"
+          [placeholder]="expressionHint" />
+        <p class="field-desc">
+          <svg viewBox="0 0 16 16" class="hint-icon-sm"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.3" fill="none"/><path d="M8 7v4M8 5v1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <ng-container [ngSwitch]="form.get('mappingType')?.value">
+            <span *ngSwitchCase="'FORMAT_CHANGE'">
+              Accepted values: <code>UPPERCASE</code>, <code>LOWERCASE</code>, <code>TRIM</code>
+            </span>
+            <span *ngSwitchCase="'VALUE_TRANSFORM'">
+              Use <code>CONSTANT:&lt;value&gt;</code> to force a fixed value,
+              or leave empty to copy the source field as-is.
+            </span>
+            <span *ngSwitchCase="'CALCULATED_FIELD'">
+              Concatenate fields and literals with <code>+</code> —
+              e.g. <code>firstName+' '+lastName</code>
+            </span>
+          </ng-container>
+        </p>
+        <span class="field-error"
+          *ngIf="form.get('expression')?.touched && form.get('expression')?.invalid">
+          Expression is required for this mapping type
+        </span>
+      </div>
+
+      <!-- Provider (optionnel) -->
+      <div class="field">
+        <label class="field-label">
+          Provider
+          <span class="field-label-optional">(optional — empty = applies to all providers)</span>
+        </label>
+        <select class="field-input" formControlName="providerId">
+          <option [ngValue]="null">All providers</option>
+          <option *ngFor="let p of providers" [ngValue]="p.id">{{ p.name }}</option>
+        </select>
+      </div>
+
+      <!-- Required -->
+      <div class="field field--checkbox">
+        <label class="checkbox-label">
+          <input type="checkbox" class="checkbox-input" formControlName="required" />
+          <span class="checkbox-text">
+            <strong>Required field</strong>
+            <span class="checkbox-sub">Validation fails if this field is missing in the provider response</span>
+          </span>
+        </label>
+      </div>
+
+    </div><!-- /form-grid -->
+
+    <div class="form-actions">
+      <button
+        type="button"
+        class="btn btn--primary btn--sm"
+        (click)="save()"
+        [disabled]="form.invalid">
+        {{ editingId !== null ? 'Update Rule' : 'Create Rule' }}
+      </button>
+      <button type="button" class="btn btn--secondary btn--sm" (click)="cancelForm()">
+        Cancel
+      </button>
+    </div>
+
+  </div><!-- /form-card -->
+
+  <!-- ── Loading ─────────────────────────────────────────────────────────── -->
+  <div *ngIf="loading" class="loading-row">
+    <span class="loading-dot"></span>
+    <span class="loading-dot"></span>
+    <span class="loading-dot"></span>
+    Loading rules…
+  </div>
+
+  <!-- ── Table des règles ─────────────────────────────────────────────────── -->
+  <div *ngIf="!loading && rules.length > 0" class="rules-table-wrap">
+
+    <div class="rules-count">
+      {{ rules.length }} rule{{ rules.length > 1 ? 's' : '' }} configured
+    </div>
+
+    <table class="rules-table">
+      <thead>
+        <tr>
+          <th>Source</th>
+          <th>→</th>
+          <th>Target</th>
+          <th>Type</th>
+          <th>Expression</th>
+          <th>Provider</th>
+          <th>Required</th>
+          <th>Status</th>
+          <th class="th-actions"></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let r of rules; trackBy: trackById"
+            [class.row--inactive]="!r.active">
+          <td>
+            <code class="field-code field-code--source">{{ r.sourceField }}</code>
+          </td>
+          <td class="td-arrow">→</td>
+          <td>
+            <code class="field-code field-code--target">{{ r.targetField }}</code>
+          </td>
+          <td>
+            <span class="badge badge--type" [attr.data-type]="r.mappingType">
+              {{ typeLabel(r.mappingType) }}
+            </span>
+          </td>
+          <td class="td-expr">
+            <code *ngIf="r.expression" class="expr-code">{{ r.expression }}</code>
+            <span *ngIf="!r.expression" class="no-expr">—</span>
+          </td>
+          <td>
+            <span class="provider-tag" [class.provider-tag--all]="!r.providerId">
+              <svg viewBox="0 0 12 12" class="provider-icon">
+                <circle cx="6" cy="6" r="5" stroke="currentColor" stroke-width="1.2" fill="none"/>
+                <path d="M6 3v3l2 1.5" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+              </svg>
+              {{ providerLabel(r.providerId) }}
+            </span>
+          </td>
+          <td>
+            <span class="badge" [class.badge--required]="r.required" [class.badge--optional]="!r.required">
+              {{ r.required ? 'Required' : 'Optional' }}
+            </span>
+          </td>
+          <td>
+            <span class="badge" [class.badge--active]="r.active" [class.badge--inactive]="!r.active">
+              {{ r.active ? 'Active' : 'Inactive' }}
+            </span>
+          </td>
+          <td class="td-actions">
+            <button class="icon-btn icon-btn--edit" (click)="openEdit(r)" title="Edit rule">
+              <svg viewBox="0 0 16 16">
+                <path d="M11.5 2.5a2 2 0 0 1 2.83 2.83L5.5 14.17 2 15l.83-3.5L11.5 2.5z"
+                  stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+              </svg>
+            </button>
+            <button class="icon-btn icon-btn--delete" (click)="delete(r.id)" title="Delete rule">
+              <svg viewBox="0 0 16 16">
+                <polyline points="3 6 5 6 13 6" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+                <path d="M7 6V4.5h2V6" stroke="currentColor" stroke-width="1.4" fill="none"/>
+                <path d="M5.5 6l.5 8h4l.5-8" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+              </svg>
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Légende des types -->
+    <div class="type-legend">
+      <span class="legend-title">Types:</span>
+      <span *ngFor="let t of mappingTypes" class="legend-item">
+        <span class="badge badge--type" [attr.data-type]="t">{{ typeLabel(t) }}</span>
+        <span class="legend-desc">
+          <ng-container [ngSwitch]="t">
+            <ng-container *ngSwitchCase="'FIELD_PLACEMENT'">copy / rename</ng-container>
+            <ng-container *ngSwitchCase="'FORMAT_CHANGE'">UPPERCASE · LOWERCASE · TRIM</ng-container>
+            <ng-container *ngSwitchCase="'VALUE_TRANSFORM'">CONSTANT or passthrough</ng-container>
+            <ng-container *ngSwitchCase="'CALCULATED_FIELD'">concat multiple fields</ng-container>
+            <ng-container *ngSwitchCase="'RESTRUCTURING'">copy as-is</ng-container>
+          </ng-container>
+        </span>
+      </span>
+    </div>
+
+  </div><!-- /rules-table-wrap -->
+
+  <!-- ── Empty state ──────────────────────────────────────────────────────── -->
+  <div *ngIf="!loading && rules.length === 0 && !showForm" class="empty-state">
+    <svg viewBox="0 0 48 48" class="empty-icon">
+      <rect x="6" y="10" width="36" height="28" rx="4" stroke="currentColor" stroke-width="1.5" fill="none"/>
+      <path d="M14 20h20M14 26h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      <circle cx="36" cy="34" r="7" fill="#f0f4ff" stroke="currentColor" stroke-width="1.3"/>
+      <path d="M36 31v3l1.5 1.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+    </svg>
+    <p class="empty-title">No response mapping rules yet</p>
+    <p class="empty-sub">
+      Add rules to validate and transform provider responses before they are
+      aggregated into the final consumer response.
+    </p>
+    <button class="btn btn--primary btn--sm" (click)="openCreate()">
+      Add first rule
+    </button>
+  </div>
+
+</div>
