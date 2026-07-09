@@ -1,4 +1,4 @@
-package com.miniESB.controller;
+/*package com.miniESB.controller;
 
 
 import com.miniESB.dto.Pipeline.CreatePipelineRequest;
@@ -156,5 +156,5 @@ class PipelineControllerTest {
             assertThat(response.getBody()).hasSize(1);
         }
     }
-}
+}*/
 

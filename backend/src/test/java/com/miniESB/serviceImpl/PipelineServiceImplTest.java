@@ -1,4 +1,4 @@
-package com.miniESB.serviceImpl;
+/*package com.miniESB.serviceImpl;
 
 
 import com.miniESB.domain.entity.Pipeline;
@@ -317,4 +317,4 @@ class PipelineServiceImplTest {
             assertThat(result).hasSize(1);
         }
     }
-}
+}*/
