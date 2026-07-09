@@ -5,6 +5,8 @@ import com.miniESB.dto.process.ProcessResponse;
 import com.miniESB.service.ProcessOrchestrationService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -25,6 +27,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/process")
 @RequiredArgsConstructor
+@ConditionalOnProperty(name = "engine.mode", havingValue = "false", matchIfMissing = true)
 @CrossOrigin(origins = "*")
 public class ProcessController {
 

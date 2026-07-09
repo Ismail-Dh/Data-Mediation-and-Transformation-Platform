@@ -14,6 +14,8 @@ import com.miniESB.repository.ResponseMappingRuleRepository;
 import com.miniESB.service.ResponseMappingService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,6 +44,8 @@ import java.util.*;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@ConditionalOnProperty(name = "engine.mode", havingValue = "false", matchIfMissing = true)
+
 public class ResponseMappingServiceImpl implements ResponseMappingService {
 
     private final ResponseMappingRuleRepository ruleRepository;

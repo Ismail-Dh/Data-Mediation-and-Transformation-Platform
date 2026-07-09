@@ -28,6 +28,8 @@ import java.nio.file.*;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.*;
+import com.miniESB.domain.entity.ResponseMappingRule;
+import com.miniESB.repository.ResponseMappingRuleRepository;
 
 @Slf4j
 @Service
@@ -43,6 +45,8 @@ public class DockerImageGeneratorService {
     private final ObjectMapper             objectMapper;
     // Ajouter dans les champs injectés
     private final ImageVersionService      imageVersionService;
+    private final ResponseMappingRuleRepository responseMappingRuleRepository;
+
 
     // ══════════════════════════════════════════════════════════════════════════
     //  SSE streaming build  (tâche 5.4 + error handling renforcé)
@@ -483,7 +487,8 @@ public class DockerImageGeneratorService {
     private void generateRulesJson(Long pipelineId, Path buildDir) throws Exception {
         List<MappingRule>    mappingRules     = mappingRuleRepository.findByPipelineIdAndActiveTrue(pipelineId);
         List<PipelineField>  validationFields = pipelineFieldRepository.findAllByPipelineId(pipelineId);
-
+        Pipeline pipeline = pipelineRepository.findByIdWithProviders(pipelineId)   // ← changé
+            .orElseThrow(() -> new ResourceNotFoundException("Pipeline not found with id=" + pipelineId));
         List<Map<String, Object>> mappingList = mappingRules.stream()
                 .map(r -> {
                     Map<String, Object> m = new LinkedHashMap<>();
@@ -503,12 +508,42 @@ public class DockerImageGeneratorService {
                     m.put("nullable",  f.isNullable());
                     return m;
                 }).toList();
-
+        
+        //  export des providers pour dispatch autonome dans l'image ──
+        List<Map<String, Object>> providersList = Optional.ofNullable(pipeline.getProviders())
+            .orElse(List.of())
+            .stream()
+            .map(p -> {
+                Map<String, Object> m = new LinkedHashMap<>();
+                m.put("id",       p.getId());
+                m.put("name",     p.getName());
+                m.put("endpoint", p.getEndpoint());
+                m.put("timeout",  p.getTimeout());
+                return m;
+            }).toList();
+            
         Map<String, Object> rules = new LinkedHashMap<>();
         rules.put("pipelineId",       pipelineId);
         rules.put("mappingRules",     mappingList);
         rules.put("validationFields", validationList);
+        rules.put("providers",        providersList);      // ← ajouté
+        rules.put("outputFormat",     pipeline.getOutputFormat().name()); // JSON / XML pour les headers
+List<ResponseMappingRule> responseRules = responseMappingRuleRepository.findByPipelineId(pipelineId);
 
+List<Map<String, Object>> responseMappingRulesList = responseRules.stream()
+        .filter(ResponseMappingRule::isActive)
+        .map(r -> {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("providerId",  r.getProvider() != null ? r.getProvider().getId() : null);
+            m.put("sourceField", r.getSourceField());
+            m.put("targetField", r.getTargetField());
+            m.put("mappingType", r.getMappingType().name());
+            m.put("expression",  r.getExpression());
+            m.put("required",    r.isRequired());
+            return m;
+        }).toList();
+
+rules.put("responseMappingRules", responseMappingRulesList);
         File rulesFile = buildDir.resolve("rules.json").toFile();
         objectMapper.writerWithDefaultPrettyPrinter().writeValue(rulesFile, rules);
         log.info("rules.json generated: {}", rulesFile.getAbsolutePath());

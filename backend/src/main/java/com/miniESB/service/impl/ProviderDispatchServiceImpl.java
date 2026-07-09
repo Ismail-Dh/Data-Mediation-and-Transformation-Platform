@@ -10,6 +10,8 @@ import com.miniESB.repository.*;
 import com.miniESB.service.ProviderDispatchService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -33,6 +35,8 @@ import java.util.List;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@ConditionalOnProperty(name = "engine.mode", havingValue = "false", matchIfMissing = true)
+
 public class ProviderDispatchServiceImpl implements ProviderDispatchService {
 
     private final PipelineRepository         pipelineRepository;
