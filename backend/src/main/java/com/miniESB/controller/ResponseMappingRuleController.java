@@ -5,6 +5,8 @@ import com.miniESB.dto.response.ResponseMappingRuleResponse;
 import com.miniESB.service.ResponseMappingService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -24,6 +26,8 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/pipelines/{pipelineId}/response-rules")
 @RequiredArgsConstructor
+@ConditionalOnProperty(name = "engine.mode", havingValue = "false", matchIfMissing = true)
+
 @CrossOrigin(origins = "*")
 public class ResponseMappingRuleController {
 
