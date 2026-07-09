@@ -12,9 +12,10 @@ public record CreatePipelineRequest(
         @NotNull String outputFormat,
 
         /**
-         * Liste des providers à attacher au pipeline.
-         * Remplace l'ancien champ singulier {@code providerId}.
+         * Liste des providers à attacher au pipeline, chacun avec sa propre
+         * méthode HTTP (GET/POST/PUT/PATCH) — remplace l'ancien {@code providerIds}
+         * (simple liste d'IDs, toujours envoyée en POST).
          * Peut être vide ou null si aucun provider n'est encore configuré.
          */
-        List<Long> providerIds
+        List<PipelineProviderRequest> providers
 ) {}

@@ -8,6 +8,6 @@ public record UpdatePipelineRequest(
         String inputFormat,
         String outputFormat,
 
-        /** IDs des providers à attacher (remplace providerId). */
-        List<Long> providerIds
+        /** Providers à attacher (remplace providerIds) — null = ne pas modifier, [] = tout détacher. */
+        List<PipelineProviderRequest> providers
 ) {}
