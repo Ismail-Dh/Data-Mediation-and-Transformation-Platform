@@ -1,5 +1,6 @@
 export type PipelineStatus = 'DRAFT' | 'CONFIGURED' | 'VALIDATED';
 export type DataFormat     = 'JSON'  | 'XML'  | 'CSV'  | 'PLAIN_TEXT';
+export type HttpRequestMethod = 'GET' | 'POST' | 'PUT' | 'PATCH';
 
 /** Résumé d'un provider tel que renvoyé dans PipelineResponse (multi-provider T5). */
 export interface ProviderSummary {
@@ -25,7 +26,12 @@ export interface Pipeline {
   createdBy:    string;
 
   /** Liste des providers attachés — remplace les anciens champs singuliers. */
-  providers: ProviderSummary[];
+  providers: {
+        id: number;
+       name: string;
+        endpoint: string;
+        httpMethod: HttpRequestMethod; // ← nouveau champ
+     }[];
 }
 
 /**

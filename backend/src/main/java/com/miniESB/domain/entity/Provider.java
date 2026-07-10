@@ -30,8 +30,8 @@ public class Provider {
     @Column(name = "timeout", nullable = false)
     private int timeout;
 
-    /** Pipelines auxquels ce provider est attaché (côté inverse du @ManyToMany). */
-    @ManyToMany(mappedBy = "providers", fetch = FetchType.LAZY)
+    /** Pipelines auxquels ce provider est attaché (via l'association PipelineProvider, qui porte la méthode HTTP). */
+    @OneToMany(mappedBy = "provider", fetch = FetchType.LAZY)
     @Builder.Default
-    private List<Pipeline> pipelines = new ArrayList<>();
+    private List<PipelineProvider> pipelineLinks = new ArrayList<>();
 }

@@ -488,7 +488,7 @@ public class DockerImageGeneratorService {
         List<MappingRule>    mappingRules     = mappingRuleRepository.findByPipelineIdAndActiveTrue(pipelineId);
         List<PipelineField>  validationFields = pipelineFieldRepository.findAllByPipelineId(pipelineId);
         Pipeline pipeline = pipelineRepository.findByIdWithProviders(pipelineId)   // ← changé
-            .orElseThrow(() -> new ResourceNotFoundException("Pipeline not found with id=" + pipelineId));
+                .orElseThrow(() -> new ResourceNotFoundException("Pipeline not found with id=" + pipelineId));
         List<Map<String, Object>> mappingList = mappingRules.stream()
                 .map(r -> {
                     Map<String, Object> m = new LinkedHashMap<>();
@@ -508,42 +508,47 @@ public class DockerImageGeneratorService {
                     m.put("nullable",  f.isNullable());
                     return m;
                 }).toList();
-        
+
         //  export des providers pour dispatch autonome dans l'image ──
-        List<Map<String, Object>> providersList = Optional.ofNullable(pipeline.getProviders())
-            .orElse(List.of())
-            .stream()
-            .map(p -> {
-                Map<String, Object> m = new LinkedHashMap<>();
-                m.put("id",       p.getId());
-                m.put("name",     p.getName());
-                m.put("endpoint", p.getEndpoint());
-                m.put("timeout",  p.getTimeout());
-                return m;
-            }).toList();
-            
+        // Chaque provider embarque désormais sa méthode HTTP (GET/POST/PUT/PATCH),
+        // choisie pour CE pipeline via l'association PipelineProvider — l'image
+        // Docker générée doit l'utiliser telle quelle pour son dispatch autonome
+        // (plus de POST codé en dur).
+        List<Map<String, Object>> providersList = Optional.ofNullable(pipeline.getPipelineProviders())
+                .orElse(List.of())
+                .stream()
+                .map(link -> {
+                    Map<String, Object> m = new LinkedHashMap<>();
+                    m.put("id",         link.getProvider().getId());
+                    m.put("name",       link.getProvider().getName());
+                    m.put("endpoint",   link.getProvider().getEndpoint());
+                    m.put("timeout",    link.getProvider().getTimeout());
+                    m.put("httpMethod", link.getHttpMethod() != null ? link.getHttpMethod().name() : "POST");
+                    return m;
+                }).toList();
+
         Map<String, Object> rules = new LinkedHashMap<>();
         rules.put("pipelineId",       pipelineId);
         rules.put("mappingRules",     mappingList);
         rules.put("validationFields", validationList);
         rules.put("providers",        providersList);      // ← ajouté
         rules.put("outputFormat",     pipeline.getOutputFormat().name()); // JSON / XML pour les headers
-List<ResponseMappingRule> responseRules = responseMappingRuleRepository.findByPipelineId(pipelineId);
+        List<ResponseMappingRule> responseRules = responseMappingRuleRepository.findByPipelineId(pipelineId);
 
-List<Map<String, Object>> responseMappingRulesList = responseRules.stream()
-        .filter(ResponseMappingRule::isActive)
-        .map(r -> {
-            Map<String, Object> m = new LinkedHashMap<>();
-            m.put("providerId",  r.getProvider() != null ? r.getProvider().getId() : null);
-            m.put("sourceField", r.getSourceField());
-            m.put("targetField", r.getTargetField());
-            m.put("mappingType", r.getMappingType().name());
-            m.put("expression",  r.getExpression());
-            m.put("required",    r.isRequired());
-            return m;
-        }).toList();
+        List<Map<String, Object>> responseMappingRulesList = responseRules.stream()
+                .filter(ResponseMappingRule::isActive)
+                .map(r -> {
+                    Map<String, Object> m = new LinkedHashMap<>();
+                    m.put("providerId",  r.getProvider() != null ? r.getProvider().getId() : null);
+                    m.put("sourceField", r.getSourceField());
+                    m.put("targetField", r.getTargetField());
+                    m.put("mappingType", r.getMappingType().name());
+                    m.put("expression",  r.getExpression());
+                    m.put("required",    r.isRequired());
+                    return m;
+                }).toList();
 
-rules.put("responseMappingRules", responseMappingRulesList);
+        rules.put("responseMappingRules", responseMappingRulesList);
         File rulesFile = buildDir.resolve("rules.json").toFile();
         objectMapper.writerWithDefaultPrettyPrinter().writeValue(rulesFile, rules);
         log.info("rules.json generated: {}", rulesFile.getAbsolutePath());
@@ -681,18 +686,18 @@ rules.put("responseMappingRules", responseMappingRulesList);
         );
     }
     public List<BuildLogEntryResponse> getVersionHistory(Long pipelineId) {
-    return buildLogEntryRepository.findByPipelineIdOrderByStartTimeDesc(pipelineId)
-            .stream()
-            .map(e -> new BuildLogEntryResponse(
-                    e.getId(),
-                    e.getVersion() != null ? e.getVersion() : "—",
-                    e.getVersion(),
-                    e.getStatus(),
-                    e.getStartTime(),
-                    e.getEndTime(),
-                    e.getStartTime() != null && e.getEndTime() != null
-                            ? Duration.between(e.getStartTime(), e.getEndTime()).toSeconds()
-                            : null
-            )).toList();
+        return buildLogEntryRepository.findByPipelineIdOrderByStartTimeDesc(pipelineId)
+                .stream()
+                .map(e -> new BuildLogEntryResponse(
+                        e.getId(),
+                        e.getVersion() != null ? e.getVersion() : "—",
+                        e.getVersion(),
+                        e.getStatus(),
+                        e.getStartTime(),
+                        e.getEndTime(),
+                        e.getStartTime() != null && e.getEndTime() != null
+                                ? Duration.between(e.getStartTime(), e.getEndTime()).toSeconds()
+                                : null
+                )).toList();
     }
 }

@@ -1,14 +1,18 @@
 package com.miniESB.service.impl;
 
 import com.miniESB.domain.entity.Pipeline;
+import com.miniESB.domain.entity.PipelineProvider;
 import com.miniESB.domain.entity.Provider;
 import com.miniESB.domain.entity.User;
 import com.miniESB.domain.enums.DataFormat;
+import com.miniESB.domain.enums.HttpRequestMethod;
 import com.miniESB.domain.enums.PipelineStatus;
 import com.miniESB.dto.Pipeline.CreatePipelineRequest;
+import com.miniESB.dto.Pipeline.PipelineProviderRequest;
 import com.miniESB.dto.Pipeline.PipelineResponse;
 import com.miniESB.dto.Pipeline.UpdatePipelineRequest;
 import com.miniESB.exception.ResourceNotFoundException;
+import com.miniESB.repository.PipelineProviderRepository;
 import com.miniESB.repository.PipelineRepository;
 import com.miniESB.repository.ProviderRepository;
 import com.miniESB.repository.UserRepository;
@@ -34,14 +38,13 @@ public class PipelineServiceImpl implements PipelineService {
     private final PipelineRepository pipelineRepository;
     private final UserRepository     userRepository;
     private final ProviderRepository providerRepository;
+    private final PipelineProviderRepository pipelineProviderRepository;
 
     @Override
     @Transactional
     public PipelineResponse createPipeline(CreatePipelineRequest request, String username) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-
-        List<Provider> providers = resolveProviders(request.providerIds());
 
         Pipeline pipeline = Pipeline.builder()
                 .name(request.name())
@@ -51,10 +54,20 @@ public class PipelineServiceImpl implements PipelineService {
                 .status(PipelineStatus.DRAFT)
                 .createdAt(LocalDateTime.now())
                 .createdBy(user)
-                .providers(providers)
                 .build();
 
-        return toResponse(pipelineRepository.save(pipeline));
+        // 1) On sauvegarde d'abord le pipeline SEUL pour obtenir son ID généré
+        //    (Provider IDENTITY) — indispensable avant de créer les liens, puisque
+        //    PipelineProvider utilise une clé composite dérivée (pipeline_id, provider_id).
+        pipeline = pipelineRepository.save(pipeline);
+
+        // 2) On sauvegarde EXPLICITEMENT les liens pipeline↔provider (avec leur
+        //    méthode HTTP) via leur propre repository, plutôt que de compter sur
+        //    un cascade JPA fragile dans ce contexte.
+        List<PipelineProvider> links = resolvePipelineProviders(pipeline, request.providers());
+        links = pipelineProviderRepository.saveAll(links);
+
+        return toResponse(pipeline, links);
     }
 
     @Override
@@ -75,11 +88,26 @@ public class PipelineServiceImpl implements PipelineService {
         if (request.inputFormat()  != null) pipeline.setInputFormat(DataFormat.valueOf(request.inputFormat()));
         if (request.outputFormat() != null) pipeline.setOutputFormat(DataFormat.valueOf(request.outputFormat()));
 
-        if (request.providerIds() != null) {
-            pipeline.setProviders(resolveProviders(request.providerIds()));
+        pipeline = pipelineRepository.save(pipeline);
+
+        List<PipelineProvider> links;
+        if (request.providers() != null) {
+            // Remplacement explicite : on supprime d'abord tous les liens existants
+            // de CE pipeline, on flush pour que le DELETE parte avant les INSERT
+            // (sinon collision sur la clé composite pipeline_id+provider_id si un
+            // même provider reste sélectionné avec une méthode HTTP différente),
+            // puis on insère les nouveaux liens avec la méthode HTTP choisie.
+            pipelineProviderRepository.deleteAllByPipelineId(pipeline.getId());
+            pipelineProviderRepository.flush();
+
+            links = resolvePipelineProviders(pipeline, request.providers());
+            links = pipelineProviderRepository.saveAll(links);
+        } else {
+            // Pas de modification demandée sur les providers → on garde les liens existants.
+            links = pipelineProviderRepository.findByPipeline_Id(pipeline.getId());
         }
 
-        return toResponse(pipelineRepository.save(pipeline));
+        return toResponse(pipeline, links);
     }
 
     @Override
@@ -163,11 +191,23 @@ public class PipelineServiceImpl implements PipelineService {
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    private List<Provider> resolveProviders(List<Long> ids) {
-        if (ids == null || ids.isEmpty()) return new ArrayList<>();
-        return ids.stream()
-                .map(id -> providerRepository.findById(id)
-                        .orElseThrow(() -> new ResourceNotFoundException("Provider not found: " + id)))
+    /**
+     * Construit les associations PipelineProvider (provider + méthode HTTP) à partir
+     * de la requête. La méthode HTTP est optionnelle par sélection — POST par défaut
+     * si non fournie, pour rester rétrocompatible avec un appel sans httpMethod.
+     */
+    private List<PipelineProvider> resolvePipelineProviders(Pipeline pipeline, List<PipelineProviderRequest> selections) {
+        if (selections == null || selections.isEmpty()) return new ArrayList<>();
+        return selections.stream()
+                .map(sel -> {
+                    Provider provider = providerRepository.findById(sel.providerId())
+                            .orElseThrow(() -> new ResourceNotFoundException("Provider not found: " + sel.providerId()));
+                    return PipelineProvider.builder()
+                            .pipeline(pipeline)
+                            .provider(provider)
+                            .httpMethod(sel.httpMethod() != null ? sel.httpMethod() : HttpRequestMethod.POST)
+                            .build();
+                })
                 .collect(Collectors.toList());
     }
 
@@ -178,11 +218,24 @@ public class PipelineServiceImpl implements PipelineService {
     }
 
     private PipelineResponse toResponse(Pipeline p) {
-        List<PipelineResponse.ProviderSummary> providerSummaries = p.getProviders() == null
+        return toResponse(p, p.getPipelineProviders());
+    }
+
+    /**
+     * Variante utilisée après create/update : on passe explicitement les liens
+     * qu'on vient de sauvegarder via PipelineProviderRepository, plutôt que de
+     * relire p.getPipelineProviders() (collection LAZY potentiellement périmée
+     * puisqu'on gère désormais ces lignes hors du cycle de vie cascadé du pipeline).
+     */
+    private PipelineResponse toResponse(Pipeline p, List<PipelineProvider> pipelineProviders) {
+        List<PipelineResponse.ProviderSummary> providerSummaries = pipelineProviders == null
                 ? List.of()
-                : p.getProviders().stream()
-                .map(pr -> new PipelineResponse.ProviderSummary(
-                        pr.getId(), pr.getName(), pr.getEndpoint()))
+                : pipelineProviders.stream()
+                .map(link -> new PipelineResponse.ProviderSummary(
+                        link.getProvider().getId(),
+                        link.getProvider().getName(),
+                        link.getProvider().getEndpoint(),
+                        link.getHttpMethod()))
                 .toList();
 
         return new PipelineResponse(

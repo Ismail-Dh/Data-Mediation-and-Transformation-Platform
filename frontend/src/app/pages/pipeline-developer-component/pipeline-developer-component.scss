@@ -615,8 +615,51 @@ $shadow-hov:0 6px 24px rgba(0, 0, 0, 0.11);
 .fmt-tag      { background: #f0f4ff; color: #1a3a78; padding: 2px 8px; border-radius: 4px; font-size: 0.78rem; font-weight: 600; }
 .fmt-arrow-sm { color: #bbb; font-size: 0.85rem; }
 
-.prov-name-detail { font-weight: 500; display: block; }
-.prov-ep-detail   { font-family: monospace; font-size: 0.75rem; color: #aaa; display: block; }
+.prov-name-detail { font-weight: 500; }
+.prov-ep-detail   { font-family: monospace; font-size: 0.75rem; color: #aaa; }
+
+.prov-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 4px 0;
+}
+
+// ── HTTP method badge (choisi à la création/édition du pipeline) ───────────────
+.method-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+
+  &--get   { background: #e3f2fd; color: #1565c0; }
+  &--post  { background: #e8f5e9; color: #2e7d32; }
+  &--put   { background: #fff3e0; color: #e65100; }
+  &--patch { background: #f3e5f5; color: #6a1b9a; }
+}
+
+// Select inline dans la checklist provider du formulaire — n'apparaît que si coché
+.pcheck-method-select {
+  flex-shrink: 0;
+  margin-left: auto;
+  padding: 3px 6px;
+  border: 1.5px solid $border;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: $text-main;
+  background: #fff;
+  cursor: pointer;
+
+  &:focus {
+    outline: none;
+    border-color: $accent;
+  }
+}
 
 // ── Tabs ─────────────────────────────────────────────────────────────────────
 .detail-tabs {
