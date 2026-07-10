@@ -15,6 +15,15 @@ import java.util.List;
 
 public interface PipelineRepository extends JpaRepository<Pipeline, Long> {
     List<Pipeline> findByCreatedBy(User user);
-    @Query("SELECT p FROM Pipeline p LEFT JOIN FETCH p.providers WHERE p.id = :id")
+
+    /**
+     * Fetch le pipeline avec ses providers ET la méthode HTTP par lien
+     * (association PipelineProvider). Remplace l'ancien "LEFT JOIN FETCH p.providers"
+     * qui n'existe plus depuis le passage à l'association dédiée PipelineProvider.
+     */
+    @Query("SELECT DISTINCT p FROM Pipeline p " +
+            "LEFT JOIN FETCH p.pipelineProviders pp " +
+            "LEFT JOIN FETCH pp.provider " +
+            "WHERE p.id = :id")
     Optional<Pipeline> findByIdWithProviders(@Param("id") Long id);
 }

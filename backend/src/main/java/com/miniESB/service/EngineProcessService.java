@@ -61,7 +61,7 @@ public class EngineProcessService {
                 (List<Map<String, Object>>) rules.getOrDefault("providers", List.of());
         String outputFormat = (String) rules.getOrDefault("outputFormat", "JSON");
         List<Map<String, Object>> responseMappingRules =
-        (List<Map<String, Object>>) rules.getOrDefault("responseMappingRules", List.of());
+                (List<Map<String, Object>>) rules.getOrDefault("responseMappingRules", List.of());
 
         List<Map<String, Object>> dispatchResults = dispatchToProviders(mapped, providers, outputFormat, responseMappingRules);
         boolean anySuccess = dispatchResults.stream()
@@ -107,12 +107,24 @@ public class EngineProcessService {
         Number timeoutN = (Number) provider.get("timeout");
         int timeoutSec  = timeoutN != null ? timeoutN.intValue() : 30;
 
+        // Méthode HTTP choisie pour ce provider (exportée dans rules.json par
+        // DockerImageGeneratorService depuis PipelineProvider.httpMethod).
+        // Fallback défensif sur POST si absente (rules.json généré avant ce changement).
+        String httpMethodStr = (String) provider.getOrDefault("httpMethod", "POST");
+        HttpMethod httpMethod;
+        try {
+            httpMethod = HttpMethod.valueOf(httpMethodStr.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            log.warn("Provider '{}' — httpMethod inconnu '{}' dans rules.json, fallback POST", name, httpMethodStr);
+            httpMethod = HttpMethod.POST;
+        }
+
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("providerName", name);
         result.put("endpoint", endpoint);
 
         long start = System.currentTimeMillis();
-        log.info("POST {} → provider='{}'", endpoint, name);
+        log.info("{} {} → provider='{}'", httpMethod, endpoint, name);
 
         try {
             RestTemplate rt = restTemplateBuilder
@@ -126,7 +138,7 @@ public class EngineProcessService {
             headers.setAccept(List.of(MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML, MediaType.ALL));
 
             HttpEntity<String> req = new HttpEntity<>(body, headers);
-            ResponseEntity<String> resp = rt.exchange(endpoint, HttpMethod.POST, req, String.class);
+            ResponseEntity<String> resp = rt.exchange(endpoint, httpMethod, req, String.class);
 
             long duration = System.currentTimeMillis() - start;
             boolean ok = resp.getStatusCode().is2xxSuccessful();

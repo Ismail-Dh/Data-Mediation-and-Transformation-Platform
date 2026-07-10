@@ -25,7 +25,7 @@ export class SidebarComponent {
     { label: 'Registries',       icon: 'storage',         route: 'developer/registries',  adminOnly: false, developerOnly: true  },
     { label: 'Validation Rules', icon: 'rule',            route: '/validationRules',      adminOnly: true,  developerOnly: false },
     { label: 'Templates',        icon: 'description',     route: '/admin/templates',      adminOnly: true,  developerOnly: false },
-    //{ label: 'Pipelines',        icon: 'build',           route: '/admin/pipelines',      adminOnly: true,  developerOnly: false },
+    { label: 'Pipelines',        icon: 'build',           route: '/admin/pipelines',      adminOnly: true,  developerOnly: false },
     { label: 'My Pipelines',     icon: 'build',           route: '/developer/pipelines',  adminOnly: false, developerOnly: true  },
     // ── Process & Response Rules : accessibles depuis l'onglet pipeline ──────
     // Ces entrées de sidebar servent de raccourcis visuels (optional — les onglets
