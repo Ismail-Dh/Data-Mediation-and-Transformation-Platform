@@ -2,6 +2,7 @@ package com.miniESB.service.impl;
 
 import com.miniESB.domain.entity.*;
 import com.miniESB.domain.enums.DataFormat;
+import com.miniESB.domain.enums.HttpRequestMethod;
 import com.miniESB.domain.enums.PayloadStatus;
 import com.miniESB.dto.dispatch.ProviderDispatchResult;
 import com.miniESB.exception.ResourceNotFoundException;
@@ -26,8 +27,10 @@ import java.util.List;
 
 /**
  * T5 — Dispatche le payload mappé vers TOUS les providers du pipeline
- * (relation @ManyToMany depuis V23) et persiste une {@link ProviderResponse}
- * par provider pour traçabilité complète.
+ * (association {@link PipelineProvider} depuis V23/V24) et persiste une
+ * {@link ProviderResponse} par provider pour traçabilité complète.
+ * Chaque provider est appelé avec la méthode HTTP (GET/POST/PUT/PATCH)
+ * choisie pour CE pipeline (portée par PipelineProvider.httpMethod).
  */
 @Slf4j
 @Service
@@ -54,8 +57,8 @@ public class ProviderDispatchServiceImpl implements ProviderDispatchService {
         Payload payload = payloadRepository.findById(payloadId)
                 .orElseThrow(() -> new ResourceNotFoundException("Payload not found: " + payloadId));
 
-        List<Provider> providers = pipeline.getProviders();
-        if (providers == null || providers.isEmpty()) {
+        List<PipelineProvider> pipelineProviders = pipeline.getPipelineProviders();
+        if (pipelineProviders == null || pipelineProviders.isEmpty()) {
             log.warn("Pipeline id={} has no provider attached — dispatch skipped", pipelineId);
             return List.of();
         }
@@ -63,8 +66,8 @@ public class ProviderDispatchServiceImpl implements ProviderDispatchService {
         List<ProviderDispatchResult> results = new ArrayList<>();
         boolean anySuccess = false;
 
-        for (Provider provider : providers) {
-            ProviderDispatchResult result = callProvider(provider, pipeline, payload, mappedPayload);
+        for (PipelineProvider link : pipelineProviders) {
+            ProviderDispatchResult result = callProvider(link, pipeline, payload, mappedPayload);
             results.add(result);
             if (result.success()) anySuccess = true;
         }
@@ -80,19 +83,21 @@ public class ProviderDispatchServiceImpl implements ProviderDispatchService {
 
     // ── Appel HTTP vers un provider ──────────────────────────────────────────
 
-    private ProviderDispatchResult callProvider(Provider provider,
+    private ProviderDispatchResult callProvider(PipelineProvider link,
                                                 Pipeline pipeline,
                                                 Payload payload,
                                                 String mappedPayload) {
+        Provider provider = link.getProvider();
         String endpoint = provider.getEndpoint();
+        HttpMethod method = resolveHttpMethod(link);
         long startMs = System.currentTimeMillis();
 
-        log.info("POST {} → provider='{}' payload={}", endpoint, provider.getName(), payload.getId());
+        log.info("{} {} → provider='{}' payload={}", method, endpoint, provider.getName(), payload.getId());
 
         try {
             RestTemplate rt = buildRestTemplate(provider.getTimeout());
             HttpEntity<String> req = new HttpEntity<>(mappedPayload, buildHeaders(pipeline));
-            ResponseEntity<String> resp = rt.exchange(endpoint, HttpMethod.POST, req, String.class);
+            ResponseEntity<String> resp = rt.exchange(endpoint, method, req, String.class);
 
             long dur = System.currentTimeMillis() - startMs;
             int  st  = resp.getStatusCode().value();
@@ -182,6 +187,28 @@ public class ProviderDispatchServiceImpl implements ProviderDispatchService {
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
+
+    /**
+     * Résout la méthode HTTP à utiliser pour l'appel sortant vers ce provider,
+     * dans le contexte de CE pipeline. La méthode est portée par l'association
+     * PipelineProvider (choisie à la création/édition du pipeline), et non par
+     * le provider lui-même — un même provider peut donc être appelé différemment
+     * selon le pipeline. Fallback défensif sur POST si non renseignée.
+     */
+    private HttpMethod resolveHttpMethod(PipelineProvider link) {
+        HttpRequestMethod configured = link.getHttpMethod();
+        if (configured == null) {
+            log.warn("Pipeline id={} → provider '{}' has no httpMethod configured — defaulting to POST",
+                    link.getPipeline().getId(), link.getProvider().getName());
+            return HttpMethod.POST;
+        }
+        return switch (configured) {
+            case GET   -> HttpMethod.GET;
+            case POST  -> HttpMethod.POST;
+            case PUT   -> HttpMethod.PUT;
+            case PATCH -> HttpMethod.PATCH;
+        };
+    }
 
     private RestTemplate buildRestTemplate(int timeoutSec) {
         Duration t = Duration.ofSeconds(timeoutSec > 0 ? timeoutSec : 30);

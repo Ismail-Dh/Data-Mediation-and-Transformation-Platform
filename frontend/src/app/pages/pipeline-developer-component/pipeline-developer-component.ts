@@ -6,6 +6,7 @@ import { PipelineService } from '../../services/pipeline/pipeline-service';
 import { ProviderService } from '../../services/provider/provider-service';
 import { Pipeline, providerNames, firstProvider } from '../../models/pipeline';
 import { Provider } from '../../models/provider';
+import { HttpRequestMethod, HTTP_REQUEST_METHODS, PipelineProviderSelection } from '../../models/pipeline-provider-selection';
 import { PipelineFieldsTabComponent } from './tabs/pipeline-fields-tab/pipeline-fields-tab.component';
 import { PipelinePayloadsTabComponent } from './tabs/pipeline-payloads-tab/pipeline-payloads-tab.component';
 import { PipelineRulesTabComponent } from './tabs/pipeline-rules-tab/pipeline-rules-tab.component';
@@ -59,6 +60,8 @@ export class PipelineDeveloperComponent implements OnInit {
   // Helpers multi-provider exposés au template
   readonly providerNames = providerNames;
   readonly firstProvider = firstProvider;
+  /** Méthodes HTTP disponibles pour chaque provider attaché (choisies ici, pas dans l'admin providers). */
+  readonly HTTP_METHODS: HttpRequestMethod[] = HTTP_REQUEST_METHODS;
 
   constructor(
     private pipelineService: PipelineService,
@@ -82,8 +85,9 @@ export class PipelineDeveloperComponent implements OnInit {
       version:      [''],
       inputFormat:  ['', Validators.required],
       outputFormat: ['', Validators.required],
-      // Multi-provider : tableau d'IDs (remplace le champ singulier providerId)
-      providerIds:  [[]]
+      // Multi-provider : tableau de { providerId, httpMethod } — la méthode HTTP
+      // se choisit ici, à la création/édition du pipeline (pas dans l'admin providers).
+      providers:    [[] as PipelineProviderSelection[]]
     });
   }
 
@@ -122,34 +126,62 @@ export class PipelineDeveloperComponent implements OnInit {
       version:      p.version,
       inputFormat:  p.inputFormat,
       outputFormat: p.outputFormat,
-      providerIds:  (p.providers ?? []).map(pr => pr.id)
+      // p.providers[].httpMethod vient du backend (PipelineResponse.ProviderSummary.httpMethod)
+      providers:    (p.providers ?? []).map(pr => ({
+        providerId: pr.id,
+        httpMethod: (pr.httpMethod as HttpRequestMethod) ?? 'POST'
+      }))
     });
     this.showModal = true;
     this.cdr.detectChanges();
   }
 
-  // ── Helpers pour la sélection multi-provider via checkboxes ───────────────
+  // ── Helpers pour la sélection multi-provider via checkboxes + méthode HTTP ──
 
   /** Retourne true si le provider est dans la liste sélectionnée du formulaire. */
   isProviderSelected(providerId: number): boolean {
-    const ids: number[] = this.form.get('providerIds')?.value ?? [];
-    return ids.includes(providerId);
+    const selections: PipelineProviderSelection[] = this.form.get('providers')?.value ?? [];
+    return selections.some(s => s.providerId === providerId);
   }
 
-  /** Coche / décoche un provider dans le FormControl providerIds. */
+  /** Coche / décoche un provider. À la sélection, la méthode HTTP par défaut est POST. */
   toggleProvider(providerId: number, event: Event): void {
     const checked = (event.target as HTMLInputElement).checked;
-    const current: number[] = [...(this.form.get('providerIds')?.value ?? [])];
+    const current: PipelineProviderSelection[] = [...(this.form.get('providers')?.value ?? [])];
 
-    if (checked && !current.includes(providerId)) {
-      current.push(providerId);
+    if (checked && !current.some(s => s.providerId === providerId)) {
+      current.push({ providerId, httpMethod: 'POST' });
     } else if (!checked) {
-      const idx = current.indexOf(providerId);
+      const idx = current.findIndex(s => s.providerId === providerId);
       if (idx > -1) current.splice(idx, 1);
     }
 
-    this.form.get('providerIds')?.setValue(current);
+    this.form.get('providers')?.setValue(current);
     this.cdr.detectChanges();
+  }
+
+  /** Méthode HTTP actuellement choisie pour un provider sélectionné (pour le <select>). */
+  getProviderMethod(providerId: number): HttpRequestMethod {
+    const selections: PipelineProviderSelection[] = this.form.get('providers')?.value ?? [];
+    return selections.find(s => s.providerId === providerId)?.httpMethod ?? 'POST';
+  }
+
+  /** Change la méthode HTTP d'un provider déjà sélectionné pour ce pipeline. */
+  setProviderMethod(providerId: number, method: HttpRequestMethod): void {
+    const current: PipelineProviderSelection[] = [...(this.form.get('providers')?.value ?? [])];
+    const idx = current.findIndex(s => s.providerId === providerId);
+    if (idx > -1) {
+      current[idx] = { ...current[idx], httpMethod: method };
+      this.form.get('providers')?.setValue(current);
+      this.cdr.detectChanges();
+    }
+  }
+
+  /** Wrapper pour le (change) du <select> de méthode HTTP dans le template. */
+  onMethodChange(providerId: number, event: Event): void {
+    const method = (event.target as HTMLSelectElement).value as HttpRequestMethod;
+    console.log('Changing method for provider', providerId, 'to', method);
+    this.setProviderMethod(providerId, method);
   }
 
   closeModal(): void {
@@ -162,6 +194,7 @@ export class PipelineDeveloperComponent implements OnInit {
     if (this.form.invalid) return;
     const val = this.form.value;
     if (this.editingId !== null) {
+      console.log('Updating pipeline', this.editingId, val);
       this.pipelineService.update(this.editingId, val).subscribe(() => {
         this.loadPipelines(); this.closeModal();
       });

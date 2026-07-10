@@ -1,0 +1,149 @@
+<!-- ===== HEADER ===== -->
+<div class="page">
+  <div class="page-header">
+    <div class="page-title">
+      <div class="title-row">
+        <h1>All Pipelines</h1>
+        <span class="role-chip">ADMIN</span>
+      </div>
+      <span class="subtitle">Full system view — all users pipelines (read-only)</span>
+    </div>
+    <!-- Écran de consultation uniquement : ni création, ni édition, ni suppression. -->
+  </div>
+
+  <!-- ===== STATS ===== -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <span class="stat-num">{{ pipelines.length }}</span>
+      <span class="stat-label">Total</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-num stat-num--draft">{{ countByStatus('DRAFT') }}</span>
+      <span class="stat-label">Draft</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-num stat-num--configured">{{ countByStatus('CONFIGURED') }}</span>
+      <span class="stat-label">Configured</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-num stat-num--validated">{{ countByStatus('VALIDATED') }}</span>
+      <span class="stat-label">Validated</span>
+    </div>
+  </div>
+
+  <!-- ===== FILTERS ===== -->
+  <div class="toolbar">
+    <div class="search-wrap">
+      <svg class="search-icon" viewBox="0 0 20 20"><circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" stroke-width="1.5" fill="none"/><line x1="13" y1="13" x2="18" y2="18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <input
+        type="text"
+        class="search-input"
+        placeholder="Search by name, owner or provider…"
+        [(ngModel)]="searchQuery"
+        (ngModelChange)="applyFilters()"
+      />
+    </div>
+    <select class="filter-select" [(ngModel)]="filterStatus" (ngModelChange)="applyFilters()">
+      <option value="">All statuses</option>
+      <option *ngFor="let s of STATUSES" [value]="s">{{ s }}</option>
+    </select>
+    <select class="filter-select" [(ngModel)]="filterFormat" (ngModelChange)="applyFilters()">
+      <option value="">All formats</option>
+      <option *ngFor="let f of FORMATS" [value]="f">{{ f }}</option>
+    </select>
+    <span class="count-badge">{{ filtered.length }} result{{ filtered.length !== 1 ? 's' : '' }}</span>
+  </div>
+
+  <!-- ===== TABLE ===== -->
+  <div class="table-card">
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Version</th>
+          <th>Format flow</th>
+          <th>Status</th>
+          <th>Owner</th>
+          <th>Provider(s)</th>
+          <th>Created</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let p of filtered" (click)="openDetail(p)" class="tr-clickable">
+          <td class="td-name">{{ p.name }}</td>
+          <td class="td-mono">{{ p.version || '—' }}</td>
+          <td>
+            <span class="fmt-tag">{{ p.inputFormat }}</span>
+            <span class="fmt-arrow">&#8594;</span>
+            <span class="fmt-tag">{{ p.outputFormat }}</span>
+          </td>
+          <td><span class="badge" [ngClass]="'badge--' + p.status.toLowerCase()">{{ p.status }}</span></td>
+          <td class="td-owner">{{ p.createdBy }}</td>
+          <td>
+            <span class="prov-tag" *ngIf="p.providers.length">{{ providerNames(p) }}</span>
+            <span class="no-prov"  *ngIf="!p.providers.length">—</span>
+          </td>
+          <td class="td-date">{{ p.createdAt | date:'dd/MM/yy' }}</td>
+        </tr>
+        <tr *ngIf="filtered.length === 0">
+          <td colspan="7" class="td-empty">No pipelines match the current filters.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ===== DETAIL DRAWER (lecture seule) ===== -->
+<div class="modal-overlay" *ngIf="detailPipeline" (click)="closeDetail()">
+  <div class="drawer" (click)="$event.stopPropagation()">
+    <div class="drawer-header">
+      <div>
+        <h2>{{ detailPipeline.name }}</h2>
+        <span class="badge" [ngClass]="'badge--' + detailPipeline!.status.toLowerCase()">
+          {{ detailPipeline.status }}
+        </span>
+      </div>
+      <button class="close-btn" (click)="closeDetail()">
+        <svg viewBox="0 0 20 20"><line x1="4" y1="4" x2="16" y2="16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="16" y1="4" x2="4" y2="16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+
+    <div class="detail-grid">
+      <div class="detail-item">
+        <span class="detail-label">Version</span>
+        <span class="detail-value">{{ detailPipeline.version || '—' }}</span>
+      </div>
+      <div class="detail-item">
+        <span class="detail-label">Owner</span>
+        <span class="detail-value">{{ detailPipeline.createdBy }}</span>
+      </div>
+      <div class="detail-item">
+        <span class="detail-label">Created</span>
+        <span class="detail-value">{{ detailPipeline.createdAt | date:'dd MMM yyyy, HH:mm' }}</span>
+      </div>
+      <div class="detail-item">
+        <span class="detail-label">Input format</span>
+        <span class="fmt-tag detail-tag">{{ detailPipeline.inputFormat }}</span>
+      </div>
+      <div class="detail-item">
+        <span class="detail-label">Output format</span>
+        <span class="fmt-tag detail-tag">{{ detailPipeline.outputFormat }}</span>
+      </div>
+      <div class="detail-item full">
+        <span class="detail-label">Provider(s)</span>
+        <div class="detail-value" *ngIf="detailPipeline.providers.length">
+          <div *ngFor="let pr of detailPipeline.providers" class="prov-item">
+            <span class="prov-name-detail">{{ pr.name }}</span>
+            <span class="method-badge" [ngClass]="'method-badge--' + pr.httpMethod.toLowerCase()">{{ pr.httpMethod }}</span>
+            <small class="td-mono">{{ pr.endpoint }}</small>
+          </div>
+        </div>
+        <span class="no-prov" *ngIf="!detailPipeline.providers.length">None</span>
+      </div>
+    </div>
+
+    <div class="drawer-actions">
+      <button class="btn btn--secondary" (click)="closeDetail()">Close</button>
+    </div>
+  </div>
+</div>

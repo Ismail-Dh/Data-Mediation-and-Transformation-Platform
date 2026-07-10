@@ -118,6 +118,15 @@
               <span class="pcheck-name">{{ pv.name }}</span>
               <span class="pcheck-meta">{{ pv.protocol }} — {{ pv.endpoint }}</span>
             </span>
+            <!-- Méthode HTTP utilisée pour transmettre le message à CE provider, pour CE pipeline -->
+            <select
+              *ngIf="isProviderSelected(pv.id)"
+              class="pcheck-method-select"
+              [value]="getProviderMethod(pv.id)"
+              (click)="$event.stopPropagation()"
+              (change)="onMethodChange(pv.id, $event)">
+              <option *ngFor="let m of HTTP_METHODS" [value]="m">{{ m }}</option>
+            </select>
           </label>
           <p class="provider-empty-hint" *ngIf="providers.length === 0">No providers available.</p>
         </div>
@@ -177,7 +186,10 @@
       </div>
       <div class="detail-kv" *ngIf="detailPipeline.providers.length === 1">
         <span class="detail-label">Endpoint</span>
-        <span class="detail-val"><code style="font-size:.8rem">{{ detailPipeline.providers[0].endpoint }}</code></span>
+        <span class="detail-val">
+          <span class="method-badge" [ngClass]="'method-badge--' + detailPipeline.providers[0].httpMethod.toLowerCase()">{{ detailPipeline.providers[0].httpMethod }}</span>
+          <code style="font-size:.8rem">{{ detailPipeline.providers[0].endpoint }}</code>
+        </span>
       </div>
     </div>
 
@@ -213,6 +225,7 @@
             <div class="detail-val">
               <div *ngFor="let pr of detailPipeline.providers" class="prov-item">
                 <span class="prov-name-detail">{{ pr.name }}</span>
+                <span class="method-badge" [ngClass]="'method-badge--' + pr.httpMethod.toLowerCase()">{{ pr.httpMethod }}</span>
                 <span class="prov-ep-detail">{{ pr.endpoint }}</span>
               </div>
             </div>

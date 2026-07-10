@@ -50,19 +50,15 @@ public class Pipeline {
     private User createdBy;
 
     /**
-     * Providers attachés à ce pipeline.
-     * Migré de @ManyToOne (un seul provider) vers @ManyToMany pour permettre
-     * à un pipeline de dispatcher son payload mappé vers plusieurs providers
-     * en parallèle, chacun avec sa propre réponse tracée (voir ProviderResponse).
+     * Providers attachés à ce pipeline, via l'association {@link PipelineProvider}
+     * qui porte la méthode HTTP (GET/POST/PUT/PATCH) choisie pour chacun.
+     * LECTURE SEULE ici : la persistance (create/update/delete) des liens se fait
+     * explicitement via {@code PipelineProviderRepository} dans PipelineServiceImpl
+     * — pas de cascade JPA (fragile avec une clé composite dérivée + parent IDENTITY).
      */
-    @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(
-            name = "pipeline_providers",
-            joinColumns = @JoinColumn(name = "pipeline_id"),
-            inverseJoinColumns = @JoinColumn(name = "provider_id")
-    )
+    @OneToMany(mappedBy = "pipeline", fetch = FetchType.LAZY)
     @Builder.Default
-    private List<Provider> providers = new ArrayList<>();
+    private List<PipelineProvider> pipelineProviders = new ArrayList<>();
 
     @OneToMany(mappedBy = "pipeline",cascade = CascadeType.ALL,orphanRemoval = true)
     @Builder.Default
