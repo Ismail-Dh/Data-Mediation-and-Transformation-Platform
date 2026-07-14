@@ -1,11 +1,11 @@
 package com.miniESB.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.miniESB.controller.BuildMonitorController;
-import com.miniESB.domain.entity.BuildLogEntry;
 import com.miniESB.domain.enums.ImageStatus;
+import com.miniESB.dto.docker.BuildLogEntryResponse;
 import com.miniESB.exception.DockerDaemonException;
 import com.miniESB.exception.ResourceNotFoundException;
-import com.miniESB.repository.BuildLogEntryRepository;
 import com.miniESB.service.impl.DockerImageGeneratorService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -15,6 +15,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -42,7 +43,7 @@ import static org.mockito.Mockito.*;
 class BuildMonitorControllerTest {
 
     @Mock private DockerImageGeneratorService generatorService;
-    @Mock private BuildLogEntryRepository     buildLogEntryRepository;
+    @Spy  private ObjectMapper objectMapper = new ObjectMapper();
 
     @InjectMocks
     private BuildMonitorController controller;
@@ -308,27 +309,26 @@ class BuildMonitorControllerTest {
     class BuildHistory {
 
         @Test
-        @DisplayName("returns the list from buildLogEntryRepository ordered by startTime desc")
-        void getBuildHistory_delegatesToRepository() {
-            BuildLogEntry entry1 = BuildLogEntry.builder()
-                    .pipelineId(PIPELINE_ID).status(ImageStatus.SUCCESS).build();
-            BuildLogEntry entry2 = BuildLogEntry.builder()
-                    .pipelineId(PIPELINE_ID).status(ImageStatus.FAILED).build();
+        @DisplayName("returns the list from generatorService ordered by startTime desc")
+        void getBuildHistory_delegatesToService() {
+            BuildLogEntryResponse entry1 = new BuildLogEntryResponse(
+                    1L, "1.0.0", "1.0.0", ImageStatus.SUCCESS, null, null, null);
+            BuildLogEntryResponse entry2 = new BuildLogEntryResponse(
+                    2L, "1.0.1", "1.0.1", ImageStatus.FAILED, null, null, null);
 
-            when(buildLogEntryRepository.findByPipelineIdOrderByStartTimeDesc(PIPELINE_ID))
+            when(generatorService.getVersionHistory(PIPELINE_ID))
                     .thenReturn(List.of(entry1, entry2));
 
             Object result = controller.getBuildHistory(PIPELINE_ID);
 
             assertThat(result).isEqualTo(List.of(entry1, entry2));
-            verify(buildLogEntryRepository)
-                    .findByPipelineIdOrderByStartTimeDesc(PIPELINE_ID);
+            verify(generatorService).getVersionHistory(PIPELINE_ID);
         }
 
         @Test
         @DisplayName("returns empty list when no builds exist")
         void getBuildHistory_noBuild_returnsEmpty() {
-            when(buildLogEntryRepository.findByPipelineIdOrderByStartTimeDesc(PIPELINE_ID))
+            when(generatorService.getVersionHistory(PIPELINE_ID))
                     .thenReturn(List.of());
 
             Object result = controller.getBuildHistory(PIPELINE_ID);
@@ -339,13 +339,12 @@ class BuildMonitorControllerTest {
         @Test
         @DisplayName("history is called with the correct pipelineId")
         void getBuildHistory_calledWithCorrectId() {
-            when(buildLogEntryRepository.findByPipelineIdOrderByStartTimeDesc(PIPELINE_ID))
+            when(generatorService.getVersionHistory(PIPELINE_ID))
                     .thenReturn(List.of());
 
             controller.getBuildHistory(PIPELINE_ID);
 
-            verify(buildLogEntryRepository)
-                    .findByPipelineIdOrderByStartTimeDesc(PIPELINE_ID);
+            verify(generatorService).getVersionHistory(PIPELINE_ID);
         }
     }
 
@@ -365,8 +364,7 @@ class BuildMonitorControllerTest {
 
             controller.streamBuildLogs(PIPELINE_ID);
 
-            // Le contrôleur ne doit jamais persister directement
-            verifyNoInteractions(buildLogEntryRepository);
+
         }
 
         @Test

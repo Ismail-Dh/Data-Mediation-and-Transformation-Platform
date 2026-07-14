@@ -14,7 +14,7 @@ import lombok.*;
  * utile quand deux providers renvoient des formats différents pour le même pipeline.</p>
  *
  * <p>{@code required=true} signifie que si le champ {@code sourceField} est absent
- * de la réponse du provider, la validation échoue (voir ResponseMappingService).</p>
+ * de la réponse du provider, la validation échoue (voir ResponseMappingExecutionService).</p>
  */
 @Entity
 @Table(name = "response_mapping_rules")

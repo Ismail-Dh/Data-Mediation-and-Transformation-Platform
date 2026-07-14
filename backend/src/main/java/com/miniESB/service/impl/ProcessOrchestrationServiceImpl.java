@@ -18,7 +18,7 @@ import com.miniESB.service.MappingService;
 import com.miniESB.service.PayloadService;
 import com.miniESB.service.ProcessOrchestrationService;
 import com.miniESB.service.ProviderDispatchService;
-import com.miniESB.service.ResponseMappingService;
+import com.miniESB.service.ResponseMappingExecutionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -55,7 +55,7 @@ public class ProcessOrchestrationServiceImpl implements ProcessOrchestrationServ
     private final PayloadService            payloadService;
     private final MappingService            mappingService;
     private final ProviderDispatchService   dispatchService;
-    private final ResponseMappingService    responseMappingService;
+    private final ResponseMappingExecutionService responseMappingService;
     private final ObjectMapper              objectMapper;
 
     @Override
@@ -98,7 +98,7 @@ public class ProcessOrchestrationServiceImpl implements ProcessOrchestrationServ
 
         log.info("Step 4 OK — {} provider(s) called", dispatchResults.size());
 
-        // ── 5. Validation + mapping des réponses providers (ResponseMappingService) ─
+        // ── 5. Validation + mapping des réponses providers (ResponseMappingExecutionService) ─
         List<ProviderResponseDetail> details = responseMappingService.validateAndMap(
                 pipeline.getId(), dispatchResults);
 

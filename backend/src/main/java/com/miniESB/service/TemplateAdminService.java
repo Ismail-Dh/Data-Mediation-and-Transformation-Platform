@@ -6,9 +6,17 @@ import com.miniESB.dto.template.TemplateResponse;
 
 import java.util.List;
 
-public interface TemplateService {
-
-    // ---- Admin operations ----
+/**
+ * Opérations d'administration des templates (VALIDATION / MAPPING).
+ *
+ * <p>Séparée de {@link TemplateQueryService} (lecture seule, côté développeur)
+ * pour respecter l'Interface Segregation Principle : avant ce refactoring,
+ * les deux étaient réunies dans une seule interface {@code TemplateService},
+ * ce qui obligeait {@code DeveloperTemplateController} à dépendre de 6
+ * méthodes d'administration (create/update/publish/disable/findAll/findById)
+ * qu'il n'utilisait jamais.</p>
+ */
+public interface TemplateAdminService {
 
     /** Create a new DRAFT template (VALIDATION or MAPPING). */
     TemplateResponse create(TemplateRequest request, String adminUsername);
@@ -31,9 +39,4 @@ public interface TemplateService {
 
     /** Return a single template by id and type — Admin view. */
     TemplateResponse findById(Long id, TemplateType type);
-
-    // ---- Developer (read-only) operations ----
-
-    /** Return only PUBLISHED templates — Developer view. */
-    List<TemplateResponse> findPublished(TemplateType type);
 }

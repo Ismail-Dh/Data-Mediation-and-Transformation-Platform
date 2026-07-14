@@ -4,7 +4,7 @@ package com.miniESB.controller;
 import com.miniESB.domain.enums.TemplateStatus;
 import com.miniESB.domain.enums.TemplateType;
 import com.miniESB.dto.template.TemplateResponse;
-import com.miniESB.service.TemplateService;
+import com.miniESB.service.TemplateQueryService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -27,7 +27,7 @@ import static org.mockito.Mockito.*;
 @DisplayName("DeveloperTemplateController — unit tests")
 class DeveloperTemplateControllerTest {
 
-    @Mock  private TemplateService templateService;
+    @Mock  private TemplateQueryService templateService;
     @InjectMocks private DeveloperTemplateController controller;
     Map<String, Object> validationContent = Map.of(
             "rules", List.of(

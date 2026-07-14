@@ -4,7 +4,7 @@ import com.miniESB.audit.Auditable;
 import com.miniESB.domain.enums.TemplateType;
 import com.miniESB.dto.template.TemplateRequest;
 import com.miniESB.dto.template.TemplateResponse;
-import com.miniESB.service.TemplateService;
+import com.miniESB.service.TemplateAdminService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
@@ -44,7 +44,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AdminTemplateController {
 
-    private final TemplateService templateService;
+    private final TemplateAdminService templateService;
 
     // -------------------------------------------------------------------------
     // POST /api/admin/templates

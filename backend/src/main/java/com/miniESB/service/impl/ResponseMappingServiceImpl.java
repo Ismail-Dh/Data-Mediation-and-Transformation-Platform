@@ -4,14 +4,17 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.miniESB.domain.entity.Provider;
 import com.miniESB.domain.entity.ResponseMappingRule;
-import com.miniESB.domain.enums.MappingType;
 import com.miniESB.dto.dispatch.ProviderDispatchResult;
 import com.miniESB.dto.response.*;
+import com.miniESB.engine.responsemapping.ResponseFieldRuleData;
+import com.miniESB.engine.responsemapping.ResponseMappingEngine;
+import com.miniESB.engine.responsemapping.ResponseMappingResult;
 import com.miniESB.exception.ResourceNotFoundException;
 import com.miniESB.repository.PipelineRepository;
 import com.miniESB.repository.ProviderRepository;
 import com.miniESB.repository.ResponseMappingRuleRepository;
-import com.miniESB.service.ResponseMappingService;
+import com.miniESB.service.ResponseMappingExecutionService;
+import com.miniESB.service.ResponseMappingRuleAdminService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -23,52 +26,46 @@ import java.time.LocalDateTime;
 import java.util.*;
 
 /**
- * T6 — Implémentation de la validation et du mapping des réponses providers.
+ * T6 — Implémentation "mode base de données" de la validation et du mapping
+ * des réponses providers.
  *
- * <p><b>Algorithme par provider :</b></p>
- * <ol>
- *   <li>Désérialisation du rawBody JSON en Map.</li>
- *   <li>Pour chaque règle active applicable (ciblant ce provider ou générique) :
- *     <ul>
- *       <li>Si {@code required=true} et le champ source absent → violation.</li>
- *       <li>Si le champ est présent → applique la transformation selon {@link MappingType}.</li>
- *     </ul>
- *   </li>
- *   <li>Retourne validationPassed=true si aucune violation, plus le corps mappé.</li>
- * </ol>
+ * <p>Implémente deux interfaces distinctes ({@link ResponseMappingExecutionService},
+ * {@link ResponseMappingRuleAdminService}) plutôt qu'une seule interface fourre-tout
+ * (Interface Segregation Principle) : {@code ProcessOrchestrationServiceImpl} ne
+ * dépend que de l'exécution, {@code ResponseMappingRuleController} ne dépend que
+ * du CRUD.</p>
  *
- * <p>Les réponses en erreur réseau (httpStatus=0) ou HTTP non-2xx ne sont pas
- * validées — elles reçoivent automatiquement validationPassed=false avec
- * un message d'erreur explicite.</p>
+ * <p><strong>Depuis le refactoring</strong>, le dispatch par {@code MappingType}
+ * et l'implémentation de chaque transformation ne sont plus ici : ils vivent
+ * dans {@code com.miniESB.engine.responsemapping} (pattern Strategy), partagés
+ * avec {@code EngineResponseMappingHelper} (mode fichier), qui dupliquait
+ * auparavant ce même code pour opérer sans JPA.</p>
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 @ConditionalOnProperty(name = "engine.mode", havingValue = "false", matchIfMissing = true)
-
-public class ResponseMappingServiceImpl implements ResponseMappingService {
+public class ResponseMappingServiceImpl implements ResponseMappingExecutionService, ResponseMappingRuleAdminService {
 
     private final ResponseMappingRuleRepository ruleRepository;
-    private final PipelineRepository            pipelineRepository;
-    private final ProviderRepository            providerRepository;
-    private final ObjectMapper                  objectMapper;
+    private final PipelineRepository pipelineRepository;
+    private final ProviderRepository providerRepository;
+    private final ObjectMapper objectMapper;
+    private final ResponseMappingEngine responseMappingEngine;
 
-    // ── T6 : validation + mapping ─────────────────────────────────────────────
+    // ── T6 : validation + mapping (ResponseMappingExecutionService) ─────────
 
     @Override
     public List<ProviderResponseDetail> validateAndMap(Long pipelineId,
-                                                       List<ProviderDispatchResult> results) {
+                                                         List<ProviderDispatchResult> results) {
         List<ProviderResponseDetail> details = new ArrayList<>();
-
         for (ProviderDispatchResult result : results) {
             details.add(processOneProvider(pipelineId, result));
         }
-
         return details;
     }
 
-    private ProviderResponseDetail processOneProvider(Long pipelineId,
-                                                      ProviderDispatchResult result) {
+    private ProviderResponseDetail processOneProvider(Long pipelineId, ProviderDispatchResult result) {
         // Réponse en erreur réseau ou HTTP non-2xx → pas de validation
         if (!result.success()) {
             String reason = result.httpStatus() == 0
@@ -83,11 +80,9 @@ public class ResponseMappingServiceImpl implements ResponseMappingService {
             );
         }
 
-        // Désérialiser le rawBody
         Map<String, Object> sourceMap;
         try {
-            sourceMap = objectMapper.readValue(result.rawBody(),
-                    new TypeReference<Map<String, Object>>() {});
+            sourceMap = objectMapper.readValue(result.rawBody(), new TypeReference<Map<String, Object>>() {});
         } catch (Exception e) {
             log.warn("Cannot parse provider '{}' response as JSON: {}", result.providerName(), e.getMessage());
             return new ProviderResponseDetail(
@@ -98,118 +93,34 @@ public class ResponseMappingServiceImpl implements ResponseMappingService {
             );
         }
 
-        // Charger les règles applicables à ce provider
-        List<ResponseMappingRule> rules = ruleRepository.findApplicableRules(
-                pipelineId, result.providerId());
+        List<ResponseFieldRuleData> ruleData = ruleRepository.findApplicableRules(pipelineId, result.providerId())
+                .stream()
+                .map(this::toRuleData)
+                .toList();
 
-        List<String> violations = new ArrayList<>();
-        Map<String, Object> mappedBody = new LinkedHashMap<>();
+        ResponseMappingResult mapping = responseMappingEngine.apply(ruleData, sourceMap);
 
-        for (ResponseMappingRule rule : rules) {
-            applyRule(rule, sourceMap, mappedBody, violations);
-        }
-
-        // Copier les champs non couverts par les règles dans le corps mappé
-        // (comportement passthrough : on garde tout, les règles renomment/transforment)
-        sourceMap.forEach((k, v) -> mappedBody.putIfAbsent(k, v));
-
-        boolean passed = violations.isEmpty();
         log.info("Provider '{}' response validation: passed={} violations={}",
-                result.providerName(), passed, violations.size());
+                result.providerName(), mapping.passed(), mapping.violations().size());
 
         return new ProviderResponseDetail(
                 result.providerId(), result.providerName(),
                 result.httpStatus(), result.rawBody(), result.durationMs(),
                 true, LocalDateTime.now(),
-                passed, violations, mappedBody
+                mapping.passed(), mapping.violations(), mapping.mappedBody()
         );
     }
 
-    private void applyRule(ResponseMappingRule rule,
-                           Map<String, Object> source,
-                           Map<String, Object> target,
-                           List<String> violations) {
-
-        String srcField = rule.getSourceField();
-        String tgtField = rule.getTargetField();
-        Object value    = source.get(srcField);
-
-        // Validation : champ requis absent
-        if (value == null) {
-            if (rule.isRequired()) {
-                violations.add("Required field '" + srcField + "' is missing in provider response");
-            }
-            return;
-        }
-
-        // Transformation selon MappingType (mêmes constantes que MappingServiceImpl / T5)
-        Object transformed;
-        try {
-            transformed = switch (rule.getMappingType()) {
-                case FIELD_PLACEMENT  -> value;                                   // copie / renommage simple, sans transformation
-                case FORMAT_CHANGE    -> applyFormatChange(value, rule.getExpression());
-                case VALUE_TRANSFORM  -> applyValueTransform(rule.getExpression(), value, source);
-                case CALCULATED_FIELD -> applyConcat(rule.getExpression(), source);
-                case RESTRUCTURING    -> value;                                   // pas de restructuration imbriquée pour les réponses
-            };
-        } catch (Exception e) {
-            log.warn("Rule id={} transformation failed for field '{}': {}", rule.getId(), srcField, e.getMessage());
-            violations.add("Transformation failed for field '" + srcField + "': " + e.getMessage());
-            return;
-        }
-
-        target.put(tgtField, transformed);
+    private ResponseFieldRuleData toRuleData(ResponseMappingRule rule) {
+        return new ResponseFieldRuleData(rule.getId(), rule.getSourceField(), rule.getTargetField(),
+                rule.getMappingType(), rule.getExpression(), rule.isRequired());
     }
 
-    /**
-     * FORMAT_CHANGE : l'expression indique l'opération de formatage à appliquer
-     * (UPPERCASE, LOWERCASE, TRIM). Reprend la même convention que
-     * MappingServiceImpl#transformSingleValue pour rester cohérent avec T5.
-     */
-    private Object applyFormatChange(Object value, String expression) {
-        if (expression == null || expression.isBlank()) return value;
-        return switch (expression.trim().toUpperCase()) {
-            case "UPPERCASE" -> value.toString().toUpperCase();
-            case "LOWERCASE" -> value.toString().toLowerCase();
-            case "TRIM"      -> value.toString().trim();
-            default -> throw new IllegalArgumentException(
-                    "Unknown FORMAT_CHANGE expression: " + expression);
-        };
-    }
-
-    /**
-     * VALUE_TRANSFORM : si l'expression commence par "CONSTANT:", retourne une
-     * valeur fixe indépendante du champ source ; sinon retourne la valeur telle quelle.
-     */
-    private Object applyValueTransform(String expression, Object value, Map<String, Object> source) {
-        if (expression == null || expression.isBlank()) return value;
-        if (expression.startsWith("CONSTANT:")) {
-            return expression.substring("CONSTANT:".length());
-        }
-        return value;
-    }
-
-    /**
-     * CONCAT : l'expression contient les noms de champs séparés par '+'.
-     * Exemple : expression = "firstName+' '+lastName"
-     * Support simplifié — concatène les valeurs des champs listés.
-     */
-    private Object applyConcat(String expression, Map<String, Object> source) {
-        if (expression == null || expression.isBlank()) return "";
-        StringBuilder sb = new StringBuilder();
-        for (String part : expression.split("\\+")) {
-            String token = part.trim().replace("'", "");
-            sb.append(source.getOrDefault(token, token));
-        }
-        return sb.toString();
-    }
-
-    // ── CRUD des ResponseMappingRule ──────────────────────────────────────────
+    // ── CRUD des ResponseMappingRule (ResponseMappingRuleAdminService) ──────
 
     @Override
     @Transactional
-    public ResponseMappingRuleResponse createRule(Long pipelineId,
-                                                  CreateResponseMappingRuleRequest req) {
+    public ResponseMappingRuleResponse createRule(Long pipelineId, CreateResponseMappingRuleRequest req) {
         var pipeline = pipelineRepository.findById(pipelineId)
                 .orElseThrow(() -> new ResourceNotFoundException("Pipeline not found: " + pipelineId));
 
@@ -235,14 +146,12 @@ public class ResponseMappingServiceImpl implements ResponseMappingService {
 
     @Override
     public List<ResponseMappingRuleResponse> getRules(Long pipelineId) {
-        return ruleRepository.findByPipelineId(pipelineId)
-                .stream().map(this::toResponse).toList();
+        return ruleRepository.findByPipelineId(pipelineId).stream().map(this::toResponse).toList();
     }
 
     @Override
     @Transactional
-    public ResponseMappingRuleResponse updateRule(Long ruleId,
-                                                  CreateResponseMappingRuleRequest req) {
+    public ResponseMappingRuleResponse updateRule(Long ruleId, CreateResponseMappingRuleRequest req) {
         var rule = ruleRepository.findById(ruleId)
                 .orElseThrow(() -> new ResourceNotFoundException("ResponseMappingRule not found: " + ruleId));
 

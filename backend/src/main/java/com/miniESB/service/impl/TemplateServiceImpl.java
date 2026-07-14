@@ -11,7 +11,8 @@ import com.miniESB.exception.ResourceNotFoundException;
 import com.miniESB.repository.MappingTemplateRepository;
 import com.miniESB.repository.UserRepository;
 import com.miniESB.repository.ValidationTemplateRepository;
-import com.miniESB.service.TemplateService;
+import com.miniESB.service.TemplateAdminService;
+import com.miniESB.service.TemplateQueryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -27,7 +28,7 @@ import java.util.List;
 @ConditionalOnProperty(name = "engine.mode", havingValue = "false", matchIfMissing = true)
 
 
-public class TemplateServiceImpl implements TemplateService {
+public class TemplateServiceImpl implements TemplateAdminService, TemplateQueryService {
 
     private final ValidationTemplateRepository validationRepo;
     private final MappingTemplateRepository mappingRepo;

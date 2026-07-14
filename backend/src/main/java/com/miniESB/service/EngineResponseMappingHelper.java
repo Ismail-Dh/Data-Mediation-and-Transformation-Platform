@@ -2,6 +2,10 @@ package com.miniESB.service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.miniESB.domain.enums.MappingType;
+import com.miniESB.engine.responsemapping.ResponseFieldRuleData;
+import com.miniESB.engine.responsemapping.ResponseMappingEngine;
+import com.miniESB.engine.responsemapping.ResponseMappingResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -10,8 +14,15 @@ import org.springframework.stereotype.Component;
 import java.util.*;
 
 /**
- * Réplique en mémoire (sans JPA) de la logique T6 de ResponseMappingServiceImpl,
- * utilisée par EngineProcessService dans l'image Docker autonome.
+ * Réplique en mémoire (sans JPA) de la logique T6 de {@code ResponseMappingServiceImpl},
+ * utilisée par {@code EngineProcessService} dans l'image Docker autonome (mode "engine").
+ *
+ * <p><strong>Depuis le refactoring</strong>, cette classe ne contient plus sa propre
+ * copie du dispatch par {@code MappingType} : elle convertit les règles JSON du
+ * fichier {@code rules.json} en {@link ResponseFieldRuleData} (même format neutre
+ * que le mode base de données) et délègue à {@link ResponseMappingEngine} — le
+ * même moteur que {@code ResponseMappingServiceImpl}. Élimine la duplication qui
+ * existait entre les deux classes (violation SRP/OCP/DRY).</p>
  */
 @Slf4j
 @Component
@@ -20,10 +31,11 @@ import java.util.*;
 public class EngineResponseMappingHelper {
 
     private final ObjectMapper objectMapper;
+    private final ResponseMappingEngine responseMappingEngine;
 
     public void applyResponseMapping(Long providerId, String rawBody,
-                                     List<Map<String, Object>> rules,
-                                     Map<String, Object> result) {
+                                      List<Map<String, Object>> rules,
+                                      Map<String, Object> result) {
         Map<String, Object> sourceMap;
         try {
             sourceMap = objectMapper.readValue(rawBody, new TypeReference<Map<String, Object>>() {});
@@ -34,91 +46,43 @@ public class EngineResponseMappingHelper {
             return;
         }
 
-        List<Map<String, Object>> applicableRules = rules.stream()
+        List<ResponseFieldRuleData> applicableRules = rules.stream()
                 .filter(r -> {
                     Object rProviderId = r.get("providerId");
                     return rProviderId == null
                             || Objects.equals(((Number) rProviderId).longValue(), providerId);
-                }).toList();
+                })
+                .map(this::toRuleData)
+                .filter(Objects::nonNull)
+                .toList();
 
-        List<String> violations = new ArrayList<>();
-        Map<String, Object> mappedBody = new LinkedHashMap<>();
+        ResponseMappingResult mapping = responseMappingEngine.apply(applicableRules, sourceMap);
 
-        for (Map<String, Object> rule : applicableRules) {
-            applyRule(rule, sourceMap, mappedBody, violations);
-        }
-
-        sourceMap.forEach((k, v) -> mappedBody.putIfAbsent(k, v));
-
-        boolean passed = violations.isEmpty();
-        result.put("validationPassed", passed);
-        result.put("validationErrors", violations);
-        result.put("mappedBody", mappedBody);
+        result.put("validationPassed", mapping.passed());
+        result.put("validationErrors", mapping.violations());
+        result.put("mappedBody", mapping.mappedBody());
     }
 
-    private void applyRule(Map<String, Object> rule,
-                           Map<String, Object> source,
-                           Map<String, Object> target,
-                           List<String> violations) {
-        String srcField  = (String) rule.get("sourceField");
-        String tgtField  = (String) rule.get("targetField");
-        String type      = (String) rule.get("mappingType");
-        String expr      = (String) rule.get("expression");
+    private ResponseFieldRuleData toRuleData(Map<String, Object> rule) {
+        String srcField = (String) rule.get("sourceField");
+        String tgtField = (String) rule.get("targetField");
+        String typeStr = (String) rule.get("mappingType");
+        String expr = (String) rule.get("expression");
         boolean required = Boolean.TRUE.equals(rule.get("required"));
 
-        Object value = source.get(srcField);
+        MappingType type = parseMappingType(typeStr);
+        if (type == null) return null;
 
-        if (value == null) {
-            if (required) {
-                violations.add("Required field '" + srcField + "' is missing in provider response");
-            }
-            return;
-        }
+        return new ResponseFieldRuleData(null, srcField, tgtField, type, expr, required);
+    }
 
-        Object transformed;
+    private MappingType parseMappingType(String raw) {
+        if (raw == null) return null;
         try {
-            transformed = switch (type == null ? "" : type.toUpperCase()) {
-                case "FIELD_PLACEMENT"  -> value;
-                case "FORMAT_CHANGE"    -> applyFormatChange(value, expr);
-                case "VALUE_TRANSFORM"  -> applyValueTransform(expr, value);
-                case "CALCULATED_FIELD" -> applyConcat(expr, source);
-                case "RESTRUCTURING"    -> value;
-                default -> value;
-            };
-        } catch (Exception e) {
-            log.warn("Response rule failed for field '{}': {}", srcField, e.getMessage());
-            violations.add("Transformation failed for field '" + srcField + "': " + e.getMessage());
-            return;
+            return MappingType.valueOf(raw.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            log.warn("Unsupported response mapping type in rules.json: {}", raw);
+            return null;
         }
-
-        target.put(tgtField, transformed);
-    }
-
-    private Object applyFormatChange(Object value, String expression) {
-        if (expression == null || expression.isBlank()) return value;
-        return switch (expression.trim().toUpperCase()) {
-            case "UPPERCASE" -> value.toString().toUpperCase();
-            case "LOWERCASE" -> value.toString().toLowerCase();
-            case "TRIM"      -> value.toString().trim();
-            default -> throw new IllegalArgumentException("Unknown FORMAT_CHANGE: " + expression);
-        };
-    }
-
-    private Object applyValueTransform(String expression, Object value) {
-        if (expression == null || expression.isBlank()) return value;
-        if (expression.startsWith("CONSTANT:")) {
-            return expression.substring("CONSTANT:".length());
-        }
-        return value;
-    }
-
-    private Object applyConcat(String expression, Map<String, Object> source) {
-        if (expression == null || expression.isBlank()) return "";
-        StringBuilder sb = new StringBuilder();
-        for (String part : expression.split("\\+")) {
-            String token = part.trim().replace("'", "");
-            sb.append(source.getOrDefault(token, token));
-        }
-        return sb.toString();
     }
 }

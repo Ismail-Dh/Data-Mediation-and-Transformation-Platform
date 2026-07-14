@@ -1,5 +1,6 @@
 package com.miniESB.exception;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.miniESB.service.impl.DockerImageGeneratorService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -19,8 +20,23 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+/**
+ * Gestionnaire d'erreurs global.
+ *
+ * <p><strong>Depuis le refactoring</strong>, {@link #sseErrorResponse} délègue
+ * la sérialisation JSON à l'{@link ObjectMapper} injecté par Spring, au lieu
+ * de reconstruire le JSON à la main via {@code StringBuilder} (violation
+ * SRP/DIP : ce handler dépendait d'une implémentation JSON "maison" au lieu
+ * de l'abstraction standard déjà utilisée partout ailleurs dans l'application).</p>
+ */
 @ControllerAdvice
 public class GlobalExceptionHandler {
+
+    private final ObjectMapper objectMapper;
+
+    public GlobalExceptionHandler(ObjectMapper objectMapper) {
+        this.objectMapper = objectMapper;
+    }
 
     // ── 400 Bean Validation (@Valid sur les DTOs) ─────────────────────────────
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -197,28 +213,11 @@ public class GlobalExceptionHandler {
                 payload.put("buildLog", buildLog);
             }
 
-            // Sérialisation manuelle légère (pas d'ObjectMapper injecté ici)
-            StringBuilder json = new StringBuilder("{");
-            payload.forEach((k, v) -> {
-                if (json.length() > 1) json.append(",");
-                json.append("\"").append(k).append("\":");
-                if (v instanceof Number) {
-                    json.append(v);
-                } else {
-                    // Échapper les guillemets et sauts de ligne dans la valeur
-                    String safe = v.toString()
-                            .replace("\\", "\\\\")
-                            .replace("\"", "'")
-                            .replace("\n", "\\n")
-                            .replace("\r", "");
-                    json.append("\"").append(safe).append("\"");
-                }
-            });
-            json.append("}");
+            String json = objectMapper.writeValueAsString(payload);
 
             emitter.send(SseEmitter.event()
                     .name("BUILD_FAILED")
-                    .data(json.toString()));
+                    .data(json));
             emitter.complete();
         } catch (IOException ignored) { }
 
