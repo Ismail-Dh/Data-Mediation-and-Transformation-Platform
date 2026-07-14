@@ -25,7 +25,7 @@ import static org.mockito.Mockito.*;
 @DisplayName("AdminTemplateController — unit tests")
 class AdminTemplateControllerTest {
 
-    @Mock  private TemplateService templateService;
+    @Mock  private TemplateAdminService templateService;
     @InjectMocks private AdminTemplateController adminTemplateController;
 
     Map<String, Object> validationContent = Map.of(

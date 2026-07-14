@@ -10,7 +10,7 @@ import com.miniESB.dto.process.ProcessResponse;
  *   1. Réception + validation structurelle du payload  (PayloadService)
  *   2. Mapping du payload entrant                      (MappingService)
  *   3. Dispatch HTTP vers tous les providers           (ProviderDispatchService)
- *   4. Validation + mapping des réponses providers     (ResponseMappingService)
+ *   4. Validation + mapping des réponses providers     (ResponseMappingExecutionService)
  *   5. Agrégation et construction de la réponse finale
  *   6. Persistance du ConsumerResponse                 (T5 traçabilité)
  * </pre>

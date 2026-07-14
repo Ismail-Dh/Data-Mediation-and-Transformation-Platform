@@ -8,6 +8,9 @@ import com.miniESB.exception.DockerBuildException;
 import com.miniESB.exception.DockerDaemonException;
 import com.miniESB.exception.ResourceNotFoundException;
 import com.miniESB.repository.*;
+import com.miniESB.service.ImageVersionService;
+import com.miniESB.service.docker.CommandExecutor;
+import com.miniESB.service.impl.DockerBuildArtifactGenerator;
 import com.miniESB.service.impl.DockerImageGeneratorService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -16,12 +19,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.MockedConstruction;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
@@ -38,17 +38,22 @@ import static org.mockito.Mockito.*;
  *   <li>Daemon Docker injoignable → DockerDaemonException (pipeline reste VALIDATED)</li>
  *   <li>Build Docker échoué (exit code != 0) → DockerBuildException (pipeline reste VALIDATED)</li>
  * </ol>
+ *
+ * <p><strong>Depuis le refactoring</strong>, cette classe ne dépend plus directement
+ * de {@code ProcessBuilder} (donc plus besoin de {@code MockedConstruction}) : les
+ * appels shell passent par {@link CommandExecutor}, un mock simple suffit.</p>
  */
 @ExtendWith(MockitoExtension.class)
 @DisplayName("DockerImageGeneratorService — error handling")
 class DockerImageGeneratorServiceTest {
 
     @Mock private PipelineRepository      pipelineRepository;
-    @Mock private MappingRuleRepository   mappingRuleRepository;
-    @Mock private PipelineFieldRepository pipelineFieldRepository;
     @Mock private DockerImageRepository   dockerImageRepository;
     @Mock private BuildLogEntryRepository buildLogEntryRepository;
     @Mock private ObjectMapper            objectMapper;
+    @Mock private ImageVersionService     imageVersionService;
+    @Mock private DockerBuildArtifactGenerator artifactGenerator;
+    @Mock private CommandExecutor         commandExecutor;
 
     @InjectMocks
     private DockerImageGeneratorService service;
