@@ -3,7 +3,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
 import com.miniESB.domain.enums.TemplateType;
 import com.miniESB.dto.template.TemplateResponse;
-import com.miniESB.service.TemplateService;
+import com.miniESB.service.TemplateQueryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -33,7 +33,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class DeveloperTemplateController {
 
-    private final TemplateService templateService;
+    private final TemplateQueryService templateService;
 
     // -------------------------------------------------------------------------
     // GET /api/templates?type=VALIDATION|MAPPING

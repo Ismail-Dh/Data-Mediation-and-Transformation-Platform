@@ -11,10 +11,11 @@ import com.miniESB.exception.DockerBuildException;
 import com.miniESB.exception.DockerDaemonException;
 import com.miniESB.exception.ResourceNotFoundException;
 import com.miniESB.repository.*;
+import com.miniESB.service.ImageVersionService;
+import com.miniESB.service.docker.CommandExecutor;
+import com.miniESB.service.docker.CommandResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import com.miniESB.service.ImageVersionService;
-
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.MediaType;
 import org.springframework.scheduling.annotation.Async;
@@ -22,58 +23,58 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
-import java.io.*;
-import java.net.ConnectException;
-import java.nio.file.*;
+import java.io.File;
+import java.io.IOException;
+import java.util.Comparator;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.*;
-import com.miniESB.domain.entity.ResponseMappingRule;
-import com.miniESB.repository.ResponseMappingRuleRepository;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
+/**
+ * Orchestration du build d'image Docker pour un pipeline (synchrone et SSE).
+ *
+ * <p><strong>Depuis le refactoring</strong> :</p>
+ * <ul>
+ *   <li>la génération des artefacts ({@code rules.json}, {@code Dockerfile}) est
+ *       déléguée à {@link DockerBuildArtifactGenerator} (SRP) ;</li>
+ *   <li>l'exécution des commandes {@code docker ...} passe par l'abstraction
+ *       {@link CommandExecutor} au lieu d'instancier {@code ProcessBuilder}
+ *       directement (Dependency Inversion Principle) — cette classe est
+ *       désormais testable avec un {@code CommandExecutor} simulé, sans
+ *       nécessiter de vrai daemon Docker.</li>
+ * </ul>
+ *
+ * <p><strong>Garantie pipeline sur erreur</strong> : quelle que soit l'erreur
+ * (daemon injoignable ou build échoué), le statut du pipeline reste
+ * {@code VALIDATED}. Seul le {@link DockerImage} passe en {@code FAILED}.</p>
+ */
 @Slf4j
 @Service
 @ConditionalOnProperty(name = "engine.mode", havingValue = "false", matchIfMissing = true)
 @RequiredArgsConstructor
 public class DockerImageGeneratorService {
 
-    private final PipelineRepository       pipelineRepository;
-    private final MappingRuleRepository    mappingRuleRepository;
-    private final PipelineFieldRepository  pipelineFieldRepository;
-    private final DockerImageRepository    dockerImageRepository;
-    private final BuildLogEntryRepository  buildLogEntryRepository;
-    private final ObjectMapper             objectMapper;
-    // Ajouter dans les champs injectés
-    private final ImageVersionService      imageVersionService;
-    private final ResponseMappingRuleRepository responseMappingRuleRepository;
-
+    private final PipelineRepository pipelineRepository;
+    private final DockerImageRepository dockerImageRepository;
+    private final BuildLogEntryRepository buildLogEntryRepository;
+    private final ObjectMapper objectMapper;
+    private final ImageVersionService imageVersionService;
+    private final DockerBuildArtifactGenerator artifactGenerator;
+    private final CommandExecutor commandExecutor;
 
     // ══════════════════════════════════════════════════════════════════════════
-    //  SSE streaming build  (tâche 5.4 + error handling renforcé)
+    //  SSE streaming build
     // ══════════════════════════════════════════════════════════════════════════
 
-    /**
-     * Lance le build Docker dans un thread dédié (@Async) et streame chaque
-     * ligne de log via {@code emitter}.
-     *
-     * <p>Événements SSE émis :
-     * <ul>
-     *   <li>Messages sans nom (data: &lt;ligne brute&gt;) — pendant le build</li>
-     *   <li>{@code BUILD_COMPLETE} — {@code {type, imageId, size, duration}}</li>
-     *   <li>{@code BUILD_FAILED}   — {@code {type, errorType, errorMessage, exitCode?, buildLog?}}</li>
-     * </ul>
-     *
-     * <p><strong>Garantie pipeline</strong> : quelle que soit l'erreur (daemon injoignable ou
-     * build échoué), le statut du pipeline reste {@code VALIDATED}. Seul le {@link DockerImage}
-     * passe en {@code FAILED}.
-     */
     @Async("buildSseExecutor")
     public void generateImageWithSse(Long pipelineId, SseEmitter emitter) {
 
         LocalDateTime startTime = LocalDateTime.now();
-        StringBuilder fullLog   = new StringBuilder();
 
-        // ── 1. Charger le pipeline ────────────────────────────────────────────
         Pipeline pipeline;
         try {
             pipeline = pipelineRepository.findById(pipelineId)
@@ -91,17 +92,12 @@ public class DockerImageGeneratorService {
             return;
         }
 
-        // ── 2. Créer / mettre à jour l'entrée DockerImage ────────────────────
         String imageName = "pipeline-" + pipelineId;
-        String currentPipelineVersion = pipeline.getVersion() != null
-                ? pipeline.getVersion()
-                : "1.0";
+        String currentPipelineVersion = pipeline.getVersion() != null ? pipeline.getVersion() : "1.0";
 
-        DockerImage dockerImage = dockerImageRepository
-                .findByPipelineId(pipelineId)
+        DockerImage dockerImage = dockerImageRepository.findByPipelineId(pipelineId)
                 .orElse(DockerImage.builder().pipeline(pipeline).build());
 
-        // Calcul du prochain tag sémantique
         String nextTag = imageVersionService.computeNextTag(dockerImage, pipeline);
 
         dockerImage.setImageName(imageName);
@@ -110,61 +106,49 @@ public class DockerImageGeneratorService {
         dockerImage.setBuiltAt(null);
         dockerImageRepository.save(dockerImage);
 
-        // ── 3. Build + streaming ──────────────────────────────────────────────
         Path buildDir = null;
+        StringBuilder fullLog = new StringBuilder();
         try {
             buildDir = Files.createTempDirectory("pipeline-build-sse-" + pipelineId);
 
-            generateRulesJson(pipelineId, buildDir);
-            generateDockerfile(buildDir);
+            artifactGenerator.generateRulesJson(pipelineId, buildDir);
+            artifactGenerator.generateDockerfile(buildDir);
 
             String fullImageName = imageName + ":" + nextTag;
 
-            // ── 3a. Vérifier que le daemon Docker répond ──────────────────────
             checkDockerDaemon();
 
-            // ── 3b. Lancer le build ───────────────────────────────────────────
-            Process process;
+            CommandResult result;
             try {
-                process = new ProcessBuilder(
-                        "docker", "build", "-t", fullImageName, buildDir.toString())
-                        .redirectErrorStream(true)
-                        .start();
+                result = commandExecutor.run(
+                        List.of("docker", "build", "-t", fullImageName, buildDir.toString()),
+                        line -> {
+                            fullLog.append(line).append("\n");
+                            try {
+                                emitter.send(line, MediaType.TEXT_PLAIN);
+                            } catch (IOException ignored) {
+                                // client déconnecté — on laisse le build continuer côté serveur
+                            }
+                        });
             } catch (IOException e) {
-                // Le daemon est joignable mais start() a quand même échoué
-                throw new DockerDaemonException(
-                        "Failed to start docker build process", e);
+                throw new DockerDaemonException("Failed to start docker build process", e);
             }
 
-            // Streamer ligne par ligne vers le frontend
-            try (BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(process.getInputStream()))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    fullLog.append(line).append("\n");
-                    emitter.send(line, MediaType.TEXT_PLAIN);
-                }
-            }
-
-            int exitCode = process.waitFor();
-            if (exitCode != 0) {
-                // Build échoué — pipeline reste VALIDATED
+            if (!result.isSuccess()) {
                 dockerImage.setStatus(ImageStatus.FAILED);
                 dockerImageRepository.save(dockerImage);
-                saveBuildLogEntry(pipeline, dockerImage, fullLog.toString(),
+                saveBuildLogEntry(pipeline, dockerImage, result.output(),
                         ImageStatus.FAILED, startTime, LocalDateTime.now());
 
                 sendSseErrorAndComplete(emitter, "BUILD_ERROR",
-                        "docker build failed with exit code: " + exitCode,
-                        exitCode, fullLog.toString());
+                        "docker build failed with exit code: " + result.exitCode(),
+                        result.exitCode(), result.output());
                 return;
             }
 
-            // ── 4. Succès ─────────────────────────────────────────────────────
             Long sizeBytes = getImageSize(imageName + ":" + nextTag);
             LocalDateTime endTime = LocalDateTime.now();
 
-            // Appliquer la version sémantique sur l'entité
             imageVersionService.applyNextVersion(dockerImage, nextTag, currentPipelineVersion);
 
             dockerImage.setStatus(ImageStatus.SUCCESS);
@@ -172,15 +156,15 @@ public class DockerImageGeneratorService {
             dockerImage.setSizeBytes(sizeBytes);
             dockerImageRepository.save(dockerImage);
 
-            saveBuildLogEntry(pipeline, dockerImage, fullLog.toString(),
+            saveBuildLogEntry(pipeline, dockerImage, result.output(),
                     ImageStatus.SUCCESS, startTime, endTime);
 
             long durationSec = Duration.between(startTime, endTime).toSeconds();
             Map<String, Object> completeEvent = new LinkedHashMap<>();
-            completeEvent.put("type",     "BUILD_COMPLETE");
-            completeEvent.put("imageId",  dockerImage.getId());
-            completeEvent.put("tag",      nextTag);               // ← tag sémantique
-            completeEvent.put("size",     sizeBytes != null ? sizeBytes : 0L);
+            completeEvent.put("type", "BUILD_COMPLETE");
+            completeEvent.put("imageId", dockerImage.getId());
+            completeEvent.put("tag", nextTag);
+            completeEvent.put("size", sizeBytes != null ? sizeBytes : 0L);
             completeEvent.put("duration", durationSec);
 
             emitter.send(SseEmitter.event()
@@ -191,7 +175,6 @@ public class DockerImageGeneratorService {
             log.info("SSE build complete for pipeline={} in {}s", pipelineId, durationSec);
 
         } catch (DockerDaemonException e) {
-            // Daemon injoignable — pipeline reste VALIDATED, image → FAILED
             log.error("Docker daemon unreachable for pipeline={}: {}", pipelineId, e.getMessage());
             dockerImage.setStatus(ImageStatus.FAILED);
             dockerImageRepository.save(dockerImage);
@@ -199,22 +182,8 @@ public class DockerImageGeneratorService {
                     ImageStatus.FAILED, startTime, LocalDateTime.now());
 
             sendSseErrorAndComplete(emitter, "DAEMON_UNREACHABLE",
-                    e.getMessage() + (e.getTechnicalDetail() != null
-                            ? " — " + e.getTechnicalDetail() : ""),
+                    e.getMessage() + (e.getTechnicalDetail() != null ? " — " + e.getTechnicalDetail() : ""),
                     null, null);
-
-        } catch (DockerBuildException e) {
-            // build échoué via chemin synchrone (ne devrait pas arriver ici, mais défensif)
-            log.error("Docker build failed for pipeline={} (exit={}): {}",
-                    pipelineId, e.getExitCode(), e.getMessage());
-            dockerImage.setStatus(ImageStatus.FAILED);
-            dockerImageRepository.save(dockerImage);
-            saveBuildLogEntry(pipeline, dockerImage,
-                    e.getBuildLog() != null ? e.getBuildLog() : fullLog.toString(),
-                    ImageStatus.FAILED, startTime, LocalDateTime.now());
-
-            sendSseErrorAndComplete(emitter, "BUILD_ERROR",
-                    e.getMessage(), e.getExitCode(), e.getBuildLog());
 
         } catch (Exception e) {
             log.error("SSE build FAILED for pipeline={}: {}", pipelineId, e.getMessage());
@@ -231,18 +200,9 @@ public class DockerImageGeneratorService {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    //  Build synchrone (endpoint POST /generate) + error handling renforcé
+    //  Build synchrone (endpoint POST /generate)
     // ══════════════════════════════════════════════════════════════════════════
 
-    /**
-     * Build synchrone (sans SSE).
-     *
-     * <p>Lance les deux exceptions typées :
-     * <ul>
-     *   <li>{@link DockerDaemonException} → HTTP 503, pipeline reste {@code VALIDATED}</li>
-     *   <li>{@link DockerBuildException}  → HTTP 422, pipeline reste {@code VALIDATED}</li>
-     * </ul>
-     */
     @Transactional
     public DockerImageBuildResponse generateImage(Long pipelineId) throws Exception {
 
@@ -257,15 +217,11 @@ public class DockerImageGeneratorService {
         }
 
         String imageName = "pipeline-" + pipelineId;
-        String currentPipelineVersion = pipeline.getVersion() != null
-                ? pipeline.getVersion()
-                : "1.0";
+        String currentPipelineVersion = pipeline.getVersion() != null ? pipeline.getVersion() : "1.0";
 
-        DockerImage dockerImage = dockerImageRepository
-                .findByPipelineId(pipelineId)
+        DockerImage dockerImage = dockerImageRepository.findByPipelineId(pipelineId)
                 .orElse(DockerImage.builder().pipeline(pipeline).build());
 
-        // Calcul du prochain tag sémantique
         String nextTag = imageVersionService.computeNextTag(dockerImage, pipeline);
 
         dockerImage.setImageName(imageName);
@@ -278,10 +234,9 @@ public class DockerImageGeneratorService {
         log.info("Build directory created: {}", buildDir);
 
         try {
-            generateRulesJson(pipelineId, buildDir);
-            generateDockerfile(buildDir);
+            artifactGenerator.generateRulesJson(pipelineId, buildDir);
+            artifactGenerator.generateDockerfile(buildDir);
 
-            // Vérifier le daemon avant de tenter le build
             checkDockerDaemon();
 
             dockerImage.setStatus(ImageStatus.BUILDING);
@@ -291,7 +246,6 @@ public class DockerImageGeneratorService {
 
             Long sizeBytes = getImageSize(imageName + ":" + nextTag);
 
-            // Appliquer la version sémantique sur l'entité
             imageVersionService.applyNextVersion(dockerImage, nextTag, currentPipelineVersion);
 
             dockerImage.setStatus(ImageStatus.SUCCESS);
@@ -305,25 +259,22 @@ public class DockerImageGeneratorService {
                     dockerImage.getId(), imageName, nextTag, "SUCCESS", "Image built successfully");
 
         } catch (DockerDaemonException e) {
-            // Daemon injoignable — pipeline reste VALIDATED
             dockerImage.setStatus(ImageStatus.FAILED);
             dockerImageRepository.save(dockerImage);
             log.error("Docker daemon unreachable for pipeline={}: {}", pipelineId, e.getMessage());
-            throw e;  // → GlobalExceptionHandler → 503
+            throw e;
 
         } catch (DockerBuildException e) {
-            // Build échoué — pipeline reste VALIDATED
             dockerImage.setStatus(ImageStatus.FAILED);
             dockerImageRepository.save(dockerImage);
             log.error("Docker build failed for pipeline={} (exit={}): {}",
                     pipelineId, e.getExitCode(), e.getMessage());
-            throw e;  // → GlobalExceptionHandler → 422
+            throw e;
 
         } catch (Exception e) {
             dockerImage.setStatus(ImageStatus.FAILED);
             dockerImageRepository.save(dockerImage);
-            log.error("Docker image generation FAILED for pipeline={}: {}",
-                    pipelineId, e.getMessage());
+            log.error("Docker image generation FAILED for pipeline={}: {}", pipelineId, e.getMessage());
             throw e;
 
         } finally {
@@ -332,102 +283,53 @@ public class DockerImageGeneratorService {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    //  Private helpers
+    //  Private helpers — exécution via CommandExecutor (plus de ProcessBuilder direct)
     // ══════════════════════════════════════════════════════════════════════════
 
-    /**
-     * Vérifie que le daemon Docker est joignable via {@code docker info}.
-     *
-     * <p>Si la commande échoue (IOException, exit code != 0), lance une
-     * {@link DockerDaemonException} avec le détail technique.
-     *
-     * @throws DockerDaemonException si le daemon est inaccessible
-     */
     private void checkDockerDaemon() {
         try {
-            ProcessBuilder pb = new ProcessBuilder("docker", "info")
-                    .redirectErrorStream(true);
-            Process proc = pb.start();
-
-            // Vider stdout pour éviter le blocage du buffer
-            StringBuilder output = new StringBuilder();
-            try (BufferedReader r = new BufferedReader(
-                    new InputStreamReader(proc.getInputStream()))) {
-                String line;
-                while ((line = r.readLine()) != null) {
-                    output.append(line).append("\n");
-                }
-            }
-
-            int exit = proc.waitFor();
-            if (exit != 0) {
-                String detail = output.toString().trim();
-                log.error("docker info failed (exit={}): {}", exit, detail);
+            CommandResult result = commandExecutor.run(List.of("docker", "info"));
+            if (!result.isSuccess()) {
+                log.error("docker info failed (exit={}): {}", result.exitCode(), result.output());
                 throw new DockerDaemonException(
-                        "Docker daemon is not reachable (docker info exited with code " + exit + ")",
-                        detail);
+                        "Docker daemon is not reachable (docker info exited with code " + result.exitCode() + ")",
+                        result.output().trim());
             }
-
         } catch (DockerDaemonException e) {
             throw e;
         } catch (IOException e) {
-            // docker binary introuvable ou socket absent
             log.error("Cannot connect to Docker daemon: {}", e.getMessage());
-            throw new DockerDaemonException(
-                    "Docker daemon is not reachable — cannot execute 'docker info'", e);
+            throw new DockerDaemonException("Docker daemon is not reachable — cannot execute 'docker info'", e);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new DockerDaemonException(
-                    "Docker daemon check interrupted", e.getMessage());
+            throw new DockerDaemonException("Docker daemon check interrupted", e.getMessage());
         }
     }
 
-    /**
-     * Lance {@code docker build} de façon synchrone et accumule le log complet.
-     * En cas d'exit code != 0, lance une {@link DockerBuildException} avec le log.
-     * En cas d'IOException au démarrage, lance une {@link DockerDaemonException}.
-     */
     private void buildDockerImage(String imageName, String tag, Path buildDir) throws Exception {
         String fullName = imageName + ":" + tag;
         List<String> command = List.of("docker", "build", "-t", fullName, buildDir.toString());
         log.info("Running: {}", String.join(" ", command));
 
-        ProcessBuilder pb = new ProcessBuilder(command);
-        pb.redirectErrorStream(true);
-
-        Process process;
+        CommandResult result;
         try {
-            process = pb.start();
+            result = commandExecutor.run(command, line -> log.info("[docker build] {}", line));
         } catch (IOException e) {
-            throw new DockerDaemonException(
-                    "Failed to start 'docker build' process", e);
+            throw new DockerDaemonException("Failed to start 'docker build' process", e);
         }
 
-        StringBuilder buildLog = new StringBuilder();
-        try (BufferedReader reader = new BufferedReader(
-                new InputStreamReader(process.getInputStream()))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                buildLog.append(line).append("\n");
-                log.info("[docker build] {}", line);
-            }
-        }
-
-        int exitCode = process.waitFor();
-        if (exitCode != 0) {
+        if (!result.isSuccess()) {
             throw new DockerBuildException(
-                    "docker build failed with exit code: " + exitCode,
-                    exitCode,
-                    buildLog.toString());
+                    "docker build failed with exit code: " + result.exitCode(),
+                    result.exitCode(),
+                    result.output());
         }
         log.info("Docker image built successfully: {}", fullName);
     }
 
-    // ── Persistance BuildLogEntry ─────────────────────────────────────────────
-
     private void saveBuildLogEntry(Pipeline pipeline, DockerImage dockerImage,
-                                   String fullLog, ImageStatus status,
-                                   LocalDateTime startTime, LocalDateTime endTime) {
+                                    String fullLog, ImageStatus status,
+                                    LocalDateTime startTime, LocalDateTime endTime) {
         try {
             BuildLogEntry entry = BuildLogEntry.builder()
                     .pipelineId(pipeline.getId())
@@ -440,161 +342,40 @@ public class DockerImageGeneratorService {
                     .build();
             buildLogEntryRepository.save(entry);
         } catch (Exception ex) {
-            log.warn("Could not persist BuildLogEntry for pipeline={}: {}",
-                    pipeline.getId(), ex.getMessage());
+            log.warn("Could not persist BuildLogEntry for pipeline={}: {}", pipeline.getId(), ex.getMessage());
         }
     }
 
-    // ── Helper SSE error ──────────────────────────────────────────────────────
-
-    /**
-     * Émet un événement SSE {@code BUILD_FAILED} avec un corps enrichi, puis ferme l'émetteur.
-     *
-     * @param emitter   le SseEmitter à fermer
-     * @param errorType code sémantique : {@code DAEMON_UNREACHABLE}, {@code BUILD_ERROR},
-     *                  {@code PIPELINE_NOT_FOUND}, {@code PIPELINE_NOT_VALIDATED}, {@code BUILD_FAILED}
-     * @param message   message lisible par le développeur
-     * @param exitCode  exit code docker (null si non applicable)
-     * @param buildLog  log complet du build (null si non disponible)
-     */
-    private void sendSseErrorAndComplete(SseEmitter emitter,
-                                         String errorType,
-                                         String message,
-                                         Integer exitCode,
-                                         String buildLog) {
+    private void sendSseErrorAndComplete(SseEmitter emitter, String errorType, String message,
+                                          Integer exitCode, String buildLog) {
         try {
             Map<String, Object> payload = new LinkedHashMap<>();
-            payload.put("type",        "BUILD_FAILED");
-            payload.put("errorType",   errorType);
+            payload.put("type", "BUILD_FAILED");
+            payload.put("errorType", errorType);
             payload.put("errorMessage", message != null ? message : "Unknown error");
-            if (exitCode != null) {
-                payload.put("exitCode", exitCode);
-            }
-            if (buildLog != null && !buildLog.isBlank()) {
-                payload.put("buildLog", buildLog);
-            }
-            emitter.send(SseEmitter.event()
-                    .name("BUILD_FAILED")
-                    .data(objectMapper.writeValueAsString(payload)));
+            if (exitCode != null) payload.put("exitCode", exitCode);
+            if (buildLog != null && !buildLog.isBlank()) payload.put("buildLog", buildLog);
+
+            emitter.send(SseEmitter.event().name("BUILD_FAILED").data(objectMapper.writeValueAsString(payload)));
             emitter.complete();
         } catch (IOException ignored) {
             // Client déjà déconnecté
         }
     }
 
-    // ── Generate rules.json ───────────────────────────────────────────────────
-
-    private void generateRulesJson(Long pipelineId, Path buildDir) throws Exception {
-        List<MappingRule>    mappingRules     = mappingRuleRepository.findByPipelineIdAndActiveTrue(pipelineId);
-        List<PipelineField>  validationFields = pipelineFieldRepository.findAllByPipelineId(pipelineId);
-        Pipeline pipeline = pipelineRepository.findByIdWithProviders(pipelineId)   // ← changé
-                .orElseThrow(() -> new ResourceNotFoundException("Pipeline not found with id=" + pipelineId));
-        List<Map<String, Object>> mappingList = mappingRules.stream()
-                .map(r -> {
-                    Map<String, Object> m = new LinkedHashMap<>();
-                    m.put("sourceField", r.getSourceField());
-                    m.put("targetField", r.getTargetField());
-                    m.put("mappingType", r.getMappingType().name());
-                    m.put("expression",  r.getExpression());
-                    return m;
-                }).toList();
-
-        List<Map<String, Object>> validationList = validationFields.stream()
-                .map(f -> {
-                    Map<String, Object> m = new LinkedHashMap<>();
-                    m.put("fieldPath", f.getFieldPath());
-                    m.put("fieldType", f.getFieldType().name());
-                    m.put("required",  f.isRequired());
-                    m.put("nullable",  f.isNullable());
-                    return m;
-                }).toList();
-
-        //  export des providers pour dispatch autonome dans l'image ──
-        // Chaque provider embarque désormais sa méthode HTTP (GET/POST/PUT/PATCH),
-        // choisie pour CE pipeline via l'association PipelineProvider — l'image
-        // Docker générée doit l'utiliser telle quelle pour son dispatch autonome
-        // (plus de POST codé en dur).
-        List<Map<String, Object>> providersList = Optional.ofNullable(pipeline.getPipelineProviders())
-                .orElse(List.of())
-                .stream()
-                .map(link -> {
-                    Map<String, Object> m = new LinkedHashMap<>();
-                    m.put("id",         link.getProvider().getId());
-                    m.put("name",       link.getProvider().getName());
-                    m.put("endpoint",   link.getProvider().getEndpoint());
-                    m.put("timeout",    link.getProvider().getTimeout());
-                    m.put("httpMethod", link.getHttpMethod() != null ? link.getHttpMethod().name() : "POST");
-                    return m;
-                }).toList();
-
-        Map<String, Object> rules = new LinkedHashMap<>();
-        rules.put("pipelineId",       pipelineId);
-        rules.put("mappingRules",     mappingList);
-        rules.put("validationFields", validationList);
-        rules.put("providers",        providersList);      // ← ajouté
-        rules.put("outputFormat",     pipeline.getOutputFormat().name()); // JSON / XML pour les headers
-        List<ResponseMappingRule> responseRules = responseMappingRuleRepository.findByPipelineId(pipelineId);
-
-        List<Map<String, Object>> responseMappingRulesList = responseRules.stream()
-                .filter(ResponseMappingRule::isActive)
-                .map(r -> {
-                    Map<String, Object> m = new LinkedHashMap<>();
-                    m.put("providerId",  r.getProvider() != null ? r.getProvider().getId() : null);
-                    m.put("sourceField", r.getSourceField());
-                    m.put("targetField", r.getTargetField());
-                    m.put("mappingType", r.getMappingType().name());
-                    m.put("expression",  r.getExpression());
-                    m.put("required",    r.isRequired());
-                    return m;
-                }).toList();
-
-        rules.put("responseMappingRules", responseMappingRulesList);
-        File rulesFile = buildDir.resolve("rules.json").toFile();
-        objectMapper.writerWithDefaultPrettyPrinter().writeValue(rulesFile, rules);
-        log.info("rules.json generated: {}", rulesFile.getAbsolutePath());
-    }
-
-    // ── Generate Dockerfile ───────────────────────────────────────────────────
-
-    private void generateDockerfile(Path buildDir) throws Exception {
-        String dockerfileContent = """
-                FROM mini-esb-backend:latest
-                COPY rules.json /app/rules.json
-                ENV ENGINE_MODE=true
-                ENV RULES_FILE=/app/rules.json
-                EXPOSE 8080
-                ENTRYPOINT ["java", "-jar", "app.jar", \
-                "--engine.mode=true", \
-                "--engine.rules-file=/app/rules.json", \
-                "--spring.profiles.active=engine"]
-                """;
-        Files.writeString(buildDir.resolve("Dockerfile"), dockerfileContent);
-        log.info("Dockerfile generated");
-    }
-
-    // ── Get image size ────────────────────────────────────────────────────────
-
     private Long getImageSize(String imageFullName) {
         try {
-            ProcessBuilder pb = new ProcessBuilder(
-                    "docker", "inspect", "--format={{.Size}}", imageFullName);
-            pb.redirectErrorStream(true);
-            Process process = pb.start();
-
-            try (BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(process.getInputStream()))) {
-                String line = reader.readLine();
-                if (line != null && !line.isBlank()) {
-                    return Long.parseLong(line.trim());
-                }
+            CommandResult result = commandExecutor.run(
+                    List.of("docker", "inspect", "--format={{.Size}}", imageFullName));
+            String line = result.output().lines().findFirst().orElse(null);
+            if (line != null && !line.isBlank()) {
+                return Long.parseLong(line.trim());
             }
         } catch (Exception e) {
             log.warn("Could not retrieve image size: {}", e.getMessage());
         }
         return null;
     }
-
-    // ── Export image ──────────────────────────────────────────────────────────
 
     public byte[] exportImage(Long pipelineId) throws Exception {
         DockerImage dockerImage = dockerImageRepository.findByPipelineId(pipelineId)
@@ -607,22 +388,33 @@ public class DockerImageGeneratorService {
         }
 
         String fullName = dockerImage.getImageName() + ":" + dockerImage.getTag();
-        ProcessBuilder pb = new ProcessBuilder("docker", "save", fullName);
-        pb.redirectErrorStream(false);
-        Process process = pb.start();
-
-        byte[] imageBytes = process.getInputStream().readAllBytes();
-        int exitCode = process.waitFor();
-
-        if (exitCode != 0) {
-            throw new RuntimeException("docker save failed with exit code: " + exitCode);
-        }
+        byte[] imageBytes = commandExecutor.runForBytes(List.of("docker", "save", fullName));
 
         log.info("Image exported: {} ({} bytes)", fullName, imageBytes.length);
         return imageBytes;
     }
 
-    // ── Get image info ────────────────────────────────────────────────────────
+    /**
+     * Informations de version sémantique courante pour un pipeline.
+     *
+     * <p>Extrait de {@code DockerImageController}, qui accédait directement à
+     * {@code DockerImageRepository} pour construire cette réponse — violation
+     * du Dependency Inversion Principle (un contrôleur doit dépendre d'une
+     * abstraction de service, pas d'un détail de persistance).</p>
+     */
+    public Map<String, Object> getCurrentVersionInfo(Long pipelineId) {
+        DockerImage image = dockerImageRepository.findByPipelineId(pipelineId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "No image found for pipeline id=" + pipelineId));
+
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("pipelineId", pipelineId);
+        response.put("currentTag", image.getTag());
+        response.put("pipelineVersion", image.getPipeline().getVersion());
+        response.put("patch", image.getVersionPatch());
+        response.put("lastPipelineVersion", image.getLastPipelineVersion());
+        return response;
+    }
 
     public DockerImageResponse getImageInfo(Long pipelineId) {
         DockerImage image = dockerImageRepository.findByPipelineId(pipelineId)
@@ -631,20 +423,9 @@ public class DockerImageGeneratorService {
         return toResponse(image);
     }
 
-
-
-// ─────────────────────────────────────────────────────────────────────────────
-
     /**
      * Vérifie de façon synchrone que le pipeline existe et est en statut {@code VALIDATED}.
-     *
-     * <p>Appelé par {@link com.miniESB.controller.BuildMonitorController#streamBuildLogs}
-     * pour rejeter immédiatement les requêtes invalides avant de lancer le thread {@code @Async},
-     * évitant ainsi d'ouvrir une connexion SSE pour rien.
-     *
-     * @param pipelineId identifiant du pipeline à valider
-     * @throws ResourceNotFoundException si le pipeline n'existe pas
-     * @throws IllegalStateException     si le pipeline n'est pas en statut {@code VALIDATED}
+     * Appelé par {@code BuildMonitorController} avant de lancer le thread {@code @Async}.
      */
     public void assertPipelineValidated(Long pipelineId) {
         Pipeline pipeline = pipelineRepository.findById(pipelineId)
@@ -657,11 +438,6 @@ public class DockerImageGeneratorService {
                             + pipeline.getStatus());
         }
     }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Emplacement dans le fichier : coller juste avant deleteDirectory(Path dir)
-// ─────────────────────────────────────────────────────────────────────────────
-    // ── Helpers ───────────────────────────────────────────────────────────────
 
     private void deleteDirectory(Path dir) {
         try {
@@ -685,6 +461,8 @@ public class DockerImageGeneratorService {
                 image.getPipeline().getId()
         );
     }
+
+    /** Historique des builds d'un pipeline (du plus récent au plus ancien). */
     public List<BuildLogEntryResponse> getVersionHistory(Long pipelineId) {
         return buildLogEntryRepository.findByPipelineIdOrderByStartTimeDesc(pipelineId)
                 .stream()

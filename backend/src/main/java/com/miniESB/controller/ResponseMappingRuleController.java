@@ -2,7 +2,7 @@ package com.miniESB.controller;
 
 import com.miniESB.dto.response.CreateResponseMappingRuleRequest;
 import com.miniESB.dto.response.ResponseMappingRuleResponse;
-import com.miniESB.service.ResponseMappingService;
+import com.miniESB.service.ResponseMappingRuleAdminService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
@@ -31,12 +31,12 @@ import java.util.List;
 @CrossOrigin(origins = "*")
 public class ResponseMappingRuleController {
 
-    private final ResponseMappingService responseMappingService;
+    private final ResponseMappingRuleAdminService responseMappingRuleAdminService;
 
     @GetMapping
     public ResponseEntity<List<ResponseMappingRuleResponse>> getRules(
             @PathVariable Long pipelineId) {
-        return ResponseEntity.ok(responseMappingService.getRules(pipelineId));
+        return ResponseEntity.ok(responseMappingRuleAdminService.getRules(pipelineId));
     }
 
     @PostMapping
@@ -45,7 +45,7 @@ public class ResponseMappingRuleController {
             @Valid @RequestBody CreateResponseMappingRuleRequest request) {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
-                .body(responseMappingService.createRule(pipelineId, request));
+                .body(responseMappingRuleAdminService.createRule(pipelineId, request));
     }
 
     @PutMapping("/{ruleId}")
@@ -53,14 +53,14 @@ public class ResponseMappingRuleController {
             @PathVariable Long pipelineId,
             @PathVariable Long ruleId,
             @Valid @RequestBody CreateResponseMappingRuleRequest request) {
-        return ResponseEntity.ok(responseMappingService.updateRule(ruleId, request));
+        return ResponseEntity.ok(responseMappingRuleAdminService.updateRule(ruleId, request));
     }
 
     @DeleteMapping("/{ruleId}")
     public ResponseEntity<Void> deleteRule(
             @PathVariable Long pipelineId,
             @PathVariable Long ruleId) {
-        responseMappingService.deleteRule(ruleId);
+        responseMappingRuleAdminService.deleteRule(ruleId);
         return ResponseEntity.noContent().build();
     }
 }

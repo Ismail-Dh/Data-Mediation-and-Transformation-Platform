@@ -1,11 +1,8 @@
 package com.miniESB.controller;
 
-import com.miniESB.domain.entity.DockerImage;
 import com.miniESB.dto.docker.*;
 import com.miniESB.exception.DockerBuildException;
 import com.miniESB.exception.DockerDaemonException;
-import com.miniESB.exception.ResourceNotFoundException;
-import com.miniESB.repository.DockerImageRepository;
 import com.miniESB.service.impl.DockerImageGeneratorService;
 import com.miniESB.service.impl.DockerImagePushService;
 import com.miniESB.service.ImageVersionService;
@@ -56,7 +53,6 @@ public class DockerImageController {
 
     private final DockerImageGeneratorService generatorService;
     private final ImageVersionService         imageVersionService;
-    private final DockerImageRepository       dockerImageRepository;
     private final DockerImagePushService pushService; 
 
 
@@ -180,19 +176,7 @@ public class DockerImageController {
     @GetMapping("/version")
     public ResponseEntity<Map<String, Object>> getCurrentVersion(
             @PathVariable Long pipelineId) {
-
-        DockerImage image = dockerImageRepository.findByPipelineId(pipelineId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "No image found for pipeline id=" + pipelineId));
-
-        Map<String, Object> response = new LinkedHashMap<>();
-        response.put("pipelineId",          pipelineId);
-        response.put("currentTag",          image.getTag());
-        response.put("pipelineVersion",     image.getPipeline().getVersion());
-        response.put("patch",               image.getVersionPatch());
-        response.put("lastPipelineVersion", image.getLastPipelineVersion());
-
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(generatorService.getCurrentVersionInfo(pipelineId));
     }
 
     // ── Private helpers ───────────────────────────────────────────────────────

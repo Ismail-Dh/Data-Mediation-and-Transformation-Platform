@@ -7,10 +7,21 @@ import com.miniESB.domain.enums.MappingType;
 import com.miniESB.dto.mapping.MappingResultResponse;
 import com.miniESB.dto.mapping.MappingRuleRequest;
 import com.miniESB.dto.mapping.MappingRuleResponse;
+import com.miniESB.engine.mapping.MappingEngine;
+import com.miniESB.engine.mapping.MappingStrategy;
+import com.miniESB.engine.mapping.impl.CalculatedFieldStrategy;
+import com.miniESB.engine.mapping.impl.FieldPlacementStrategy;
+import com.miniESB.engine.mapping.impl.FormatChangeStrategy;
+import com.miniESB.engine.mapping.impl.RestructuringStrategy;
+import com.miniESB.engine.mapping.impl.ValueTransformStrategy;
+import com.miniESB.engine.mapping.operator.LowercaseOperator;
+import com.miniESB.engine.mapping.operator.RegexReplaceOperator;
+import com.miniESB.engine.mapping.operator.SplitOperator;
+import com.miniESB.engine.mapping.operator.TrimOperator;
+import com.miniESB.engine.mapping.operator.UppercaseOperator;
 import com.miniESB.exception.ResourceNotFoundException;
 import com.miniESB.repository.MappingRuleRepository;
 import com.miniESB.repository.PipelineRepository;
-import com.miniESB.service.ProviderDispatchService;
 import com.miniESB.service.impl.MappingServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -35,24 +46,41 @@ class MappingServiceImplTest {
     @Mock private MappingRuleRepository mappingRuleRepository;
     @Mock private PipelineRepository    pipelineRepository;
     @Mock private PayloadRepository     payloadRepository;
-    @Mock
-    private ProviderDispatchService providerDispatchService;
     private MappingServiceImpl mappingService;
 
     private Pipeline pipeline;
 
     @BeforeEach
     void setUp() {
-        // ObjectMapper injecté manuellement — pas de Spring context
+        // ObjectMapper injecté manuellement — pas de Spring context.
+        // MappingEngine est construit avec les vraies stratégies (pas de mock) :
+        // on teste le comportement réel du moteur de mapping, pas une simulation.
         mappingService = new MappingServiceImpl(
            mappingRuleRepository,
            pipelineRepository,
            new ObjectMapper(), 
            payloadRepository,
-                providerDispatchService
+           buildMappingEngine()
        );
 
         pipeline = Pipeline.builder().id(1L).build();
+    }
+
+    private MappingEngine buildMappingEngine() {
+        List<MappingStrategy> strategies = List.of(
+                new FieldPlacementStrategy(),
+                new ValueTransformStrategy(List.of(
+                        new UppercaseOperator(),
+                        new LowercaseOperator(),
+                        new TrimOperator(),
+                        new SplitOperator(),
+                        new RegexReplaceOperator()
+                )),
+                new RestructuringStrategy(),
+                new FormatChangeStrategy(),
+                new CalculatedFieldStrategy()
+        );
+        return new MappingEngine(strategies);
     }
 
     // ── Helper ────────────────────────────────────────────────────────────────

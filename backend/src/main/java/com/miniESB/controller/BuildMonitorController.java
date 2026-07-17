@@ -1,9 +1,9 @@
 package com.miniESB.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.miniESB.exception.DockerBuildException;
 import com.miniESB.exception.DockerDaemonException;
 import com.miniESB.exception.ResourceNotFoundException;
-import com.miniESB.repository.BuildLogEntryRepository;
 import com.miniESB.service.impl.DockerImageGeneratorService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -59,7 +59,7 @@ import java.util.Map;
 public class BuildMonitorController {
 
     private final DockerImageGeneratorService generatorService;
-    private final BuildLogEntryRepository    buildLogEntryRepository;
+    private final ObjectMapper objectMapper;
 
     // ══════════════════════════════════════════════════════════════════════════
     //  GET /stream  — build SSE
@@ -172,7 +172,7 @@ public class BuildMonitorController {
     @Operation(summary = "Get build history for a pipeline")
     @GetMapping("/history")
     public Object getBuildHistory(@PathVariable Long pipelineId) {
-        return buildLogEntryRepository.findByPipelineIdOrderByStartTimeDesc(pipelineId);
+        return generatorService.getVersionHistory(pipelineId);
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -213,11 +213,11 @@ public class BuildMonitorController {
      * @param exitCode  exit code docker (null si non applicable)
      * @param buildLog  log complet du build (null si non disponible)
      */
-    static void sendBuildFailedEvent(SseEmitter emitter,
-                                     String errorType,
-                                     String message,
-                                     Integer exitCode,
-                                     String buildLog) {
+    void sendBuildFailedEvent(SseEmitter emitter,
+                              String errorType,
+                              String message,
+                              Integer exitCode,
+                              String buildLog) {
         try {
             Map<String, Object> payload = new LinkedHashMap<>();
             payload.put("type",         "BUILD_FAILED");
@@ -230,27 +230,13 @@ public class BuildMonitorController {
                 payload.put("buildLog", buildLog);
             }
 
-            // Sérialisation JSON légère sans dépendance ObjectMapper ici
-            StringBuilder json = new StringBuilder("{");
-            payload.forEach((k, v) -> {
-                if (json.length() > 1) json.append(",");
-                json.append("\"").append(k).append("\":");
-                if (v instanceof Number) {
-                    json.append(v);
-                } else {
-                    String safe = v.toString()
-                            .replace("\\", "\\\\")
-                            .replace("\"", "'")
-                            .replace("\n", "\\n")
-                            .replace("\r", "");
-                    json.append("\"").append(safe).append("\"");
-                }
-            });
-            json.append("}");
+            // Sérialisation déléguée à l'ObjectMapper injecté (Spring bean),
+            // au lieu de reconstruire le JSON à la main (violation SRP/DIP corrigée).
+            String json = objectMapper.writeValueAsString(payload);
 
             emitter.send(SseEmitter.event()
                     .name("BUILD_FAILED")
-                    .data(json.toString()));
+                    .data(json));
             emitter.complete();
 
         } catch (IOException ignored) {
