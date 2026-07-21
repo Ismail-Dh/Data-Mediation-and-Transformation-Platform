@@ -4,12 +4,16 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.miniESB.domain.entity.*;
 import com.miniESB.domain.enums.ImageStatus;
 import com.miniESB.domain.enums.PipelineStatus;
+import com.miniESB.dto.docker.BuildLogEntryResponse;
+import com.miniESB.dto.docker.DockerImageBuildResponse;
+import com.miniESB.dto.docker.DockerImageResponse;
 import com.miniESB.exception.DockerBuildException;
 import com.miniESB.exception.DockerDaemonException;
 import com.miniESB.exception.ResourceNotFoundException;
 import com.miniESB.repository.*;
 import com.miniESB.service.ImageVersionService;
 import com.miniESB.service.docker.CommandExecutor;
+import com.miniESB.service.docker.CommandResult;
 import com.miniESB.service.impl.DockerBuildArtifactGenerator;
 import com.miniESB.service.impl.DockerImageGeneratorService;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,7 +25,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.io.IOException;
+import java.nio.file.Path;
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
@@ -29,31 +35,24 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 /**
- * Tests unitaires pour la gestion d'erreurs de {@link DockerImageGeneratorService}.
+ * Complément de {@code DockerImageGeneratorServiceTest} : couvre les chemins réels
+ * du service (pas seulement le contrat des exceptions) grâce au mock de
+ * {@link CommandExecutor}, introduit par le refactoring Dependency Inversion.
  *
- * <h3>Scénarios couverts</h3>
- * <ol>
- *   <li>Pipeline inexistant → ResourceNotFoundException</li>
- *   <li>Pipeline non VALIDATED → IllegalStateException</li>
- *   <li>Daemon Docker injoignable → DockerDaemonException (pipeline reste VALIDATED)</li>
- *   <li>Build Docker échoué (exit code != 0) → DockerBuildException (pipeline reste VALIDATED)</li>
- * </ol>
- *
- * <p><strong>Depuis le refactoring</strong>, cette classe ne dépend plus directement
- * de {@code ProcessBuilder} (donc plus besoin de {@code MockedConstruction}) : les
- * appels shell passent par {@link CommandExecutor}, un mock simple suffit.</p>
+ * <p>NE couvre PAS {@code generateImageWithSse(...)} (Async + SseEmitter) —
+ * à traiter séparément.</p>
  */
 @ExtendWith(MockitoExtension.class)
-@DisplayName("DockerImageGeneratorService — error handling")
-class DockerImageGeneratorServiceTest {
+@DisplayName("DockerImageGeneratorService — real service paths")
+class DockerImageGeneratorServiceRealPathsTest {
 
-    @Mock private PipelineRepository      pipelineRepository;
-    @Mock private DockerImageRepository   dockerImageRepository;
+    @Mock private PipelineRepository pipelineRepository;
+    @Mock private DockerImageRepository dockerImageRepository;
     @Mock private BuildLogEntryRepository buildLogEntryRepository;
-    @Mock private ObjectMapper            objectMapper;
-    @Mock private ImageVersionService     imageVersionService;
+    @Mock private ObjectMapper objectMapper;
+    @Mock private ImageVersionService imageVersionService;
     @Mock private DockerBuildArtifactGenerator artifactGenerator;
-    @Mock private CommandExecutor         commandExecutor;
+    @Mock private CommandExecutor commandExecutor;
 
     @InjectMocks
     private DockerImageGeneratorService service;
@@ -77,282 +76,380 @@ class DockerImageGeneratorServiceTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    //  1. Pipeline inexistant
+    //  generateImage() — chemin succès complet
     // ══════════════════════════════════════════════════════════════════════════
 
     @Nested
-    @DisplayName("Pipeline not found")
-    class PipelineNotFound {
+    @DisplayName("generateImage — success path")
+    class GenerateImageSuccess {
 
         @Test
-        @DisplayName("throws ResourceNotFoundException when pipelineId does not exist")
-        void generateImage_unknownPipeline_throwsResourceNotFound() {
-            when(pipelineRepository.findById(99L)).thenReturn(Optional.empty());
+        @DisplayName("returns SUCCESS response and persists DockerImage as SUCCESS")
+        void generateImage_happyPath_returnsSuccessAndSavesImage() throws Exception {
+            when(pipelineRepository.findById(42L)).thenReturn(Optional.of(validatedPipeline));
+            when(dockerImageRepository.findByPipelineId(42L)).thenReturn(Optional.of(existingImage));
+            when(imageVersionService.computeNextTag(existingImage, validatedPipeline)).thenReturn("1.0.1");
 
-            assertThatThrownBy(() -> service.generateImage(99L))
-                    .isInstanceOf(ResourceNotFoundException.class)
-                    .hasMessageContaining("99");
+            // "docker info" (checkDockerDaemon) puis "docker build" (buildDockerImage)
+            when(commandExecutor.run(eq(List.of("docker", "info"))))
+                    .thenReturn(new CommandResult(0, "OK"));
+            when(commandExecutor.run(argThat(cmd -> cmd != null && cmd.contains("build")), any()))
+                    .thenReturn(new CommandResult(0, "Successfully built abc123"));
+            // "docker inspect" (getImageSize)
+            when(commandExecutor.run(argThat(cmd -> cmd != null && cmd.contains("inspect"))))
+                    .thenReturn(new CommandResult(0, "123456"));
+
+            DockerImageBuildResponse response = service.generateImage(42L);
+
+            assertThat(response.status()).isEqualTo("SUCCESS");
+            assertThat(response.tag()).isEqualTo("1.0.1");
+
+            verify(dockerImageRepository, atLeastOnce()).save(argThat(
+                    img -> img.getStatus() == ImageStatus.SUCCESS));
+            verify(imageVersionService).applyNextVersion(existingImage, "1.0.1", "1.0.0");
         }
 
         @Test
-        @DisplayName("does not save any DockerImage when pipeline is not found")
-        void generateImage_unknownPipeline_doesNotSaveImage() {
-            when(pipelineRepository.findById(99L)).thenReturn(Optional.empty());
+        @DisplayName("creates a new DockerImage when none exists yet for the pipeline")
+        void generateImage_noExistingImage_createsNewOne() throws Exception {
+            when(pipelineRepository.findById(42L)).thenReturn(Optional.of(validatedPipeline));
+            when(dockerImageRepository.findByPipelineId(42L)).thenReturn(Optional.empty());
+            when(imageVersionService.computeNextTag(any(), eq(validatedPipeline))).thenReturn("1.0.0");
+            when(commandExecutor.run(eq(List.of("docker", "info"))))
+                    .thenReturn(new CommandResult(0, "OK"));
+            when(commandExecutor.run(argThat(cmd -> cmd != null && cmd.contains("build")), any()))
+                    .thenReturn(new CommandResult(0, "built"));
+            when(commandExecutor.run(argThat(cmd -> cmd != null && cmd.contains("inspect"))))
+                    .thenReturn(new CommandResult(0, ""));
 
-            assertThatThrownBy(() -> service.generateImage(99L))
-                    .isInstanceOf(ResourceNotFoundException.class);
+            service.generateImage(42L);
 
-            verify(dockerImageRepository, never()).save(any());
+            verify(dockerImageRepository, atLeastOnce()).save(argThat(
+                    img -> img.getPipeline().equals(validatedPipeline)));
         }
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    //  2. Pipeline non VALIDATED
+    //  generateImage() — daemon Docker injoignable (vrai appel service)
     // ══════════════════════════════════════════════════════════════════════════
 
     @Nested
-    @DisplayName("Pipeline not VALIDATED")
-    class PipelineNotValidated {
+    @DisplayName("generateImage — Docker daemon unreachable (real call)")
+    class GenerateImageDaemonUnreachable {
 
         @Test
-        @DisplayName("throws IllegalStateException when pipeline status is DRAFT")
-        void generateImage_draftPipeline_throwsIllegalState() {
-            Pipeline draftPipeline = Pipeline.builder()
-                    .id(1L)
-                    .status(PipelineStatus.DRAFT)
-                    .build();
-            when(pipelineRepository.findById(1L)).thenReturn(Optional.of(draftPipeline));
+        @DisplayName("throws DockerDaemonException when 'docker info' exits non-zero")
+        void generateImage_dockerInfoFails_throwsDaemonException() throws Exception {
+            when(pipelineRepository.findById(42L)).thenReturn(Optional.of(validatedPipeline));
+            when(dockerImageRepository.findByPipelineId(42L)).thenReturn(Optional.of(existingImage));
+            when(imageVersionService.computeNextTag(existingImage, validatedPipeline)).thenReturn("1.0.1");
+            when(commandExecutor.run(eq(List.of("docker", "info"))))
+                    .thenReturn(new CommandResult(1, "Cannot connect to the Docker daemon"));
 
-            assertThatThrownBy(() -> service.generateImage(1L))
-                    .isInstanceOf(IllegalStateException.class)
-                    .hasMessageContaining("VALIDATED")
-                    .hasMessageContaining("DRAFT");
+            assertThatThrownBy(() -> service.generateImage(42L))
+                    .isInstanceOf(DockerDaemonException.class);
         }
 
         @Test
-        @DisplayName("throws IllegalStateException when pipeline status is CONFIGURED")
-        void generateImage_configuredPipeline_throwsIllegalState() {
-            Pipeline configuredPipeline = Pipeline.builder()
-                    .id(2L)
-                    .status(PipelineStatus.CONFIGURED)
-                    .build();
-            when(pipelineRepository.findById(2L)).thenReturn(Optional.of(configuredPipeline));
+        @DisplayName("marks DockerImage as FAILED, pipeline stays VALIDATED, when daemon unreachable")
+        void generateImage_daemonUnreachable_imageFailedPipelineUnchanged() throws Exception {
+            when(pipelineRepository.findById(42L)).thenReturn(Optional.of(validatedPipeline));
+            when(dockerImageRepository.findByPipelineId(42L)).thenReturn(Optional.of(existingImage));
+            when(imageVersionService.computeNextTag(existingImage, validatedPipeline)).thenReturn("1.0.1");
+            when(commandExecutor.run(eq(List.of("docker", "info"))))
+                    .thenReturn(new CommandResult(1, "daemon down"));
 
-            assertThatThrownBy(() -> service.generateImage(2L))
-                    .isInstanceOf(IllegalStateException.class)
-                    .hasMessageContaining("VALIDATED")
-                    .hasMessageContaining("CONFIGURED");
-        }
+            assertThatThrownBy(() -> service.generateImage(42L))
+                    .isInstanceOf(DockerDaemonException.class);
 
-        @Test
-        @DisplayName("pipeline status does NOT change when pipeline is not VALIDATED")
-        void generateImage_notValidated_pipelineStatusUnchanged() {
-            Pipeline draftPipeline = Pipeline.builder()
-                    .id(1L)
-                    .status(PipelineStatus.DRAFT)
-                    .build();
-            when(pipelineRepository.findById(1L)).thenReturn(Optional.of(draftPipeline));
-
-            assertThatThrownBy(() -> service.generateImage(1L));
-
-            // Le statut du pipeline ne doit pas être modifié
+            verify(dockerImageRepository, atLeastOnce()).save(argThat(
+                    img -> img.getStatus() == ImageStatus.FAILED));
             verify(pipelineRepository, never()).save(any());
-            assertThat(draftPipeline.getStatus()).isEqualTo(PipelineStatus.DRAFT);
-        }
-    }
-
-    // ══════════════════════════════════════════════════════════════════════════
-    //  3. Daemon Docker injoignable
-    // ══════════════════════════════════════════════════════════════════════════
-
-    @Nested
-    @DisplayName("Docker daemon unreachable")
-    class DockerDaemonUnreachable {
-
-        @Test
-        @DisplayName("DockerDaemonException is a RuntimeException")
-        void daemonException_isRuntimeException() {
-            assertThat(new DockerDaemonException("msg", "detail"))
-                    .isInstanceOf(RuntimeException.class);
-        }
-
-        @Test
-        @DisplayName("DockerDaemonException carries the technical detail from IOException")
-        void daemonException_carriesIoExceptionDetail() {
-            IOException cause = new IOException("No such file or directory: /var/run/docker.sock");
-            DockerDaemonException ex = new DockerDaemonException(
-                    "Docker daemon is not reachable", cause);
-
-            assertThat(ex.getTechnicalDetail())
-                    .isEqualTo("No such file or directory: /var/run/docker.sock");
-        }
-
-        @Test
-        @DisplayName("DockerDaemonException carries explicit technical detail (String)")
-        void daemonException_carriesStringDetail() {
-            DockerDaemonException ex = new DockerDaemonException(
-                    "Docker daemon is not reachable (docker info exited with code 1)",
-                    "error during connect: Get http://%2Fvar%2Frun%2Fdocker.sock/v1.24/info");
-
-            assertThat(ex.getMessage()).contains("docker info exited with code 1");
-            assertThat(ex.getTechnicalDetail()).contains("docker.sock");
-        }
-
-        /**
-         * Vérifie que le contrat d'exception est correct en isolation :
-         * DockerDaemonException est bien une RuntimeException non swallowed,
-         * et le pipeline (objet VALIDATED) n'est pas modifié par la simple
-         * construction de l'exception.
-         */
-        @Test
-        @DisplayName("pipeline stays VALIDATED when DockerDaemonException is thrown")
-        void daemonException_pipelineRemainsValidated() {
-            // On vérifie uniquement le contrat de l'exception elle-même,
-            // sans appeler generateImage() (qui nécessiterait un vrai ProcessBuilder).
-            DockerDaemonException ex = new DockerDaemonException(
-                    "Docker daemon is not reachable", "docker info exited with code 1");
-
-            // Le pipeline NE DOIT PAS changer de statut
             assertThat(validatedPipeline.getStatus()).isEqualTo(PipelineStatus.VALIDATED);
-
-            // La DockerDaemonException est bien une RuntimeException non swallowed
-            assertThat(ex).isInstanceOf(RuntimeException.class);
-            assertThat(ex.getMessage()).contains("not reachable");
         }
 
         @Test
-        @DisplayName("DockerDaemonException message is descriptive")
-        void daemonException_messageIsDescriptive() {
-            DockerDaemonException ex = new DockerDaemonException(
-                    "Docker daemon is not reachable (docker info exited with code 1)",
-                    "error during connect");
+        @DisplayName("throws DockerDaemonException when 'docker info' throws IOException")
+        void generateImage_dockerInfoIoException_throwsDaemonException() throws Exception {
+            when(pipelineRepository.findById(42L)).thenReturn(Optional.of(validatedPipeline));
+            when(dockerImageRepository.findByPipelineId(42L)).thenReturn(Optional.of(existingImage));
+            when(imageVersionService.computeNextTag(existingImage, validatedPipeline)).thenReturn("1.0.1");
+            when(commandExecutor.run(eq(List.of("docker", "info"))))
+                    .thenThrow(new java.io.IOException("socket not found"));
 
-            assertThat(ex.getMessage())
-                    .contains("Docker daemon")
-                    .contains("not reachable");
+            assertThatThrownBy(() -> service.generateImage(42L))
+                    .isInstanceOf(DockerDaemonException.class);
         }
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    //  4. Build Docker échoué
+    //  generateImage() — build Docker échoué (vrai appel service)
     // ══════════════════════════════════════════════════════════════════════════
 
     @Nested
-    @DisplayName("Docker build failed")
-    class DockerBuildFailed {
-
-        private static final String SAMPLE_BUILD_LOG =
-                "Step 1/3 : FROM mini-esb-backend:latest\n" +
-                        " ---> Unable to find image 'mini-esb-backend:latest' locally\n" +
-                        "Error response from daemon: pull access denied for mini-esb-backend\n" +
-                        "The command '/bin/sh -c mvn package' returned a non-zero code: 1";
+    @DisplayName("generateImage — Docker build failed (real call)")
+    class GenerateImageBuildFailed {
 
         @Test
-        @DisplayName("DockerBuildException carries exit code and full build log")
-        void buildException_carriesExitCodeAndLog() {
-            DockerBuildException ex = new DockerBuildException(
-                    "docker build failed with exit code: 1", 1, SAMPLE_BUILD_LOG);
+        @DisplayName("throws DockerBuildException with exit code and log when 'docker build' fails")
+        void generateImage_dockerBuildFails_throwsBuildException() throws Exception {
+            when(pipelineRepository.findById(42L)).thenReturn(Optional.of(validatedPipeline));
+            when(dockerImageRepository.findByPipelineId(42L)).thenReturn(Optional.of(existingImage));
+            when(imageVersionService.computeNextTag(existingImage, validatedPipeline)).thenReturn("1.0.1");
+            when(commandExecutor.run(eq(List.of("docker", "info"))))
+                    .thenReturn(new CommandResult(0, "OK"));
+            when(commandExecutor.run(argThat(cmd -> cmd != null && cmd.contains("build")), any()))
+                    .thenReturn(new CommandResult(1, "Error: Dockerfile parse error"));
 
-            assertThat(ex.getExitCode()).isEqualTo(1);
-            assertThat(ex.getBuildLog()).isEqualTo(SAMPLE_BUILD_LOG);
+            assertThatThrownBy(() -> service.generateImage(42L))
+                    .isInstanceOf(DockerBuildException.class)
+                    .satisfies(ex -> {
+                        DockerBuildException dbe = (DockerBuildException) ex;
+                        assertThat(dbe.getExitCode()).isEqualTo(1);
+                        assertThat(dbe.getBuildLog()).contains("Dockerfile parse error");
+                    });
         }
 
         @Test
-        @DisplayName("DockerBuildException is a RuntimeException")
-        void buildException_isRuntimeException() {
-            assertThat(new DockerBuildException("msg", 1, "log"))
-                    .isInstanceOf(RuntimeException.class);
-        }
+        @DisplayName("marks DockerImage as FAILED, pipeline stays VALIDATED, when build fails")
+        void generateImage_buildFailed_imageFailedPipelineUnchanged() throws Exception {
+            when(pipelineRepository.findById(42L)).thenReturn(Optional.of(validatedPipeline));
+            when(dockerImageRepository.findByPipelineId(42L)).thenReturn(Optional.of(existingImage));
+            when(imageVersionService.computeNextTag(existingImage, validatedPipeline)).thenReturn("1.0.1");
+            when(commandExecutor.run(eq(List.of("docker", "info"))))
+                    .thenReturn(new CommandResult(0, "OK"));
+            when(commandExecutor.run(argThat(cmd -> cmd != null && cmd.contains("build")), any()))
+                    .thenReturn(new CommandResult(1, "boom"));
 
-        @Test
-        @DisplayName("buildLog contains exploitable error information")
-        void buildException_buildLog_containsErrorInfo() {
-            DockerBuildException ex = new DockerBuildException(
-                    "docker build failed with exit code: 1", 1, SAMPLE_BUILD_LOG);
+            assertThatThrownBy(() -> service.generateImage(42L))
+                    .isInstanceOf(DockerBuildException.class);
 
-            assertThat(ex.getBuildLog())
-                    .contains("Step 1/3")
-                    .contains("Error response from daemon")
-                    .contains("non-zero code: 1");
-        }
-
-        @Test
-        @DisplayName("pipeline stays VALIDATED when DockerBuildException is thrown")
-        void buildException_pipelineRemainsValidated() {
-            // Vérification du contrat : quand un build échoue, seule l'image passe en FAILED.
-            // Le pipeline ne doit pas changer de statut.
-            DockerBuildException ex = new DockerBuildException(
-                    "docker build failed with exit code: 1", 1, SAMPLE_BUILD_LOG);
-
-            // Simule la mise à jour que le service fait sur l'image
-            existingImage.setStatus(ImageStatus.FAILED);
-
-            // Pipeline reste VALIDATED
+            verify(dockerImageRepository, atLeastOnce()).save(argThat(
+                    img -> img.getStatus() == ImageStatus.FAILED));
+            verify(pipelineRepository, never()).save(any());
             assertThat(validatedPipeline.getStatus()).isEqualTo(PipelineStatus.VALIDATED);
-            // Image passe en FAILED
-            assertThat(existingImage.getStatus()).isEqualTo(ImageStatus.FAILED);
         }
 
         @Test
-        @DisplayName("exit code 2 is also supported (e.g. invalid Dockerfile syntax)")
-        void buildException_exitCode2_isSupported() {
-            DockerBuildException ex = new DockerBuildException(
-                    "docker build failed with exit code: 2",
-                    2,
-                    "Dockerfile parse error line 4: unknown instruction: ENTRYPOINTT");
+        @DisplayName("never calls imageVersionService.applyNextVersion when build fails")
+        void generateImage_buildFailed_neverAppliesVersion() throws Exception {
+            when(pipelineRepository.findById(42L)).thenReturn(Optional.of(validatedPipeline));
+            when(dockerImageRepository.findByPipelineId(42L)).thenReturn(Optional.of(existingImage));
+            when(imageVersionService.computeNextTag(existingImage, validatedPipeline)).thenReturn("1.0.1");
+            when(commandExecutor.run(eq(List.of("docker", "info"))))
+                    .thenReturn(new CommandResult(0, "OK"));
+            when(commandExecutor.run(argThat(cmd -> cmd != null && cmd.contains("build")), any()))
+                    .thenReturn(new CommandResult(1, "boom"));
 
-            assertThat(ex.getExitCode()).isEqualTo(2);
-            assertThat(ex.getBuildLog()).contains("unknown instruction");
-        }
+            assertThatThrownBy(() -> service.generateImage(42L))
+                    .isInstanceOf(DockerBuildException.class);
 
-        @Test
-        @DisplayName("buildLog is preserved with newlines (multiline)")
-        void buildException_buildLog_preservesNewlines() {
-            DockerBuildException ex = new DockerBuildException("msg", 1, SAMPLE_BUILD_LOG);
-            String[] lines = ex.getBuildLog().split("\n");
-            assertThat(lines.length).isGreaterThan(1);
-            assertThat(lines[0]).contains("Step 1/3");
+            verify(imageVersionService, never()).applyNextVersion(any(), any(), any());
         }
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    //  5. Invariant global : pipeline status ne change jamais sur erreur build
+    //  exportImage()
     // ══════════════════════════════════════════════════════════════════════════
 
     @Nested
-    @DisplayName("Pipeline status invariant")
-    class PipelineStatusInvariant {
+    @DisplayName("exportImage")
+    class ExportImage {
 
         @Test
-        @DisplayName("VALIDATED status is preserved regardless of DockerDaemonException")
-        void pipelineStatus_preservedOnDaemonError() {
-            PipelineStatus before = validatedPipeline.getStatus();
-            // Simule ce que le service fait en cas de DockerDaemonException :
-            // il ne modifie PAS le pipeline
-            assertThat(validatedPipeline.getStatus()).isEqualTo(before);
+        @DisplayName("returns raw bytes via 'docker save' when image status is SUCCESS")
+        void exportImage_successStatus_returnsBytes() throws Exception {
+            DockerImage successImage = DockerImage.builder()
+                    .id(10L).pipeline(validatedPipeline)
+                    .status(ImageStatus.SUCCESS)
+                    .imageName("pipeline-42").tag("1.0.0")
+                    .build();
+            when(dockerImageRepository.findByPipelineId(42L)).thenReturn(Optional.of(successImage));
+            byte[] expected = {1, 2, 3};
+            when(commandExecutor.runForBytes(List.of("docker", "save", "pipeline-42:1.0.0")))
+                    .thenReturn(expected);
+
+            byte[] result = service.exportImage(42L);
+
+            assertThat(result).isEqualTo(expected);
         }
 
         @Test
-        @DisplayName("VALIDATED status is preserved regardless of DockerBuildException")
-        void pipelineStatus_preservedOnBuildError() {
-            PipelineStatus before = validatedPipeline.getStatus();
-            // Simule ce que le service fait en cas de DockerBuildException :
-            // il ne modifie PAS le pipeline
-            assertThat(validatedPipeline.getStatus()).isEqualTo(before);
+        @DisplayName("throws ResourceNotFoundException when no image exists for pipeline")
+        void exportImage_noImage_throwsResourceNotFound() {
+            when(dockerImageRepository.findByPipelineId(99L)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> service.exportImage(99L))
+                    .isInstanceOf(ResourceNotFoundException.class);
         }
 
         @Test
-        @DisplayName("DockerImage status becomes FAILED on daemon error")
-        void dockerImageStatus_failedOnDaemonError() {
-            existingImage.setStatus(ImageStatus.FAILED); // simulé par le service
-            assertThat(existingImage.getStatus()).isEqualTo(ImageStatus.FAILED);
+        @DisplayName("throws IllegalStateException when image status is not SUCCESS")
+        void exportImage_notSuccessStatus_throwsIllegalState() {
+            DockerImage buildingImage = DockerImage.builder()
+                    .id(10L).pipeline(validatedPipeline)
+                    .status(ImageStatus.BUILDING)
+                    .build();
+            when(dockerImageRepository.findByPipelineId(42L)).thenReturn(Optional.of(buildingImage));
+
+            assertThatThrownBy(() -> service.exportImage(42L))
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("BUILDING");
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    //  getCurrentVersionInfo() / getImageInfo()
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Nested
+    @DisplayName("getCurrentVersionInfo / getImageInfo")
+    class VersionAndImageInfo {
+
+        @Test
+        @DisplayName("getCurrentVersionInfo returns map with tag, pipelineVersion, patch")
+        void getCurrentVersionInfo_returnsExpectedFields() {
+            DockerImage image = DockerImage.builder()
+                    .id(10L).pipeline(validatedPipeline)
+                    .tag("1.0.3").versionPatch(3).lastPipelineVersion("1.0.0")
+                    .build();
+            when(dockerImageRepository.findByPipelineId(42L)).thenReturn(Optional.of(image));
+
+            var result = service.getCurrentVersionInfo(42L);
+
+            assertThat(result)
+                    .containsEntry("pipelineId", 42L)
+                    .containsEntry("currentTag", "1.0.3")
+                    .containsEntry("patch", 3)
+                    .containsEntry("lastPipelineVersion", "1.0.0");
         }
 
         @Test
-        @DisplayName("DockerImage status becomes FAILED on build error")
-        void dockerImageStatus_failedOnBuildError() {
-            existingImage.setStatus(ImageStatus.FAILED); // simulé par le service
-            assertThat(existingImage.getStatus()).isEqualTo(ImageStatus.FAILED);
+        @DisplayName("getCurrentVersionInfo throws ResourceNotFoundException when no image")
+        void getCurrentVersionInfo_noImage_throwsResourceNotFound() {
+            when(dockerImageRepository.findByPipelineId(99L)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> service.getCurrentVersionInfo(99L))
+                    .isInstanceOf(ResourceNotFoundException.class);
+        }
+
+        @Test
+        @DisplayName("getImageInfo maps DockerImage entity to DockerImageResponse")
+        void getImageInfo_mapsToResponse() {
+            DockerImage image = DockerImage.builder()
+                    .id(10L).pipeline(validatedPipeline)
+                    .imageName("pipeline-42").tag("1.0.0")
+                    .status(ImageStatus.SUCCESS).sizeBytes(1024L)
+                    .builtAt(LocalDateTime.of(2026, 7, 1, 10, 0))
+                    .build();
+            when(dockerImageRepository.findByPipelineId(42L)).thenReturn(Optional.of(image));
+
+            DockerImageResponse response = service.getImageInfo(42L);
+
+            assertThat(response.id()).isEqualTo(10L);
+            assertThat(response.imageName()).isEqualTo("pipeline-42");
+            assertThat(response.tag()).isEqualTo("1.0.0");
+            assertThat(response.status()).isEqualTo(ImageStatus.SUCCESS);
+            assertThat(response.sizeBytes()).isEqualTo(1024L);
+            assertThat(response.pipelineId()).isEqualTo(42L);
+        }
+
+        @Test
+        @DisplayName("getImageInfo throws ResourceNotFoundException when no image for pipeline")
+        void getImageInfo_noImage_throwsResourceNotFound() {
+            when(dockerImageRepository.findByPipelineId(99L)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> service.getImageInfo(99L))
+                    .isInstanceOf(ResourceNotFoundException.class);
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    //  assertPipelineValidated()
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Nested
+    @DisplayName("assertPipelineValidated")
+    class AssertPipelineValidated {
+
+        @Test
+        @DisplayName("does not throw when pipeline is VALIDATED")
+        void assertPipelineValidated_validatedPipeline_doesNotThrow() {
+            when(pipelineRepository.findById(42L)).thenReturn(Optional.of(validatedPipeline));
+
+            assertThatCode(() -> service.assertPipelineValidated(42L)).doesNotThrowAnyException();
+        }
+
+        @Test
+        @DisplayName("throws IllegalStateException when pipeline is not VALIDATED")
+        void assertPipelineValidated_draftPipeline_throwsIllegalState() {
+            Pipeline draft = Pipeline.builder().id(1L).status(PipelineStatus.DRAFT).build();
+            when(pipelineRepository.findById(1L)).thenReturn(Optional.of(draft));
+
+            assertThatThrownBy(() -> service.assertPipelineValidated(1L))
+                    .isInstanceOf(IllegalStateException.class);
+        }
+
+        @Test
+        @DisplayName("throws ResourceNotFoundException when pipeline does not exist")
+        void assertPipelineValidated_unknownPipeline_throwsResourceNotFound() {
+            when(pipelineRepository.findById(99L)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> service.assertPipelineValidated(99L))
+                    .isInstanceOf(ResourceNotFoundException.class);
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    //  getVersionHistory()
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Nested
+    @DisplayName("getVersionHistory")
+    class VersionHistory {
+
+        @Test
+        @DisplayName("maps BuildLogEntry list to responses, most recent first, with computed duration")
+        void getVersionHistory_mapsEntriesWithDuration() {
+            LocalDateTime start = LocalDateTime.of(2026, 7, 1, 10, 0);
+            LocalDateTime end = LocalDateTime.of(2026, 7, 1, 10, 2);
+            BuildLogEntry entry = BuildLogEntry.builder()
+                    .id(1L).pipelineId(42L).version("1.0.0")
+                    .status(ImageStatus.SUCCESS)
+                    .startTime(start).endTime(end)
+                    .build();
+            when(buildLogEntryRepository.findByPipelineIdOrderByStartTimeDesc(42L))
+                    .thenReturn(List.of(entry));
+
+            List<BuildLogEntryResponse> history = service.getVersionHistory(42L);
+
+            assertThat(history).hasSize(1);
+            assertThat(history.get(0).durationSeconds()).isEqualTo(120L);
+        }
+
+        @Test
+        @DisplayName("returns empty list when no build history exists")
+        void getVersionHistory_noEntries_returnsEmptyList() {
+            when(buildLogEntryRepository.findByPipelineIdOrderByStartTimeDesc(99L))
+                    .thenReturn(List.of());
+
+            assertThat(service.getVersionHistory(99L)).isEmpty();
+        }
+
+        @Test
+        @DisplayName("duration is null when endTime is missing (build still running)")
+        void getVersionHistory_missingEndTime_durationIsNull() {
+            BuildLogEntry entry = BuildLogEntry.builder()
+                    .id(2L).pipelineId(42L).version("1.0.1")
+                    .status(ImageStatus.BUILDING)
+                    .startTime(LocalDateTime.now()).endTime(null)
+                    .build();
+            when(buildLogEntryRepository.findByPipelineIdOrderByStartTimeDesc(42L))
+                    .thenReturn(List.of(entry));
+
+            List<BuildLogEntryResponse> history = service.getVersionHistory(42L);
+
+            assertThat(history.get(0).durationSeconds()).isNull();
         }
     }
 }

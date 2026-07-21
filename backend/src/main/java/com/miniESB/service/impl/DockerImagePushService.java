@@ -9,14 +9,22 @@ import com.miniESB.exception.ResourceNotFoundException;
 import com.miniESB.repository.DockerImageRepository;
 import com.miniESB.repository.RegistryRepository;
 import com.miniESB.service.RegistryService;
+import com.miniESB.service.docker.CommandExecutor;
+import com.miniESB.service.docker.CommandResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
+import java.util.List;
 
+/**
+ * <p><strong>Refactoring</strong> : cette classe instanciait directement
+ * {@code new ProcessBuilder(...)} à 4 endroits (login/tag/push/logout), ce qui
+ * la rendait impossible à tester sans un vrai daemon Docker — même problème
+ * que {@link DockerImageGeneratorService} avant son propre refactoring.
+ * Elle dépend désormais de {@link CommandExecutor}, testable avec un mock.</p>
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -26,6 +34,7 @@ public class DockerImagePushService {
     private final DockerImageRepository dockerImageRepository;
     private final RegistryRepository    registryRepository;
     private final RegistryService       registryService;
+    private final CommandExecutor       commandExecutor;
 
     // ── Push ──────────────────────────────────────────────────────────────────
 
@@ -87,42 +96,27 @@ public class DockerImagePushService {
                 + image.getImageName() + ":" + image.getTag();
     }
 
+    private String resolveRegistryUrl(String url) {
+        return url == null || url.contains("hub.docker.com")
+                ? "https://index.docker.io/v1/" : url;
+    }
+
     private void dockerLogin(String url, String username, String password) throws Exception {
-        ProcessBuilder pb = new ProcessBuilder(
-                "docker", "login",
-                url == null || url.contains("hub.docker.com") ? "https://index.docker.io/v1/" : url,
-                "--username", username,
-                "--password-stdin"
-        );
-        pb.redirectErrorStream(true);
-        Process process = pb.start();
+        List<String> command = List.of(
+                "docker", "login", resolveRegistryUrl(url),
+                "--username", username, "--password-stdin");
 
-        process.getOutputStream().write(password.getBytes());
-        process.getOutputStream().close();
-
-        StringBuilder output = new StringBuilder();
-        try (BufferedReader reader = new BufferedReader(
-                new InputStreamReader(process.getInputStream()))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                output.append(line).append("\n");
-                log.info("[docker login] {}", line);
-            }
-        }
-
-        int exitCode = process.waitFor();
-        if (exitCode != 0) {
+        CommandResult result = commandExecutor.runWithStdin(command, password);
+        if (!result.isSuccess()) {
             throw new RuntimeException(
-                    "docker login failed (exit=" + exitCode + "): " + output);
+                    "docker login failed (exit=" + result.exitCode() + "): " + result.output());
         }
         log.info("Docker login successful");
     }
 
     private void dockerTag(String localTag, String remoteTag) throws Exception {
-        ProcessBuilder pb = new ProcessBuilder("docker", "tag", localTag, remoteTag);
-        pb.redirectErrorStream(true);
-        int exitCode = pb.start().waitFor();
-        if (exitCode != 0) {
+        CommandResult result = commandExecutor.run(List.of("docker", "tag", localTag, remoteTag));
+        if (!result.isSuccess()) {
             throw new RuntimeException(
                     "docker tag failed: " + localTag + " → " + remoteTag);
         }
@@ -130,34 +124,20 @@ public class DockerImagePushService {
     }
 
     private void dockerPush(String remoteTag) throws Exception {
-        ProcessBuilder pb = new ProcessBuilder("docker", "push", remoteTag);
-        pb.redirectErrorStream(true);
-        Process process = pb.start();
+        CommandResult result = commandExecutor.run(
+                List.of("docker", "push", remoteTag),
+                line -> log.info("[docker push] {}", line));
 
-        try (BufferedReader reader = new BufferedReader(
-                new InputStreamReader(process.getInputStream()))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                log.info("[docker push] {}", line);
-            }
-        }
-
-        int exitCode = process.waitFor();
-        if (exitCode != 0) {
+        if (!result.isSuccess()) {
             throw new RuntimeException(
-                    "docker push failed with exit code: " + exitCode);
+                    "docker push failed with exit code: " + result.exitCode());
         }
         log.info("Docker push successful: {}", remoteTag);
     }
 
     private void dockerLogout(String url) {
         try {
-            new ProcessBuilder("docker", "logout",
-                    url == null || url.contains("hub.docker.com")
-                            ? "https://index.docker.io/v1/" : url)
-                    .redirectErrorStream(true)
-                    .start()
-                    .waitFor();
+            commandExecutor.run(List.of("docker", "logout", resolveRegistryUrl(url)));
             log.info("Docker logout done");
         } catch (Exception e) {
             log.warn("Docker logout failed: {}", e.getMessage());
