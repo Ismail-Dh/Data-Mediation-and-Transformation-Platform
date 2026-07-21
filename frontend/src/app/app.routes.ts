@@ -11,8 +11,6 @@ import { PipelineDeveloperComponent } from './pages/pipeline-developer-component
 import { ProviderListComponent } from './pages/provider-list-component/provider-list-component';
 import { DashboardContent } from './pages/dashboard-content/dashboard-content';
 import { ValidationRulesComponent } from './pages/validation-rules/validation-rules.component';
-import { AdminTemplate } from './pages/admin-template/admin-template';
-import { DeveloperTemplate } from './pages/developer-template/developer-template';
 import { AuditLogAdminComponent } from './pages/audit-log-admin/audit-log-admin.component';
 import { AuditLogMeComponent } from './pages/audit-log-me/audit-log-me.component';
 import { MonitoringComponent } from './pages/monitoring/monitoring.component';
@@ -34,10 +32,8 @@ export const routes: Routes = [
       { path: 'validationRules',     component: ValidationRulesComponent,   canActivate: [adminGuard] },
       { path: 'developer/pipelines', component: PipelineDeveloperComponent, canActivate: [authGuard]  },
       { path: 'provider',            component: ProviderListComponent,      canActivate: [authGuard]  },
-      { path: 'admin/templates',     component: AdminTemplate,              canActivate: [adminGuard] },
       { path: 'admin/audit-logs',    component: AuditLogAdminComponent,     canActivate: [adminGuard] },
       { path: 'my-logs',             component: AuditLogMeComponent,        canActivate: [authGuard]  },
-      { path: 'developer/templates', component: DeveloperTemplate,          canActivate: [authGuard]  },
       { path: 'admin/monitoring',    component: MonitoringComponent,        canActivate: [adminGuard] },
       // ── NEW ──────────────────────────────────────────────────────────────
       { path: 'developer/registries',    component: RegistryComponent,          canActivate: [authGuard] },

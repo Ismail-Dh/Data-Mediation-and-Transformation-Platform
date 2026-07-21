@@ -73,36 +73,4 @@ class ExceptionClassesTest {
                     .isInstanceOf(RuntimeException.class);
         }
     }
-
-    @Nested
-    @DisplayName("TemplateImmutableException")
-    class TemplateImmutableExceptionTest {
-
-        @Test
-        @DisplayName("message contains id and status")
-        void templateImmutableException_message() {
-            com.miniESB.exception.TemplateImmutableException ex =
-                    new com.miniESB.exception.TemplateImmutableException(42L, "PUBLISHED");
-
-            assertThat(ex.getMessage()).contains("42");
-            assertThat(ex.getMessage()).contains("PUBLISHED");
-        }
-
-        @Test
-        @DisplayName("works for DISABLED status")
-        void templateImmutableException_disabled() {
-            com.miniESB.exception.TemplateImmutableException ex =
-                    new com.miniESB.exception.TemplateImmutableException(7L, "DISABLED");
-
-            assertThat(ex.getMessage()).contains("DISABLED");
-            assertThat(ex.getMessage()).contains("7");
-        }
-
-        @Test
-        @DisplayName("is a RuntimeException")
-        void templateImmutableException_isRuntime() {
-            assertThat(new com.miniESB.exception.TemplateImmutableException(1L, "PUBLISHED"))
-                    .isInstanceOf(RuntimeException.class);
-        }
-    }
 }
