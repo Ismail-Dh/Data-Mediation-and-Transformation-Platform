@@ -172,6 +172,14 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(body, HttpStatus.UNPROCESSABLE_ENTITY); // 422
     }
 
+    // ── 503 Envoi d'email impossible (SMTP indisponible, credentials invalides…) ──
+    @ExceptionHandler(EmailSendingException.class)
+    public ResponseEntity<Object> handleEmailSending(EmailSendingException ex) {
+        return new ResponseEntity<>(
+                Map.of("error", "Impossible d'envoyer l'email pour le moment. Veuillez réessayer plus tard."),
+                HttpStatus.SERVICE_UNAVAILABLE);
+    }
+
     // ── 500 Fallback ──────────────────────────────────────────────────────────
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Object> handleAll(Exception ex, WebRequest request) {
