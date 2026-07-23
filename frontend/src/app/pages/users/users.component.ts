@@ -101,7 +101,7 @@ export class UsersComponent implements OnInit {
     const editing = this.editingUser();
 
     if (editing) {
-      const updateData: UpdateUserRequest = { username: val.username!, role: val.role as any };
+      const updateData: UpdateUserRequest = { username: val.username!, role: val.role as any ,email: val.email! };
       this.userService.updateUser(editing.id, updateData).subscribe({
         next: () => { this.notify('User updated'); this.showForm.set(false); this.loadUsers(); this.cdr.detectChanges(); },
         error: err => this.handleError(err)
