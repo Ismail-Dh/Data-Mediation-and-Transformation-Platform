@@ -3,10 +3,10 @@
   <!-- ── Header ──────────────────────────────────────────────────────────────── -->
   <div class="dash-header">
     <div class="dash-header__left">
-      <p class="dash-header__greeting"><span>👋</span> Bonjour, <strong>{{ username }}</strong></p>
+      <p class="dash-header__greeting"><span>👋</span> Hello, <strong>{{ username }}</strong></p>
       <h1 class="dash-header__title">
-        <span *ngIf="isAdmin">Vue plateforme</span>
-        <span *ngIf="!isAdmin">Mon espace dev</span>
+        <span *ngIf="isAdmin">Platform overview</span>
+        <span *ngIf="!isAdmin">My dev space</span>
       </h1>
       <p class="dash-header__date">{{ today }}</p>
     </div>
@@ -15,7 +15,7 @@
         <span class="role-chip__dot"></span>{{ isAdmin ? 'Admin' : 'Developer' }}
       </span>
       <button class="btn-refresh" (click)="ngOnInit()">
-        <span class="material-icons">refresh</span>Actualiser
+        <span class="material-icons">refresh</span>Refresh
       </button>
     </div>
   </div>
@@ -23,13 +23,13 @@
   <!-- ── Loading ──────────────────────────────────────────────────────────────── -->
   <div class="state-box" *ngIf="loading">
     <span class="material-icons spin">sync</span>
-    <p>Chargement des données…</p>
+    <p>Loading data…</p>
   </div>
 
   <!-- ── Error ────────────────────────────────────────────────────────────────── -->
   <div class="state-box state-box--error" *ngIf="!loading && error">
     <span class="material-icons">error_outline</span>
-    <p>Impossible de charger les données du monitoring.</p>
+    <p>Unable to load monitoring data.</p>
   </div>
 
   <ng-container *ngIf="!loading && !error">
@@ -64,8 +64,8 @@
           <div class="panel__header">
             <span class="material-icons panel__icon">bar_chart</span>
             <div>
-              <p class="panel__title">Activité des 24 dernières heures</p>
-              <p class="panel__sub">Requêtes totales et erreurs par heure</p>
+              <p class="panel__title">Activity over the last 24 hours</p>
+              <p class="panel__sub">Total requests and errors per hour</p>
             </div>
           </div>
           <div class="chart-legend">
@@ -90,11 +90,11 @@
           <div class="panel__header">
             <span class="material-icons panel__icon">assignment</span>
             <div>
-              <p class="panel__title">Actions les plus fréquentes</p>
-              <p class="panel__sub">Répartition depuis l'audit log</p>
+              <p class="panel__title">Most frequent actions</p>
+              <p class="panel__sub">Breakdown from the audit log</p>
             </div>
           </div>
-          <div class="empty-state" *ngIf="actions.length === 0">Aucune donnée disponible.</div>
+          <div class="empty-state" *ngIf="actions.length === 0">No data available.</div>
           <div class="action-list" *ngIf="actions.length > 0">
             <div class="action-row" *ngFor="let a of actions">
               <span class="action-row__label">{{ a.action }}</span>
@@ -114,8 +114,8 @@
           <div class="panel__header">
             <span class="material-icons panel__icon">device_hub</span>
             <div>
-              <p class="panel__title">Pipelines — répartition</p>
-              <p class="panel__sub">Tous les pipelines de la plateforme</p>
+              <p class="panel__title">Pipelines — breakdown</p>
+              <p class="panel__sub">All pipelines on the platform</p>
             </div>
           </div>
           <div class="status-list">
@@ -139,8 +139,8 @@
           <div class="panel__header">
             <span class="material-icons panel__icon">inbox</span>
             <div>
-              <p class="panel__title">Payloads — répartition</p>
-              <p class="panel__sub">Sur l'ensemble des pipelines</p>
+              <p class="panel__title">Payloads — breakdown</p>
+              <p class="panel__sub">Across all pipelines</p>
             </div>
           </div>
           <div class="status-list">
@@ -168,11 +168,11 @@
         <div class="panel__header">
           <span class="material-icons panel__icon">manage_search</span>
           <div>
-            <p class="panel__title">Activité récente</p>
-            <p class="panel__sub">Dernières entrées du journal d'audit</p>
+            <p class="panel__title">Recent activity</p>
+            <p class="panel__sub">Latest entries from the audit log</p>
           </div>
         </div>
-        <div class="empty-state" *ngIf="activityFeed.length === 0">Aucune activité récente.</div>
+        <div class="empty-state" *ngIf="activityFeed.length === 0">No recent activity</div>
         <div class="feed" *ngIf="activityFeed.length > 0">
           <div class="feed-item" *ngFor="let a of activityFeed">
             <span class="feed-dot"
@@ -201,11 +201,11 @@
           <div class="panel__header">
             <span class="material-icons panel__icon">device_hub</span>
             <div>
-              <p class="panel__title">Mes pipelines</p>
-              <p class="panel__sub">{{ myPipelines.length }} pipeline{{ myPipelines.length !== 1 ? 's' : '' }} créé{{ myPipelines.length !== 1 ? 's' : '' }}</p>
+              <p class="panel__title">My pipelines</p>
+              <p class="panel__sub">{{ myPipelines.length }} pipeline{{ myPipelines.length !== 1 ? 's' : '' }} created{{ myPipelines.length !== 1 ? 's' : '' }}</p>
             </div>
           </div>
-          <div class="empty-state" *ngIf="myPipelines.length === 0">Aucun pipeline créé.</div>
+          <div class="empty-state" *ngIf="myPipelines.length === 0">No pipelines created.</div>
           <div class="pipe-list" *ngIf="myPipelines.length > 0">
             <div class="pipe-row" *ngFor="let p of myPipelines">
               <div class="pipe-row__left">
@@ -229,11 +229,11 @@
           <div class="panel__header">
             <span class="material-icons panel__icon">science</span>
             <div>
-              <p class="panel__title">Derniers tests sandbox</p>
-              <p class="panel__sub">Historique de vos runs récents</p>
+              <p class="panel__title">Latest sandbox tests</p>
+              <p class="panel__sub">History of your recent runs</p>
             </div>
           </div>
-          <div class="empty-state" *ngIf="sandboxRuns.length === 0">Aucun test sandbox effectué.</div>
+          <div class="empty-state" *ngIf="sandboxRuns.length === 0">No sandbox tests run yet.</div>
           <div class="sandbox-list" *ngIf="sandboxRuns.length > 0">
             <div class="sandbox-row" *ngFor="let r of sandboxRuns">
 
@@ -254,7 +254,7 @@
                 <span class="sandbox-row__detail">{{ sandboxRunLabel(r) }}</span>
                 <!-- failureStep si présent -->
                 <span class="sandbox-row__fail" *ngIf="r.failureStep">
-                  Échec : {{ r.failureStep === 'STRUCTURAL' ? 'Validation structurelle' : 'Règles métier' }}
+                  Failure : {{ r.failureStep === 'STRUCTURAL' ? 'Structural validation' : 'Business rules' }}
                 </span>
               </div>
 
@@ -277,11 +277,11 @@
           <div class="panel__header">
             <span class="material-icons panel__icon">inbox</span>
             <div>
-              <p class="panel__title">Payloads — mes pipelines</p>
-              <p class="panel__sub">Agrégé sur mes 3 derniers pipelines</p>
+              <p class="panel__title">Payloads — my pipelines</p>
+              <p class="panel__sub">Aggregated across my last 3 pipelines</p>
             </div>
           </div>
-          <div class="empty-state" *ngIf="payloadBreakdown.length === 0">Aucun payload trouvé.</div>
+          <div class="empty-state" *ngIf="payloadBreakdown.length === 0">No payloads found.</div>
           <div class="status-list" *ngIf="payloadBreakdown.length > 0">
             <div class="status-row" *ngFor="let p of payloadBreakdown">
               <span class="status-pill"
@@ -306,11 +306,11 @@
           <div class="panel__header">
             <span class="material-icons panel__icon">history</span>
             <div>
-              <p class="panel__title">Mes actions récentes</p>
-              <p class="panel__sub">Journal d'activité personnel</p>
+              <p class="panel__title">My recent actions</p>
+              <p class="panel__sub">Personal activity log</p>
             </div>
           </div>
-          <div class="empty-state" *ngIf="activityFeed.length === 0">Aucune activité enregistrée.</div>
+          <div class="empty-state" *ngIf="activityFeed.length === 0">No activity recorded.</div>
           <div class="feed" *ngIf="activityFeed.length > 0">
             <div class="feed-item" *ngFor="let a of activityFeed">
               <span class="feed-dot"
