@@ -4,11 +4,11 @@
   <div class="mon-header">
     <div class="mon-header__left">
       <h2>Monitoring</h2>
-      <span class="mon-header__subtitle">Tableau de bord en temps réel</span>
+      <span class="mon-header__subtitle">Real-time dashboard</span>
     </div>
     <button class="btn-refresh" (click)="load()" [disabled]="loading()">
       <span class="refresh-icon" [class.spinning]="loading()">↻</span>
-      Actualiser
+      Refresh
     </button>
   </div>
 
@@ -20,7 +20,7 @@
   <!-- ── Loader ────────────────────────────────────────────────────────────── -->
   <div *ngIf="loading() && !stats()" class="mon-loading">
     <div class="spinner"></div>
-    <span>Chargement des statistiques…</span>
+    <span>Loading statistics…</span>
   </div>
 
   <ng-container *ngIf="stats() as s">
@@ -34,7 +34,7 @@
         <div class="kpi-card__icon">⚡</div>
         <div class="kpi-card__body">
           <span class="kpi-card__value">{{ s.totalRequests | number }}</span>
-          <span class="kpi-card__label">Requêtes totales</span>
+          <span class="kpi-card__label">Total requests</span>
         </div>
       </div>
 
@@ -42,7 +42,7 @@
         <div class="kpi-card__icon">✕</div>
         <div class="kpi-card__body">
           <span class="kpi-card__value">{{ s.totalErrors | number }}</span>
-          <span class="kpi-card__label">Erreurs totales</span>
+          <span class="kpi-card__label">Total errors</span>
         </div>
         <div class="kpi-card__rate">{{ s.errorRatePct }}%</div>
       </div>
@@ -53,7 +53,7 @@
           <span class="kpi-card__value">
             {{ s.avgDurationMs !== null ? (s.avgDurationMs | number:'1.0-0') + ' ms' : '—' }}
           </span>
-          <span class="kpi-card__label">Durée moy.</span>
+          <span class="kpi-card__label">Avg. duration</span>
         </div>
       </div>
 
@@ -61,7 +61,7 @@
         <div class="kpi-card__icon">⚙</div>
         <div class="kpi-card__body">
           <span class="kpi-card__value">{{ s.configuredPipelines }} / {{ s.totalPipelines }}</span>
-          <span class="kpi-card__label">Pipelines actifs</span>
+          <span class="kpi-card__label">Active pipelines</span>
         </div>
         <div class="kpi-card__rate">{{ pipelineUsageRate() }}%</div>
       </div>
@@ -82,15 +82,15 @@
         <div class="payload-stats">
           <div class="payload-stat payload-stat--success">
             <span class="payload-stat__value">{{ s.successfulPayloads }}</span>
-            <span class="payload-stat__label">Envoyés</span>
+            <span class="payload-stat__label">Sent</span>
           </div>
           <div class="payload-stat payload-stat--failed">
             <span class="payload-stat__value">{{ s.failedPayloads }}</span>
-            <span class="payload-stat__label">Échoués</span>
+            <span class="payload-stat__label">Failed</span>
           </div>
           <div class="payload-stat payload-stat--pending">
             <span class="payload-stat__value">{{ s.totalPayloads - s.successfulPayloads - s.failedPayloads }}</span>
-            <span class="payload-stat__label">En cours</span>
+            <span class="payload-stat__label">Pending</span>
           </div>
         </div>
         <!-- Progress bar -->
@@ -101,14 +101,14 @@
             <div class="progress-bar__fill progress-bar__fill--failed"
                  [style.width.%]="s.totalPayloads > 0 ? (s.failedPayloads / s.totalPayloads * 100) : 0"></div>
           </div>
-          <span class="progress-bar__label">{{ payloadSuccessRate() }}% de succès</span>
+          <span class="progress-bar__label">{{ payloadSuccessRate() }}% success</span>
         </div>
       </div>
 
       <!-- Per-action table -->
       <div class="section-card">
         <div class="section-card__header">
-          <h3>Par action</h3>
+          <h3>By action</h3>
         </div>
         <div class="action-table-wrap">
           <table class="action-table">
@@ -116,13 +116,13 @@
               <tr>
                 <th>Action</th>
                 <th>Total</th>
-                <th>Erreurs</th>
-                <th>Taux</th>
+                <th>Errors</th>
+                <th>Rate</th>
               </tr>
             </thead>
             <tbody>
               <tr *ngIf="s.requestsByAction.length === 0">
-                <td colspan="4" class="empty-cell">Aucune donnée</td>
+                <td colspan="4" class="empty-cell">No date</td>
               </tr>
               <tr *ngFor="let a of s.requestsByAction; trackBy: trackByAction"
                   [class]="getActionClass(a)">
@@ -151,7 +151,7 @@
       <!-- Requests by hour -->
       <div class="section-card chart-card">
         <div class="section-card__header">
-          <h3>Requêtes / heure <span class="chart-period">— 24 dernières heures</span></h3>
+          <h3>Requests / hour <span class="chart-period">— last 24 hours</span></h3>
         </div>
         <div class="bar-chart" *ngIf="s.requestsByHour.length > 0; else noData">
           <div class="bar-chart__bars">
@@ -168,14 +168,14 @@
           </div>
         </div>
         <ng-template #noData>
-          <div class="chart-empty">Aucune donnée sur les 24 dernières heures</div>
+          <div class="chart-empty">No data for the last 24 hours</div>
         </ng-template>
       </div>
 
       <!-- Errors by hour -->
       <div class="section-card chart-card">
         <div class="section-card__header">
-          <h3>Erreurs / heure <span class="chart-period">— 24 dernières heures</span></h3>
+          <h3>Errors / hour <span class="chart-period">— 24 dernières heures</span></h3>
         </div>
         <div class="bar-chart" *ngIf="s.errorsByHour.length > 0; else noErrorData">
           <div class="bar-chart__bars">
@@ -192,7 +192,7 @@
           </div>
         </div>
         <ng-template #noErrorData>
-          <div class="chart-empty">Aucune erreur sur les 24 dernières heures 🎉</div>
+          <div class="chart-empty">No errors in the last 24 hours </div>
         </ng-template>
       </div>
 

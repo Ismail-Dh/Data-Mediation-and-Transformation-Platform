@@ -72,7 +72,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
         this.cdr.detectChanges();
       },
       error: () => {
-        this.error.set('Impossible de charger les statistiques.');
+        this.error.set('Unable to load statistics.');
         this.loading.set(false);
         this.cdr.detectChanges();
       }
