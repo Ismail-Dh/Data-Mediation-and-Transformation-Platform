@@ -1,4 +1,4 @@
-package com.miniESB.controller;
+/*package com.miniESB.controller;
 
 import com.miniESB.service.EngineProcessService;
 import lombok.RequiredArgsConstructor;
@@ -35,4 +35,4 @@ public class EngineProcessController {
     public ResponseEntity<Map<String, String>> health() {
         return ResponseEntity.ok(Map.of("status", "UP", "mode", "engine"));
     }
-}
+}*/
