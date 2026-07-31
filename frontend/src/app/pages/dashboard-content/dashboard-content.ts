@@ -123,12 +123,12 @@ export class DashboardContent implements OnInit {
 
   private buildAdminKpis(s: MonitoringStatsResponse): void {
     this.kpis = [
-      { label: 'Total requests',   value: Number(s.totalRequests).toLocaleString('fr-FR'),      sub: 'Toutes actions auditées',  icon: 'swap_horiz',    color: 'default' },
-      { label: 'Error rate',       value: Number(s.errorRatePct).toFixed(1) + ' %',             sub: 'Requêtes HTTP ≥ 400',     icon: 'error_outline', color: s.errorRatePct > 5 ? 'danger' : 'info' },
-      { label: 'Avg duration',     value: s.avgDurationMs != null ? Number(s.avgDurationMs).toFixed(0) + ' ms' : '—', sub: 'Moyenne toutes requêtes', icon: 'timer', color: 'info' },
-      { label: 'Pipelines actifs', value: Number(s.configuredPipelines).toLocaleString('fr-FR'), sub: 'Configured + Validated',  icon: 'device_hub',    color: 'default' },
-      { label: 'Payloads traités', value: Number(s.successfulPayloads).toLocaleString('fr-FR'),  sub: 'Status SENT / MAPPED',    icon: 'check_circle',  color: 'success' },
-      { label: 'Payloads échoués', value: Number(s.failedPayloads).toLocaleString('fr-FR'),      sub: 'Status FAILED',           icon: 'cancel',        color: Number(s.failedPayloads) > 0 ? 'danger' : 'default' },
+      { label: 'Total requests',   value: Number(s.totalRequests).toLocaleString('fr-FR'),      sub: 'All audited actions',  icon: 'swap_horiz',    color: 'default' },
+      { label: 'Error rate',       value: Number(s.errorRatePct).toFixed(1) + ' %',             sub: 'HTTP requests ≥ 400',     icon: 'error_outline', color: s.errorRatePct > 5 ? 'danger' : 'info' },
+      { label: 'Avg duration',     value: s.avgDurationMs != null ? Number(s.avgDurationMs).toFixed(0) + ' ms' : '—', sub: 'Average across all requests', icon: 'timer', color: 'info' },
+      { label: 'Active pipelines', value: Number(s.configuredPipelines).toLocaleString('fr-FR'), sub: 'Configured + Validated',  icon: 'device_hub',    color: 'default' },
+      { label: 'Payloads processed', value: Number(s.successfulPayloads).toLocaleString('fr-FR'),  sub: 'Status SENT / MAPPED',    icon: 'check_circle',  color: 'success' },
+      { label: 'Failed payloads', value: Number(s.failedPayloads).toLocaleString('fr-FR'),      sub: 'Status FAILED',           icon: 'cancel',        color: Number(s.failedPayloads) > 0 ? 'danger' : 'default' },
     ];
     this.cdr.detectChanges(); // ✅ Détecter après mise à jour des KPIs
   }
@@ -243,12 +243,12 @@ export class DashboardContent implements OnInit {
     const rate = sandboxLogs.length > 0 ? Math.round(ok / sandboxLogs.length * 100) : 0;
 
     this.kpis = [
-      { label: 'Mes pipelines',      value: pipes.length.toString(),      sub: 'Créés par moi',         icon: 'device_hub',    color: 'default' },
-      { label: 'Validés',            value: validated.toString(),          sub: 'Prêts pour production', icon: 'check_circle',  color: 'success' },
-      { label: 'En configuration',   value: configured.toString(),         sub: 'Status CONFIGURED',     icon: 'settings',      color: 'info'    },
-      { label: 'Tests sandbox',      value: sandboxLogs.length.toString(), sub: 'Depuis mes logs',       icon: 'science',       color: 'default' },
-      { label: 'Taux de validation', value: rate + ' %',                   sub: 'Sandbox passés ✓',      icon: 'trending_up',   color: rate >= 70 ? 'success' : 'danger' },
-      { label: 'Mes actions',        value: logs.length.toString(),        sub: 'Journal personnel',     icon: 'history',       color: 'default' },
+      { label: 'My pipelines',      value: pipes.length.toString(),      sub: 'Created by me',         icon: 'device_hub',    color: 'default' },
+      { label: 'Validated',            value: validated.toString(),          sub: 'Ready for production', icon: 'check_circle',  color: 'success' },
+      { label: 'in configuration',   value: configured.toString(),         sub: 'Status CONFIGURED',     icon: 'settings',      color: 'info'    },
+      { label: 'sandbox Tests',      value: sandboxLogs.length.toString(), sub: 'From my logs',       icon: 'science',       color: 'default' },
+      { label: 'Validation rate', value: rate + ' %',                   sub: 'Sandbox passed ✓',      icon: 'trending_up',   color: rate >= 70 ? 'success' : 'danger' },
+      { label: 'My actions',        value: logs.length.toString(),        sub: 'Personal log',     icon: 'history',       color: 'default' },
     ];
     this.cdr.detectChanges(); // ✅ Détecter après mise à jour des KPIs dev
   }
@@ -314,11 +314,11 @@ export class DashboardContent implements OnInit {
     if (!iso) return '—';
     const diff = Date.now() - new Date(iso).getTime();
     const m = Math.floor(diff / 60_000);
-    if (m <  1) return 'à l\'instant';
-    if (m < 60) return `il y a ${m} min`;
+    if (m <  1) return 'just now';
+    if (m < 60) return `${m} min ago`;
     const h = Math.floor(m / 60);
-    if (h < 24) return `il y a ${h}h`;
-    return `il y a ${Math.floor(h / 24)}j`;
+    if (h < 24) return `${h}h ago`;
+    return `${Math.floor(h / 24)}d ago`;
   }
 
   sandboxRunOutcome(r: SandboxLogResponse): 'ok' | 'warn' | 'error' {

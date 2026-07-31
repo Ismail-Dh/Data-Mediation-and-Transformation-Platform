@@ -54,11 +54,11 @@ step: Step = 'username';
         },
         error: (err) => {
           if (err.status === 403) {
-            this.errorMessage = 'Accès refusé — vérifiez la configuration Spring Security.';
+            this.errorMessage = 'Access denied — check the Spring Security configuration';
           } else if (err.status === 404) {
-            this.errorMessage = 'Aucun utilisateur trouvé avec ce nom.';
+            this.errorMessage = 'No user found with this name.';
           } else {
-            this.errorMessage = err.error?.message || err.message || 'Erreur lors de l\'envoi du code.';
+            this.errorMessage = err.error?.message || err.message || 'Error sending the code.';
           }
           this.cdr.detectChanges();
         }
@@ -79,12 +79,12 @@ step: Step = 'username';
           if (valid) {
             this.step = 'password';
           } else {
-            this.errorMessage = 'Code incorrect ou expiré. Veuillez réessayer.';
+            this.errorMessage = 'Incorrect or expired code. Please try again.';
           }
           this.cdr.detectChanges();
         },
         error: () => {
-          this.errorMessage = 'Erreur lors de la vérification.';
+          this.errorMessage = 'Error during verification.';
           this.cdr.detectChanges();
         }
       });
@@ -94,11 +94,11 @@ step: Step = 'username';
  
   resetPassword(): void {
     if (this.newPassword !== this.confirmPassword) {
-      this.errorMessage = 'Les mots de passe ne correspondent pas.';
+      this.errorMessage = 'Passwords do not match.';
       return;
     }
     if (this.newPassword.length < 6) {
-      this.errorMessage = 'Le mot de passe doit contenir au moins 6 caractères.';
+      this.errorMessage = 'Password must be at least 6 characters long.';
       return;
     }
  
@@ -113,7 +113,7 @@ step: Step = 'username';
           this.cdr.detectChanges();
         },
         error: () => {
-          this.errorMessage = 'Erreur lors de la réinitialisation.';
+          this.errorMessage = 'Error during password reset.';
           this.cdr.detectChanges();
         }
       });

@@ -55,7 +55,7 @@ export class Login {
       error: (err) => {
         this.isLoading = false;
         this.cdr.detectChanges();
-        this.errorMessage = err?.error?.message || 'Identifiants invalides.';
+        this.errorMessage = err?.error?.message || 'Invalides identifiants.';
       },
     });
   }

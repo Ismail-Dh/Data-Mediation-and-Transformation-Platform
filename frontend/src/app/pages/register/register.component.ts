@@ -55,9 +55,9 @@ export class Register {
       error: (err) => {
         this.isLoading = false;
         if (err?.status === 409) {
-          this.errorMessage = "Ce nom d'utilisateur est déjà pris.";
+          this.errorMessage = "This username is already taken.";
         } else {
-          this.errorMessage = err?.error?.message || "Erreur lors de l'inscription.";
+          this.errorMessage = err?.error?.message || "Error during registration.";
         }
       },
     });
