@@ -1,7 +1,6 @@
 import { Component, Input, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup } from '@angular/forms';
-import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { PipelineValidationRuleService } from '../../../../services/pipeline-validation/pipeline-validation-rule-service.service';
 import { PipelineFieldService } from '../../../../services/pipelineField/pipeline-field-service';
@@ -11,7 +10,7 @@ import { PipelineFieldResponse } from '../../../../models/pipelineField';
 @Component({
   selector: 'app-pipeline-rules-tab',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule],
+  imports: [CommonModule, ReactiveFormsModule],
   templateUrl: './pipeline-rules-tab.component.html',
   styleUrl: './pipeline-rules-tab.component.scss' 
 

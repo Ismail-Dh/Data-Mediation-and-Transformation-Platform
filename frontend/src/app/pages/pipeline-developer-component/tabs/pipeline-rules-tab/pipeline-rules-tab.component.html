@@ -1,19 +1,38 @@
 <div class="tab-panel">
 
   <!-- Attacher une règle globale -->
- <div class="attach-row">
-  <select class="filter-select" [(ngModel)]="selectedGlobalRuleId">
-    <option [ngValue]="null">Select a global rule…</option>
-    <option *ngFor="let r of globalRules" [ngValue]="r.id">
-      {{ r.fieldName }}
-    </option>
-  </select>
-  <button class="btn btn--primary btn--sm"
-          [disabled]="!selectedGlobalRuleId"
-          (click)="attachGlobalRule()">
-    + Attach
-  </button>
-</div>
+  <div class="rules-section">
+    <div class="rules-section-title">
+      <span class="rules-section-label">Global rules</span>
+      <span class="rules-section-sub">Reusable rules — attach to this pipeline</span>
+    </div>
+
+    <div class="global-rules-grid" *ngIf="globalRules.length > 0">
+      <div class="global-rule-card"
+           *ngFor="let r of globalRules"
+           [class.global-rule-card--selected]="selectedGlobalRuleId === r.id"
+           (click)="selectedGlobalRuleId = r.id">
+        <div class="global-rule-card-header">
+          <code>{{ r.fieldName }}</code>
+          <span class="type-chip type-chip--{{ r.ruleType.toLowerCase() }}">{{ ruleTypeLabel(r.ruleType) }}</span>
+        </div>
+        <p class="global-rule-card-desc" *ngIf="r.description">{{ r.description }}</p>
+        <p class="global-rule-card-desc global-rule-card-desc--empty" *ngIf="!r.description">No description provided.</p>
+        <div class="global-rule-card-pattern" *ngIf="r.pattern">
+          <span class="suggestions-label">Pattern :</span> {{ r.pattern }}
+        </div>
+        <button type="button"
+                class="btn btn--primary btn--sm global-rule-card-attach"
+                (click)="$event.stopPropagation(); selectedGlobalRuleId = r.id; attachGlobalRule()">
+          + Attach
+        </button>
+      </div>
+    </div>
+
+    <div class="tab-empty tab-empty--compact" *ngIf="globalRules.length === 0">
+      <span>No global rules available yet.</span>
+    </div>
+  </div>
 
   <!-- Créer une règle privée -->
   <div class="rules-section">
