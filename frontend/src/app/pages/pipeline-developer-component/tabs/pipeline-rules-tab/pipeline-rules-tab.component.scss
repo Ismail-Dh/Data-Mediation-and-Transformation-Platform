@@ -64,6 +64,80 @@ $radius-md: 10px;
   &:focus { outline: none; border-color: $accent; }
 }
 
+// ── Global rule cards ─────────────────────────────────────────────────────────
+.global-rules-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 0.75rem;
+}
+
+.global-rule-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.85rem;
+  border: 1px solid $border;
+  border-radius: $radius-md;
+  background: #fff;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+
+  &:hover {
+    border-color: #d0d7ff;
+    box-shadow: 0 1px 4px rgba(59, 91, 219, 0.08);
+  }
+
+  &--selected {
+    border-color: $accent;
+    background: #f6f8ff;
+    box-shadow: 0 0 0 3px rgba(59, 91, 219, 0.08);
+  }
+}
+
+.global-rule-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+
+  code {
+    font-family: monospace;
+    font-size: 0.82rem;
+    background: #f0f0f0;
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: $primary-h;
+  }
+}
+
+.global-rule-card-desc {
+  font-size: 0.8rem;
+  color: $text-main;
+  line-height: 1.4;
+  margin: 0;
+
+  &--empty {
+    color: #bbb;
+    font-style: italic;
+  }
+}
+
+.global-rule-card-pattern {
+  font-size: 0.75rem;
+  color: $text-sub;
+
+  .suggestions-label { margin-right: 3px; }
+}
+
+.global-rule-card-attach {
+  align-self: flex-start;
+  margin-top: 0.15rem;
+}
+
+.tab-empty--compact {
+  padding: 1.25rem 1rem;
+}
+
 // ── Inline form ───────────────────────────────────────────────────────────────
 .inline-form {
   background: #f8f9fb;

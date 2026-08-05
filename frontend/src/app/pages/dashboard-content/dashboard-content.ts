@@ -43,7 +43,7 @@ export class DashboardContent implements OnInit {
   username = '';
   loading  = true;
   error    = false;
-  today    = new Date().toLocaleDateString('fr-FR', {
+  today    = new Date().toLocaleDateString('en-US', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
   });
 

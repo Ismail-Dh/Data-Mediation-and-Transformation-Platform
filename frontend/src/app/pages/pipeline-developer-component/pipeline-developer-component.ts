@@ -16,7 +16,7 @@ import { DockerImageButtonComponent } from './docker-image-button-component/dock
 import { PipelineProcessTabComponent } from './tabs/pipeline-process-tab-component/pipeline-process-tab-component';
 import { PipelineResponseRulesTabComponent } from './tabs/pipeline-response-rules-tab-component/pipeline-response-rules-tab-component';
 
-type DetailTab = 'info' | 'fields' | 'payloads' | 'rules' | 'mapping' | 'response-rules' | 'process' | 'image_docker';
+type DetailTab = 'info' | 'fields' | 'rules' | 'mapping' | 'response-rules' | 'process' | 'image_docker';
 
 @Component({
   selector: 'app-pipeline-developer',

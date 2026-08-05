@@ -144,10 +144,12 @@ public class StructuralValidatorService {
         FieldType expected = field.getFieldType();
         boolean typeOk = switch (expected) {
             case STRING  -> node.isTextual();
-            case INTEGER -> node.isInt() || node.isLong();
+            case INTEGER -> node.isInt() || node.isLong() || node.isBigInteger();
+            case NUMBER  -> node.isNumber();
             case BOOLEAN -> node.isBoolean();
             case OBJECT  -> node.isObject();
             case ARRAY   -> node.isArray();
+            case NULL    -> node.isNull();
         };
 
         if (!typeOk) {
@@ -175,12 +177,27 @@ public class StructuralValidatorService {
     }
 
     private String resolveActualType(JsonNode node) {
-        if (node.isTextual()) return "STRING";
-        if (node.isInt() || node.isLong()) return "INTEGER";
-        if (node.isBoolean()) return "BOOLEAN";
-        if (node.isObject()) return "OBJECT";
-        if (node.isArray()) return "ARRAY";
-        if (node.isNumber()) return "NUMBER";
+        if (node.isTextual()) {
+            return "STRING";
+        }
+        if (node.isIntegralNumber()) {
+            return "INTEGER";
+        }
+        if (node.isNumber()) {
+            return "NUMBER";
+        }
+        if (node.isBoolean()) {
+            return "BOOLEAN";
+        }
+        if (node.isObject()) {
+            return "OBJECT";
+        }
+        if (node.isArray()) {
+            return "ARRAY";
+        }
+        if (node.isNull()) {
+            return "NULL";
+        }
         return "UNKNOWN";
     }
 }

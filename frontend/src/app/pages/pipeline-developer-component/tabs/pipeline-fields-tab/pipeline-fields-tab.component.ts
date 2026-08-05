@@ -20,8 +20,14 @@ export class PipelineFieldsTabComponent implements OnInit {
   editingFieldId: number | null = null;
   fieldForm!: FormGroup;
 
-  readonly FIELD_TYPES = ['STRING', 'INTEGER', 'BOOLEAN', 'OBJECT', 'ARRAY'];
-
+readonly FIELD_TYPES = [
+  'STRING',
+  'INTEGER',
+  'NUMBER',
+  'BOOLEAN',
+  'OBJECT',
+  'ARRAY'
+];
   constructor(
     private pipelineFieldService: PipelineFieldService,
     private fb: FormBuilder,

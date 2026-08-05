@@ -196,7 +196,6 @@
     <div class="detail-tabs">
       <button class="tab-btn" [class.tab-btn--active]="detailTab === 'info'"           (click)="setDetailTab('info')">Overview</button>
       <button class="tab-btn" [class.tab-btn--active]="detailTab === 'fields'"         (click)="setDetailTab('fields')">Schema Fields</button>
-      <button class="tab-btn" [class.tab-btn--active]="detailTab === 'payloads'"       (click)="setDetailTab('payloads')">Payloads</button>
       <button class="tab-btn" [class.tab-btn--active]="detailTab === 'rules'"          (click)="setDetailTab('rules')">Validation Rules</button>
       <button class="tab-btn" [class.tab-btn--active]="detailTab === 'mapping'"        (click)="setDetailTab('mapping')">Mapping Rules</button>
       <button class="tab-btn" [class.tab-btn--active]="detailTab === 'response-rules'" (click)="setDetailTab('response-rules')">Response Rules</button>
@@ -238,15 +237,15 @@
         [pipelineId]="detailPipeline!.id">
       </app-pipeline-fields-tab>
 
-      <app-pipeline-rules-tab
-        *ngIf="detailTab === 'rules'"
-        [pipelineId]="detailPipeline!.id">
-      </app-pipeline-rules-tab>
-
-      <app-pipeline-payloads-tab
-        *ngIf="detailTab === 'payloads'"
-        [pipelineId]="detailPipeline!.id">
-      </app-pipeline-payloads-tab>
+      <ng-container *ngIf="detailTab === 'rules'">
+        <app-pipeline-rules-tab
+          [pipelineId]="detailPipeline!.id">
+        </app-pipeline-rules-tab>
+      <br/>
+        <app-pipeline-payloads-tab
+          [pipelineId]="detailPipeline!.id">
+        </app-pipeline-payloads-tab>
+      </ng-container>
 
       <app-pipeline-mapping-tab
         *ngIf="detailTab === 'mapping'"
