@@ -8,6 +8,7 @@ import com.miniESB.domain.enums.DataFormat;
 import com.miniESB.domain.enums.HttpRequestMethod;
 import com.miniESB.domain.enums.PipelineStatus;
 import com.miniESB.dto.Pipeline.CreatePipelineRequest;
+import com.miniESB.dto.Pipeline.PipelineDetailsResponse;
 import com.miniESB.dto.Pipeline.PipelineProviderRequest;
 import com.miniESB.dto.Pipeline.PipelineResponse;
 import com.miniESB.dto.Pipeline.UpdatePipelineRequest;
@@ -16,7 +17,11 @@ import com.miniESB.repository.PipelineProviderRepository;
 import com.miniESB.repository.PipelineRepository;
 import com.miniESB.repository.ProviderRepository;
 import com.miniESB.repository.UserRepository;
+import com.miniESB.service.MappingService;
+import com.miniESB.service.PipelineFieldService;
 import com.miniESB.service.PipelineService;
+import com.miniESB.service.PipelineValidationRuleService;
+import com.miniESB.service.ResponseMappingRuleAdminService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -39,6 +44,13 @@ public class PipelineServiceImpl implements PipelineService {
     private final UserRepository     userRepository;
     private final ProviderRepository providerRepository;
     private final PipelineProviderRepository pipelineProviderRepository;
+
+    // Sous-domaines rattachés au pipeline, utilisés pour construire la vue consolidée
+    // (getPipelineFullDetails) consommée par les écrans Admin / Developer "détail".
+    private final PipelineFieldService pipelineFieldService;
+    private final PipelineValidationRuleService pipelineValidationRuleService;
+    private final MappingService mappingService;
+    private final ResponseMappingRuleAdminService responseMappingRuleAdminService;
 
     @Override
     @Transactional
@@ -139,6 +151,27 @@ public class PipelineServiceImpl implements PipelineService {
         }
 
         return toResponse(pipeline);
+    }
+
+    @Override
+    public PipelineDetailsResponse getPipelineFullDetails(Long id, String username) {
+        Pipeline pipeline = pipelineRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Pipeline not found"));
+
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        if (!user.getRole().name().equals("ADMIN")) {
+            checkOwnership(pipeline, username);
+        }
+
+        return new PipelineDetailsResponse(
+                toResponse(pipeline),
+                pipelineFieldService.getFields(id),
+                pipelineValidationRuleService.getRules(id),
+                mappingService.getAllRulesByPipeline(id),
+                responseMappingRuleAdminService.getRules(id)
+        );
     }
 
     @Override

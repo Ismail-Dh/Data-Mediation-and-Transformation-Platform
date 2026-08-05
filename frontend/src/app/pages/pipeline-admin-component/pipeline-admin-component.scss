@@ -394,8 +394,10 @@ td {
   background: $bg-card;
   border-radius: $radius-lg;
   padding: 2rem;
-  width: 440px;
-  max-width: 95vw;
+  width: 760px;
+  max-width: 94vw;
+  max-height: 88vh;
+  overflow-y: auto;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.18);
   animation: slideUp 0.18s ease;
 }
@@ -449,4 +451,193 @@ td {
   gap: 0.75rem;
   padding-top: 1rem;
   border-top: 1px solid #f0f0f0;
+}
+
+// ── Detail drawer — pipeline configuration tabs ───────────────────────────────
+.detail-tabs {
+  display: flex;
+  gap: 0.4rem;
+  margin-top: 1.25rem;
+  border-bottom: 1px solid $border;
+  flex-wrap: wrap;
+}
+
+.tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.55rem 0.85rem;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: $text-sub;
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s ease, border-color 0.15s ease;
+
+  &:hover { color: $text-main; }
+
+  &--active {
+    color: $primary;
+    border-bottom-color: $primary;
+  }
+}
+
+.tab-count {
+  font-size: 0.7rem;
+  font-weight: 700;
+  background: $bg-page;
+  color: $text-sub;
+  border-radius: 999px;
+  padding: 1px 7px;
+  min-width: 18px;
+  text-align: center;
+}
+
+.tab-btn--active .tab-count {
+  background: rgba($primary, 0.12);
+  color: $primary;
+}
+
+.tab-content {
+  padding: 1rem 0 0.25rem;
+  min-height: 80px;
+}
+
+.tab-loading,
+.tab-error,
+.tab-empty {
+  font-size: 0.85rem;
+  color: $text-sub;
+  padding: 1rem 0.2rem;
+}
+
+.tab-error { color: $danger; }
+
+// ── Mini tables (Schema / Validation / Mapping / Response) ────────────────────
+.mini-table-wrap {
+  border: 1px solid $border;
+  border-radius: $radius-md;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
+}
+
+.mini-table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+
+  th {
+    text-align: left;
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: $text-sub;
+    padding: 0.55rem 0.7rem;
+    background: $bg-page;
+    border-bottom: 1px solid $border;
+    white-space: nowrap;
+  }
+
+  td {
+    padding: 0.55rem 0.7rem;
+    border-bottom: 1px solid #f2f2f2;
+    color: $text-main;
+    vertical-align: middle;
+  }
+
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:nth-child(even) { background: #fbfbfc; }
+  tbody tr:hover { background: #f3f6fd; }
+
+  // Colonnes "Type / Active / Required" étroites et fixes, le reste se partage l'espace
+  &--schema {
+    th:nth-child(1), td:nth-child(1) { width: 40%; }
+    th:nth-child(2), td:nth-child(2) { width: 22%; }
+    th:nth-child(3), td:nth-child(3) { width: 19%; }
+    th:nth-child(4), td:nth-child(4) { width: 19%; }
+  }
+
+  &--validation {
+    th:nth-child(1), td:nth-child(1) { width: 18%; }
+    th:nth-child(2), td:nth-child(2) { width: 16%; }
+    th:nth-child(3), td:nth-child(3) { width: 34%; }
+    th:nth-child(4), td:nth-child(4) { width: 14%; }
+    th:nth-child(5), td:nth-child(5) { width: 18%; }
+  }
+
+  &--mapping {
+    th:nth-child(1), td:nth-child(1) { width: 20%; }
+    th:nth-child(2), td:nth-child(2) { width: 20%; }
+    th:nth-child(3), td:nth-child(3) { width: 18%; }
+    th:nth-child(4), td:nth-child(4) { width: 26%; }
+    th:nth-child(5), td:nth-child(5) { width: 16%; }
+  }
+
+  &--response {
+    th:nth-child(1), td:nth-child(1) { width: 18%; }
+    th:nth-child(2), td:nth-child(2) { width: 18%; }
+    th:nth-child(3), td:nth-child(3) { width: 16%; }
+    th:nth-child(4), td:nth-child(4) { width: 18%; }
+    th:nth-child(5), td:nth-child(5) { width: 14%; }
+    th:nth-child(6), td:nth-child(6) { width: 16%; }
+  }
+}
+
+// Empêche les regex / expressions longues de casser la mise en page :
+// une seule ligne, tronquée avec "…", valeur complète visible via title (tooltip natif).
+.td-truncate {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 0; // force le respect de la largeur de colonne définie par table-layout: fixed
+}
+
+.td-mono {
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 0.78rem;
+}
+
+// Chip pour les types (STRING, REGEX_EMAIL, FIELD_PLACEMENT, …)
+.type-chip {
+  display: inline-block;
+  background: #eef1fb;
+  color: #3b5bdb;
+  padding: 2px 8px;
+  border-radius: 5px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+// Origine d'une règle de validation : Global (catalogue Admin) vs Private (pipeline)
+.origin-tag {
+  font-size: 0.76rem;
+  color: $text-sub;
+  font-weight: 600;
+
+  &--global { color: #6741d9; }
+}
+
+// Oui / Non compacts pour "Required" / "Nullable"
+.dot-flag {
+  font-size: 0.78rem;
+  color: #b0b0b8;
+  font-weight: 600;
+
+  &--on { color: #2e7d32; }
+
+  &::before {
+    content: '';
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    margin-right: 5px;
+    vertical-align: middle;
+  }
 }

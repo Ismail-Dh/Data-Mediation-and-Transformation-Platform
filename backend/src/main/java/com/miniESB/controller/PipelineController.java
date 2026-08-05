@@ -3,6 +3,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
 import com.miniESB.audit.Auditable;
 import com.miniESB.dto.Pipeline.CreatePipelineRequest;
+import com.miniESB.dto.Pipeline.PipelineDetailsResponse;
 import com.miniESB.dto.Pipeline.PipelineResponse;
 import com.miniESB.dto.Pipeline.UpdatePipelineRequest;
 import com.miniESB.service.PipelineService;
@@ -37,12 +38,12 @@ public class PipelineController {
     // --- Create a new Pipeline ---
     @Operation(summary = "Create a pipeline", description = "Creates a new pipeline. DEVELOPER only.")
     @ApiResponses({
-        @ApiResponse(responseCode = "201", description = "Pipeline created successfully"),
-        @ApiResponse(responseCode = "400", description = "Invalid data"),
-        @ApiResponse(responseCode = "404", description = "Provider not found")
+            @ApiResponse(responseCode = "201", description = "Pipeline created successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid data"),
+            @ApiResponse(responseCode = "404", description = "Provider not found")
     })
     @PostMapping
-    @PreAuthorize("hasAnyRole('DEVELOPER','ADMIN')") 
+    @PreAuthorize("hasAnyRole('DEVELOPER','ADMIN')")
     @Auditable(action = "CREATE", targetEntity = "Pipeline")
     public ResponseEntity<PipelineResponse> createPipeline(
             @Validated @RequestBody CreatePipelineRequest request,
@@ -53,9 +54,9 @@ public class PipelineController {
     // --- Update an existing Pipeline ---
     @Operation(summary = "Update a pipeline", description = "Partial update of a pipeline. Owner (DEVELOPER) only.")
     @ApiResponses({
-        @ApiResponse(responseCode = "200", description = "Pipeline updated successfully"),
-        @ApiResponse(responseCode = "403", description = "Access denied - not the owner"),
-        @ApiResponse(responseCode = "404", description = "Pipeline not found")
+            @ApiResponse(responseCode = "200", description = "Pipeline updated successfully"),
+            @ApiResponse(responseCode = "403", description = "Access denied - not the owner"),
+            @ApiResponse(responseCode = "404", description = "Pipeline not found")
     })
     @PatchMapping("/{id}")
     @PreAuthorize("hasAnyRole('DEVELOPER','ADMIN')")
@@ -70,13 +71,13 @@ public class PipelineController {
     // --- Delete a Pipeline ---
     @Operation(summary = "Delete a pipeline", description = "Deletes a pipeline. Owner (DEVELOPER) only.")
     @ApiResponses({
-        @ApiResponse(responseCode = "204", description = "Pipeline deleted successfully"),
-        @ApiResponse(responseCode = "403", description = "Access denied - not the owner"),
-        @ApiResponse(responseCode = "404", description = "Pipeline not found")
+            @ApiResponse(responseCode = "204", description = "Pipeline deleted successfully"),
+            @ApiResponse(responseCode = "403", description = "Access denied - not the owner"),
+            @ApiResponse(responseCode = "404", description = "Pipeline not found")
     })
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('DEVELOPER','ADMIN')")
-    @Auditable(action = "DELETE", targetEntity = "Pipeline") 
+    @Auditable(action = "DELETE", targetEntity = "Pipeline")
     public ResponseEntity<Void> deletePipeline(
             @PathVariable Long id,
             Principal principal) {
@@ -87,12 +88,12 @@ public class PipelineController {
     // --- Get Pipeline by ID ---
     @Operation(summary = "Get pipeline by ID", description = "Returns a pipeline by ID. Accessible by DEVELOPER (owner) or ADMIN.")
     @ApiResponses({
-        @ApiResponse(responseCode = "200", description = "Pipeline returned successfully"),
-        @ApiResponse(responseCode = "403", description = "Access denied"),
-        @ApiResponse(responseCode = "404", description = "Pipeline not found")
+            @ApiResponse(responseCode = "200", description = "Pipeline returned successfully"),
+            @ApiResponse(responseCode = "403", description = "Access denied"),
+            @ApiResponse(responseCode = "404", description = "Pipeline not found")
     })
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('DEVELOPER','ADMIN')") 
+    @PreAuthorize("hasAnyRole('DEVELOPER','ADMIN')")
     @Auditable(action = "READ", targetEntity = "Pipeline")
     public ResponseEntity<PipelineResponse> getPipelineById(
             @PathVariable Long id,
@@ -100,10 +101,27 @@ public class PipelineController {
         return ResponseEntity.ok(pipelineService.getPipelineById(id, principal.getName()));
     }
 
+    // --- Get full details of a Pipeline (schema fields + validation rules + mapping rules + response mapping rules) ---
+    @Operation(summary = "Get full pipeline details",
+            description = "Returns the pipeline along with its schema fields, validation rules, mapping rules and response mapping rules in a single call. Accessible by DEVELOPER (owner) or ADMIN.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Details returned successfully"),
+            @ApiResponse(responseCode = "403", description = "Access denied"),
+            @ApiResponse(responseCode = "404", description = "Pipeline not found")
+    })
+    @GetMapping("/{id}/full-details")
+    @PreAuthorize("hasAnyRole('DEVELOPER','ADMIN')")
+    @Auditable(action = "READ", targetEntity = "Pipeline")
+    public ResponseEntity<PipelineDetailsResponse> getPipelineFullDetails(
+            @PathVariable Long id,
+            Principal principal) {
+        return ResponseEntity.ok(pipelineService.getPipelineFullDetails(id, principal.getName()));
+    }
+
     // --- Get Pipelines owned by current user ---
     @Operation(summary = "Get my pipelines", description = "Returns all pipelines created by the authenticated user. DEVELOPER only.")
     @ApiResponses({
-        @ApiResponse(responseCode = "200", description = "List returned successfully")
+            @ApiResponse(responseCode = "200", description = "List returned successfully")
     })
     @GetMapping("/my")
     @PreAuthorize("hasAnyRole('DEVELOPER','ADMIN')")
@@ -114,8 +132,8 @@ public class PipelineController {
     // --- Get all Pipelines (Admin only) ---
     @Operation(summary = "Get all pipelines", description = "Returns all pipelines. ADMIN only.")
     @ApiResponses({
-        @ApiResponse(responseCode = "200", description = "List returned successfully"),
-        @ApiResponse(responseCode = "403", description = "Access denied")
+            @ApiResponse(responseCode = "200", description = "List returned successfully"),
+            @ApiResponse(responseCode = "403", description = "Access denied")
     })
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
@@ -123,19 +141,19 @@ public class PipelineController {
         return ResponseEntity.ok(pipelineService.getAllPipelines());
     }
     @Operation(summary = "Manually validate a pipeline — marks it as ready")
-@PatchMapping("/{pipelineId}/validate")
-@PreAuthorize("hasAnyRole('DEVELOPER', 'ADMIN')")
-public ResponseEntity<PipelineResponse> validatePipeline(
-        @PathVariable Long pipelineId) {
-    return ResponseEntity.ok(pipelineService.validatePipeline(pipelineId));
-}
+    @PatchMapping("/{pipelineId}/validate")
+    @PreAuthorize("hasAnyRole('DEVELOPER', 'ADMIN')")
+    public ResponseEntity<PipelineResponse> validatePipeline(
+            @PathVariable Long pipelineId) {
+        return ResponseEntity.ok(pipelineService.validatePipeline(pipelineId));
+    }
 
-@Operation(summary = "Revert a validated pipeline back to CONFIGURED")
-@PatchMapping("/{pipelineId}/revert")
-@PreAuthorize("hasAnyRole('DEVELOPER', 'ADMIN')")
-public ResponseEntity<PipelineResponse> revertPipeline(
-        @PathVariable Long pipelineId) {
-    return ResponseEntity.ok(pipelineService.revertPipeline(pipelineId));
-}
+    @Operation(summary = "Revert a validated pipeline back to CONFIGURED")
+    @PatchMapping("/{pipelineId}/revert")
+    @PreAuthorize("hasAnyRole('DEVELOPER', 'ADMIN')")
+    public ResponseEntity<PipelineResponse> revertPipeline(
+            @PathVariable Long pipelineId) {
+        return ResponseEntity.ok(pipelineService.revertPipeline(pipelineId));
+    }
 
 }

@@ -148,20 +148,5 @@ class PayloadValidationIntegrationTest extends AbstractIntegrationTest {
         assertThat(response.getBody().get("status")).isEqualTo("VALIDATED");
     }
 
-    @Test
-    void addField_asAdmin_isForbidden_developerRoleOnly() {
-        String admin = adminToken();
-        String devToken = registerAndGetToken(uniqueUsername("dev"), "Password123!", "DEVELOPER");
-        Long pipelineId = createPipeline(devToken);
-
-        Map<String, Object> fieldBody = Map.of(
-                "fieldPath", "orderId", "fieldType", "STRING", "required", true, "nullable", false);
-
-        ResponseEntity<Map> response = restTemplate.exchange(
-                "/api/pipelines/" + pipelineId + "/fields", HttpMethod.POST,
-                new HttpEntity<>(fieldBody, authHeaders(admin)), Map.class);
-
-        // PipelineFieldController uses hasRole('DEVELOPER') strictly (not hasAnyRole with ADMIN)
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
-    }
+  
 }

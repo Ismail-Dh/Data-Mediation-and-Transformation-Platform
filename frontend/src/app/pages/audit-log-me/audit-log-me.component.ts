@@ -17,6 +17,7 @@ export class AuditLogMeComponent implements OnInit {
   successCount                 = 0;
   errorCount                   = 0;
   selectedLog: AuditLog | null = null;
+  dateSortDirection: 'asc' | 'desc' = 'desc';
 
   constructor(
     private auditLogService: AuditLogService,
@@ -25,6 +26,18 @@ export class AuditLogMeComponent implements OnInit {
 
   ngOnInit(): void {
     this.load();
+  }
+
+  get sortedLogs(): AuditLog[] {
+    const sorted = [...this.logs].sort((a, b) =>
+      new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    );
+    return this.dateSortDirection === 'asc' ? sorted : sorted.reverse();
+  }
+
+  toggleDateSort(): void {
+    this.dateSortDirection = this.dateSortDirection === 'asc' ? 'desc' : 'asc';
+    this.cdr.detectChanges();
   }
 
   load(): void {

@@ -142,6 +142,120 @@
       </div>
     </div>
 
+    <!-- ===== Pipeline configuration (schema / rules) ===== -->
+    <div class="detail-tabs">
+      <button class="tab-btn" [class.tab-btn--active]="activeDetailTab === 'schema'" (click)="setDetailTab('schema')">
+        Schema Fields
+        <span class="tab-count" *ngIf="pipelineDetails">{{ pipelineDetails.fields.length }}</span>
+      </button>
+      <button class="tab-btn" [class.tab-btn--active]="activeDetailTab === 'validation'" (click)="setDetailTab('validation')">
+        Validation Rules
+        <span class="tab-count" *ngIf="pipelineDetails">{{ pipelineDetails.validationRules.length }}</span>
+      </button>
+      <button class="tab-btn" [class.tab-btn--active]="activeDetailTab === 'mapping'" (click)="setDetailTab('mapping')">
+        Mapping Rules
+        <span class="tab-count" *ngIf="pipelineDetails">{{ pipelineDetails.mappingRules.length }}</span>
+      </button>
+      <button class="tab-btn" [class.tab-btn--active]="activeDetailTab === 'response'" (click)="setDetailTab('response')">
+        Response Rules
+        <span class="tab-count" *ngIf="pipelineDetails">{{ pipelineDetails.responseMappingRules.length }}</span>
+      </button>
+    </div>
+
+    <div class="tab-content">
+      <!-- Loading / error states -->
+      <div class="tab-loading" *ngIf="detailLoading">Loading pipeline configuration…</div>
+      <div class="tab-error" *ngIf="detailError && !detailLoading">{{ detailError }}</div>
+
+      <ng-container *ngIf="pipelineDetails && !detailLoading">
+
+        <!-- Schema Fields -->
+        <div *ngIf="activeDetailTab === 'schema'">
+          <div class="mini-table-wrap" *ngIf="pipelineDetails.fields.length; else emptySchema">
+            <table class="mini-table mini-table--schema">
+              <thead>
+                <tr><th>Field path</th><th>Type</th><th>Required</th><th>Nullable</th></tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let f of pipelineDetails.fields">
+                  <td class="td-mono td-truncate" [title]="f.fieldPath">{{ f.fieldPath }}</td>
+                  <td><span class="type-chip">{{ f.fieldType }}</span></td>
+                  <td><span class="dot-flag" [class.dot-flag--on]="f.required">{{ f.required ? 'Yes' : 'No' }}</span></td>
+                  <td><span class="dot-flag" [class.dot-flag--on]="f.nullable">{{ f.nullable ? 'Yes' : 'No' }}</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <ng-template #emptySchema><p class="tab-empty">No schema fields defined for this pipeline.</p></ng-template>
+        </div>
+
+        <!-- Validation Rules -->
+        <div *ngIf="activeDetailTab === 'validation'">
+          <div class="mini-table-wrap" *ngIf="pipelineDetails.validationRules.length; else emptyValidation">
+            <table class="mini-table mini-table--validation">
+              <thead>
+                <tr><th>Field</th><th>Rule type</th><th>Pattern</th><th>Origin</th><th>Active</th></tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let r of pipelineDetails.validationRules">
+                  <td class="td-mono td-truncate" [title]="r.fieldName">{{ r.fieldName }}</td>
+                  <td><span class="type-chip">{{ r.ruleType }}</span></td>
+                  <td class="td-mono td-truncate" [title]="r.pattern || ''">{{ r.pattern || '—' }}</td>
+                  <td><span class="origin-tag" [class.origin-tag--global]="r.global">{{ r.global ? 'Global' : 'Private' }}</span></td>
+                  <td><span class="badge" [ngClass]="r.active ? 'badge--validated' : 'badge--draft'">{{ r.active ? 'Active' : 'Inactive' }}</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <ng-template #emptyValidation><p class="tab-empty">No validation rules attached to this pipeline.</p></ng-template>
+        </div>
+
+        <!-- Mapping Rules -->
+        <div *ngIf="activeDetailTab === 'mapping'">
+          <div class="mini-table-wrap" *ngIf="pipelineDetails.mappingRules.length; else emptyMapping">
+            <table class="mini-table mini-table--mapping">
+              <thead>
+                <tr><th>Source</th><th>Target</th><th>Type</th><th>Expression</th><th>Active</th></tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let m of pipelineDetails.mappingRules">
+                  <td class="td-mono td-truncate" [title]="m.sourceField">{{ m.sourceField }}</td>
+                  <td class="td-mono td-truncate" [title]="m.targetField">{{ m.targetField }}</td>
+                  <td><span class="type-chip">{{ m.mappingType }}</span></td>
+                  <td class="td-mono td-truncate" [title]="m.expression || ''">{{ m.expression || '—' }}</td>
+                  <td><span class="badge" [ngClass]="m.active ? 'badge--validated' : 'badge--draft'">{{ m.active ? 'Active' : 'Inactive' }}</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <ng-template #emptyMapping><p class="tab-empty">No mapping rules defined for this pipeline.</p></ng-template>
+        </div>
+
+        <!-- Response Mapping Rules -->
+        <div *ngIf="activeDetailTab === 'response'">
+          <div class="mini-table-wrap" *ngIf="pipelineDetails.responseMappingRules.length; else emptyResponse">
+            <table class="mini-table mini-table--response">
+              <thead>
+                <tr><th>Source</th><th>Target</th><th>Type</th><th>Provider</th><th>Required</th><th>Active</th></tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let rm of pipelineDetails.responseMappingRules">
+                  <td class="td-mono td-truncate" [title]="rm.sourceField">{{ rm.sourceField }}</td>
+                  <td class="td-mono td-truncate" [title]="rm.targetField">{{ rm.targetField }}</td>
+                  <td><span class="type-chip">{{ rm.mappingType }}</span></td>
+                  <td class="td-truncate" [title]="rm.providerName || 'All providers'">{{ rm.providerName || 'All providers' }}</td>
+                  <td><span class="dot-flag" [class.dot-flag--on]="rm.required">{{ rm.required ? 'Yes' : 'No' }}</span></td>
+                  <td><span class="badge" [ngClass]="rm.active ? 'badge--validated' : 'badge--draft'">{{ rm.active ? 'Active' : 'Inactive' }}</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <ng-template #emptyResponse><p class="tab-empty">No response mapping rules defined for this pipeline.</p></ng-template>
+        </div>
+
+      </ng-container>
+    </div>
+
     <div class="drawer-actions">
       <button class="btn btn--secondary" (click)="closeDetail()">Close</button>
     </div>

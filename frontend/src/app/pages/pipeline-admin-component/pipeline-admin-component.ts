@@ -2,7 +2,7 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { PipelineService } from '../../services/pipeline/pipeline-service';
-import { Pipeline, providerNames } from '../../models/pipeline';
+import { Pipeline, PipelineDetails, providerNames } from '../../models/pipeline';
 
 /**
  * Vue ADMIN — lecture seule de TOUS les pipelines (tous utilisateurs) + statistiques.
@@ -27,6 +27,12 @@ export class PipelineAdminComponent implements OnInit {
   filterFormat = '';
 
   detailPipeline: Pipeline | null = null;
+  detailLoading = false;
+  detailError: string | null = null;
+  pipelineDetails: PipelineDetails | null = null;
+
+  /** Onglet actif dans le tiroir de détail : Schema / Validation / Mapping / Response */
+  activeDetailTab: 'schema' | 'validation' | 'mapping' | 'response' = 'schema';
 
   readonly FORMATS  = ['JSON', 'XML', 'CSV', 'PLAIN_TEXT'];
   readonly STATUSES = ['DRAFT', 'CONFIGURED', 'VALIDATED'];
@@ -83,11 +89,35 @@ export class PipelineAdminComponent implements OnInit {
   // ── Detail (lecture seule) ───────────────────────────────────────────────────
   openDetail(p: Pipeline): void {
     this.detailPipeline = p;
+    this.activeDetailTab = 'schema';
+    this.pipelineDetails = null;
+    this.detailError = null;
+    this.detailLoading = true;
     this.cdr.detectChanges();
+
+    this.pipelineService.getFullDetails(p.id).subscribe({
+      next: details => {
+        this.pipelineDetails = details;
+        this.detailLoading = false;
+        this.cdr.detectChanges();
+      },
+      error: err => {
+        this.detailError = err?.error?.message ?? 'Failed to load pipeline details';
+        this.detailLoading = false;
+        this.cdr.detectChanges();
+      }
+    });
   }
 
   closeDetail(): void {
     this.detailPipeline = null;
+    this.pipelineDetails = null;
+    this.detailError = null;
+    this.cdr.detectChanges();
+  }
+
+  setDetailTab(tab: 'schema' | 'validation' | 'mapping' | 'response'): void {
+    this.activeDetailTab = tab;
     this.cdr.detectChanges();
   }
 }

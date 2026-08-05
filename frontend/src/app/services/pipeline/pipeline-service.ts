@@ -4,7 +4,8 @@ import { Observable } from 'rxjs';
 import {
   Pipeline,
   CreatePipelineRequest,
-  UpdatePipelineRequest
+  UpdatePipelineRequest,
+  PipelineDetails
 } from '../../models/pipeline';
 
 import { environment } from '../../environments/environment';
@@ -28,6 +29,15 @@ export class PipelineService {
 
   getById(id: number): Observable<Pipeline> {
     return this.http.get<Pipeline>(`${this.base}/${id}`);
+  }
+
+  /**
+   * Vue consolidée d'un pipeline : infos générales + schema fields +
+   * validation rules + mapping rules + response mapping rules, en un seul
+   * appel HTTP. Utilisée par l'écran Admin (et le détail Developer).
+   */
+  getFullDetails(id: number): Observable<PipelineDetails> {
+    return this.http.get<PipelineDetails>(`${this.base}/${id}/full-details`);
   }
 
   create(req: CreatePipelineRequest): Observable<Pipeline> {
