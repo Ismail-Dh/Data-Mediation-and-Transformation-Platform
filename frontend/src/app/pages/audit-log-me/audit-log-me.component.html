@@ -30,6 +30,20 @@
   <!-- ===== SPINNER ===== -->
   <div class="td-empty" *ngIf="loading">Loading…</div>
 
+  <!-- ===== TOOLBAR ===== -->
+  <div class="toolbar" *ngIf="!loading && logs.length > 0">
+    <button type="button" class="sort-btn" (click)="toggleDateSort()">
+      <svg viewBox="0 0 16 16" class="sort-icon">
+        <path *ngIf="dateSortDirection === 'desc'" d="M4 3v8m0 0L1.5 8.5M4 11l2.5-2.5" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <path *ngIf="dateSortDirection === 'asc'"  d="M4 13V5m0 0L1.5 7.5M4 5l2.5 2.5" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <line x1="8.5" y1="4" x2="14.5" y2="4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+        <line x1="8.5" y1="8" x2="13" y2="8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+        <line x1="8.5" y1="12" x2="11.5" y2="12" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+      </svg>
+      Date {{ dateSortDirection === 'desc' ? '(Newest first)' : '(Oldest first)' }}
+    </button>
+  </div>
+
   <!-- ===== TABLE ===== -->
   <div class="table-card" *ngIf="!loading">
     <table>
@@ -40,12 +54,18 @@
           <th>Target ID</th>
           <th>HTTP Status</th>
           <th>Error</th>
-          <th>Date</th>
+          <th class="th-sortable" (click)="toggleDateSort()">
+            Date
+            <svg viewBox="0 0 16 16" class="th-sort-icon">
+              <path *ngIf="dateSortDirection === 'desc'" d="M4 3v8m0 0L1.5 8.5M4 11l2.5-2.5" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+              <path *ngIf="dateSortDirection === 'asc'"  d="M4 13V5m0 0L1.5 7.5M4 5l2.5 2.5" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </th>
           <th class="th-actions">Actions</th>
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let log of logs">
+        <tr *ngFor="let log of sortedLogs">
           <td><span class="badge badge-action">{{ log.action }}</span></td>
           <td>{{ log.targetEntity }}</td>
           <td class="td-mono">{{ log.targetId ?? '—' }}</td>

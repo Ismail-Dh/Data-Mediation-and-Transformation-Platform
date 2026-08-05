@@ -1,3 +1,8 @@
+import { PipelineFieldResponse } from './pipelineField';
+import { PipelineValidationRuleResponse } from './validation-rule';
+import { MappingRuleResponse } from './mapping-rule';
+import { ResponseMappingRule } from './process.model';
+
 export type PipelineStatus = 'DRAFT' | 'CONFIGURED' | 'VALIDATED';
 export type DataFormat     = 'JSON'  | 'XML'  | 'CSV'  | 'PLAIN_TEXT';
 export type HttpRequestMethod = 'GET' | 'POST' | 'PUT' | 'PATCH';
@@ -60,4 +65,20 @@ export interface UpdatePipelineRequest {
   inputFormat?:  string;
   outputFormat?: string;
   providerIds?:  number[];
+}
+
+/**
+ * Vue consolidée d'un pipeline — miroir de PipelineDetailsResponse.java
+ * (GET /api/pipelines/{id}/full-details).
+ * Regroupe en un seul appel : infos générales, schema fields, validation
+ * rules, mapping rules et response mapping rules. Utilisée par l'écran
+ * Admin (et potentiellement Developer) pour afficher tout ce qui est
+ * rattaché à un pipeline sans multiplier les appels HTTP.
+ */
+export interface PipelineDetails {
+  pipeline:              Pipeline;
+  fields:                PipelineFieldResponse[];
+  validationRules:       PipelineValidationRuleResponse[];
+  mappingRules:          MappingRuleResponse[];
+  responseMappingRules:  ResponseMappingRule[];
 }

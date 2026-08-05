@@ -100,7 +100,55 @@ $shadow:    0 2px 12px rgba(0,0,0,0.07);
 }
 
 // ── Toolbar ───────────────────────────────────────────────────────────────────
-// (Pas de toolbar pour la version "me" car pas de filtres)
+.toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0.75rem;
+}
+
+.sort-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0.5rem 0.9rem;
+  border-radius: $radius-md;
+  border: 1px solid $border;
+  background: $bg-card;
+  color: $text-main;
+  font-size: 0.82rem;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+
+  &:hover {
+    background: #f5f6f8;
+    border-color: #d0d7ff;
+  }
+}
+
+.sort-icon {
+  width: 14px;
+  height: 14px;
+  color: $accent;
+  flex-shrink: 0;
+}
+
+.th-sortable {
+  cursor: pointer;
+  user-select: none;
+  display: table-cell;
+
+  &:hover { color: $text-main; }
+}
+
+.th-sort-icon {
+  width: 11px;
+  height: 11px;
+  margin-left: 3px;
+  vertical-align: middle;
+  color: $accent;
+}
 
 // ── Table ─────────────────────────────────────────────────────────────────────
 .table-card {

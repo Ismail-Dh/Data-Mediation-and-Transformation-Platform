@@ -19,7 +19,7 @@ import java.util.List;
 @ConditionalOnProperty(name = "engine.mode", havingValue = "false", matchIfMissing = true)
 @RestController
 @RequestMapping("/api/pipelines/{pipelineId}/fields")
-@PreAuthorize("hasRole('DEVELOPER')")
+@PreAuthorize("hasAnyRole('DEVELOPER', 'ADMIN')")
 @RequiredArgsConstructor
 public class PipelineFieldController {
 
