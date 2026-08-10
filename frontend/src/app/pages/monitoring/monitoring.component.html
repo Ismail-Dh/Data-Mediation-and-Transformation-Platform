@@ -4,7 +4,11 @@
   <div class="mon-header">
     <div class="mon-header__left">
       <h2>Monitoring</h2>
-      <span class="mon-header__subtitle">Real-time dashboard</span>
+      <span class="mon-header__subtitle">
+        Real platform activity — auto-refreshes every 30s
+        <ng-container *ngIf="lastUpdated() as t"> · updated {{ t | date:'HH:mm:ss' }}</ng-container>
+        <ng-container *ngIf="lastActivityAgo() as ago"> · last activity {{ ago }}</ng-container>
+      </span>
     </div>
     <button class="btn-refresh" (click)="load()" [disabled]="loading()">
       <span class="refresh-icon" [class.spinning]="loading()">↻</span>
@@ -26,7 +30,7 @@
   <ng-container *ngIf="stats() as s">
 
     <!-- ══════════════════════════════════════════════════════════════════════
-         ROW 1 — Global KPI cards
+         ROW 1 — Global platform KPI cards (audit_logs only, no pipeline/payload data)
     ═══════════════════════════════════════════════════════════════════════ -->
     <div class="kpi-grid">
 
@@ -58,52 +62,29 @@
       </div>
 
       <div class="kpi-card kpi-purple">
-        <div class="kpi-card__icon">⚙</div>
+        <div class="kpi-card__icon">🐢</div>
         <div class="kpi-card__body">
-          <span class="kpi-card__value">{{ s.configuredPipelines }} / {{ s.totalPipelines }}</span>
-          <span class="kpi-card__label">Active pipelines</span>
+          <span class="kpi-card__value">
+            {{ s.maxDurationMs !== null ? (s.maxDurationMs | number:'1.0-0') + ' ms' : '—' }}
+          </span>
+          <span class="kpi-card__label">Slowest request</span>
         </div>
-        <div class="kpi-card__rate">{{ pipelineUsageRate() }}%</div>
+      </div>
+
+      <div class="kpi-card kpi-teal">
+        <div class="kpi-card__icon">👤</div>
+        <div class="kpi-card__body">
+          <span class="kpi-card__value">{{ s.activeUsers24h | number }}</span>
+          <span class="kpi-card__label">Active users (24h)</span>
+        </div>
       </div>
 
     </div>
 
     <!-- ══════════════════════════════════════════════════════════════════════
-         ROW 2 — Payloads breakdown + gauge
+         ROW 2 — By action + by role
     ═══════════════════════════════════════════════════════════════════════ -->
     <div class="section-grid">
-
-      <!-- Payloads card -->
-      <div class="section-card">
-        <div class="section-card__header">
-          <h3>Payloads</h3>
-          <span class="badge badge-total">{{ s.totalPayloads }} total</span>
-        </div>
-        <div class="payload-stats">
-          <div class="payload-stat payload-stat--success">
-            <span class="payload-stat__value">{{ s.successfulPayloads }}</span>
-            <span class="payload-stat__label">Sent</span>
-          </div>
-          <div class="payload-stat payload-stat--failed">
-            <span class="payload-stat__value">{{ s.failedPayloads }}</span>
-            <span class="payload-stat__label">Failed</span>
-          </div>
-          <div class="payload-stat payload-stat--pending">
-            <span class="payload-stat__value">{{ s.totalPayloads - s.successfulPayloads - s.failedPayloads }}</span>
-            <span class="payload-stat__label">Pending</span>
-          </div>
-        </div>
-        <!-- Progress bar -->
-        <div class="progress-bar-wrap">
-          <div class="progress-bar">
-            <div class="progress-bar__fill progress-bar__fill--success"
-                 [style.width.%]="s.totalPayloads > 0 ? (s.successfulPayloads / s.totalPayloads * 100) : 0"></div>
-            <div class="progress-bar__fill progress-bar__fill--failed"
-                 [style.width.%]="s.totalPayloads > 0 ? (s.failedPayloads / s.totalPayloads * 100) : 0"></div>
-          </div>
-          <span class="progress-bar__label">{{ payloadSuccessRate() }}% success</span>
-        </div>
-      </div>
 
       <!-- Per-action table -->
       <div class="section-card">
@@ -122,7 +103,7 @@
             </thead>
             <tbody>
               <tr *ngIf="s.requestsByAction.length === 0">
-                <td colspan="4" class="empty-cell">No date</td>
+                <td colspan="4" class="empty-cell">No data</td>
               </tr>
               <tr *ngFor="let a of s.requestsByAction; trackBy: trackByAction"
                   [class]="getActionClass(a)">
@@ -138,6 +119,24 @@
               </tr>
             </tbody>
           </table>
+        </div>
+      </div>
+
+      <!-- By role -->
+      <div class="section-card">
+        <div class="section-card__header">
+          <h3>Requests by role</h3>
+        </div>
+        <div class="empty-cell" *ngIf="!s.requestsByRole.length">No data</div>
+        <div class="status-list" *ngIf="s.requestsByRole.length">
+          <div class="status-row" *ngFor="let r of s.requestsByRole; trackBy: trackByRole">
+            <span class="badge badge-action">{{ formatRole(r.role) }}</span>
+            <div class="rate-bar rate-bar--wide">
+              <div class="rate-bar__fill rate-bar__fill--blue" [style.width.%]="rolePct(r)"></div>
+              <span class="rate-bar__label">{{ rolePct(r) }}%</span>
+            </div>
+            <span class="status-row__count">{{ r.count | number }}</span>
+          </div>
         </div>
       </div>
 
@@ -168,14 +167,17 @@
           </div>
         </div>
         <ng-template #noData>
-          <div class="chart-empty">No data for the last 24 hours</div>
+          <div class="chart-empty">
+            No requests in the last 24 hours
+            <span class="chart-empty__hint" *ngIf="lastActivityAgo() as ago">Last activity: {{ ago }}</span>
+          </div>
         </ng-template>
       </div>
 
       <!-- Errors by hour -->
       <div class="section-card chart-card">
         <div class="section-card__header">
-          <h3>Errors / hour <span class="chart-period">— 24 dernières heures</span></h3>
+          <h3>Errors / hour <span class="chart-period">— last 24 hours</span></h3>
         </div>
         <div class="bar-chart" *ngIf="s.errorsByHour.length > 0; else noErrorData">
           <div class="bar-chart__bars">
@@ -192,10 +194,29 @@
           </div>
         </div>
         <ng-template #noErrorData>
-          <div class="chart-empty">No errors in the last 24 hours </div>
+          <div class="chart-empty">
+            No errors in the last 24 hours
+            <span class="chart-empty__hint" *ngIf="lastActivityAgo() as ago">Last activity: {{ ago }}</span>
+          </div>
         </ng-template>
       </div>
 
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════════════════
+         ROW 4 — Top errors
+    ═══════════════════════════════════════════════════════════════════════ -->
+    <div class="section-card" *ngIf="s.topErrors.length">
+      <div class="section-card__header">
+        <h3>Top errors</h3>
+        <span class="badge badge-total">last {{ s.topErrors.length }}</span>
+      </div>
+      <div class="top-errors">
+        <div class="top-errors__row" *ngFor="let e of s.topErrors; trackBy: trackByError">
+          <span class="top-errors__code">{{ e.code }}</span>
+          <span class="top-errors__count">{{ e.count | number }}</span>
+        </div>
+      </div>
     </div>
 
   </ng-container>

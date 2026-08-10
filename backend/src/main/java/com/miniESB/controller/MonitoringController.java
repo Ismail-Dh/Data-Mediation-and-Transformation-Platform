@@ -25,8 +25,10 @@ public class MonitoringController {
 
     @Operation(
             summary     = "Get platform KPI stats — ADMIN only",
-            description = "Returns total requests, error rate, avg duration, pipeline counts, "
-                    + "payload breakdown, hourly time-series (last 24 h), and per-action stats."
+            description = "Returns real platform monitoring KPIs (total requests, error rate, "
+                    + "avg/max duration, active users, requests by role, top errors), hourly "
+                    + "time-series (last 24 h) and per-action stats, plus pipeline/payload "
+                    + "counts kept for backward compatibility with the admin dashboard widget."
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Stats returned successfully"),
