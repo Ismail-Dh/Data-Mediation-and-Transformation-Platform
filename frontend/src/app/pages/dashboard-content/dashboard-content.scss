@@ -293,7 +293,7 @@ $radius-lg:       16px;
 
 .action-row {
   display: grid;
-  grid-template-columns: 52px 1fr 60px 48px;
+  grid-template-columns: minmax(0, 130px) 1fr 60px 48px;
   align-items: center;
   gap: 10px;
   font-size: 13px;
@@ -302,6 +302,9 @@ $radius-lg:       16px;
     font-weight: 600;
     font-size: 12px;
     color: $color-text;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   &__count { color: $color-text;     text-align: right; font-weight: 500; }
