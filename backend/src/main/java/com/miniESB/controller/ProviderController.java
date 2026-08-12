@@ -30,9 +30,9 @@ public class ProviderController {
 
     @Operation(summary = "Create a provider", description = "Creates a new provider. ADMIN only.")
     @ApiResponses({
-        @ApiResponse(responseCode = "201", description = "Provider created successfully"),
-        @ApiResponse(responseCode = "400", description = "Invalid data"),
-        @ApiResponse(responseCode = "403", description = "Access denied")
+            @ApiResponse(responseCode = "201", description = "Provider created successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid data"),
+            @ApiResponse(responseCode = "403", description = "Access denied")
     })
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
@@ -44,9 +44,9 @@ public class ProviderController {
 
     @Operation(summary = "Update a provider", description = "Partial update of a provider. ADMIN only.")
     @ApiResponses({
-        @ApiResponse(responseCode = "200", description = "Provider updated successfully"),
-        @ApiResponse(responseCode = "404", description = "Provider not found"),
-        @ApiResponse(responseCode = "403", description = "Access denied")
+            @ApiResponse(responseCode = "200", description = "Provider updated successfully"),
+            @ApiResponse(responseCode = "404", description = "Provider not found"),
+            @ApiResponse(responseCode = "403", description = "Access denied")
     })
     @PatchMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
@@ -59,9 +59,9 @@ public class ProviderController {
 
     @Operation(summary = "Delete a provider", description = "Deletes a provider by ID. ADMIN only.")
     @ApiResponses({
-        @ApiResponse(responseCode = "204", description = "Provider deleted successfully"),
-        @ApiResponse(responseCode = "404", description = "Provider not found"),
-        @ApiResponse(responseCode = "403", description = "Access denied")
+            @ApiResponse(responseCode = "204", description = "Provider deleted successfully"),
+            @ApiResponse(responseCode = "404", description = "Provider not found"),
+            @ApiResponse(responseCode = "403", description = "Access denied")
     })
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
@@ -73,21 +73,23 @@ public class ProviderController {
 
     @Operation(summary = "Get provider by ID", description = "Returns a provider by ID.")
     @ApiResponses({
-        @ApiResponse(responseCode = "200", description = "Provider returned successfully"),
-        @ApiResponse(responseCode = "404", description = "Provider not found")
+            @ApiResponse(responseCode = "200", description = "Provider returned successfully"),
+            @ApiResponse(responseCode = "404", description = "Provider not found")
     })
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'DEVELOPER')")
+    @Auditable(action = "READ", targetEntity = "Provider")
     public ResponseEntity<ProviderResponse> getProviderById(@PathVariable Long id) {
         return ResponseEntity.ok(providerService.getProviderById(id));
     }
 
     @Operation(summary = "Get all providers", description = "Returns all providers.")
     @ApiResponses({
-        @ApiResponse(responseCode = "200", description = "List returned successfully")
+            @ApiResponse(responseCode = "200", description = "List returned successfully")
     })
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'DEVELOPER')")
+    @Auditable(action = "READ_ALL", targetEntity = "Provider")
     public ResponseEntity<List<ProviderResponse>> getAllProviders() {
         return ResponseEntity.ok(providerService.getAllProviders());
     }

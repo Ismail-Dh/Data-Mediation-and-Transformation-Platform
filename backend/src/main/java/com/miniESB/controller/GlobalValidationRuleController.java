@@ -125,6 +125,7 @@ public class GlobalValidationRuleController {
             @ApiResponse(responseCode = "403", description = "Forbidden — ADMIN role required")
     })
     @GetMapping
+    @Auditable(action = "READ_ALL", targetEntity = "Validation Rule")
     public ResponseEntity<List<GlobalValidationRuleResponseDTO>> getAllRules() {
         return ResponseEntity.ok(globalValidationRuleService.getAllRules());
     }
@@ -142,6 +143,7 @@ public class GlobalValidationRuleController {
             @ApiResponse(responseCode = "403", description = "Forbidden — ADMIN role required")
     })
     @GetMapping("/active")
+    @Auditable(action = "READ_ALL", targetEntity = "Validation Rule")
     public ResponseEntity<List<GlobalValidationRuleResponseDTO>> getAllRulesActives() {
         return ResponseEntity.ok(globalValidationRuleService.getActiveRules());
     }
@@ -160,6 +162,7 @@ public class GlobalValidationRuleController {
             @ApiResponse(responseCode = "404", description = "Rule not found")
     })
     @GetMapping("/{id}")
+    @Auditable(action = "READ", targetEntity = "Validation Rule")
     public ResponseEntity<GlobalValidationRuleResponseDTO> getRuleById(@PathVariable Long id) {
         return ResponseEntity.ok(globalValidationRuleService.getRuleById(id));
     }

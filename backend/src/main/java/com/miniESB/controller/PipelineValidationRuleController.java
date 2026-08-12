@@ -1,6 +1,7 @@
 package com.miniESB.controller;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
+import com.miniESB.audit.Auditable;
 import com.miniESB.dto.pipelineValidationRule.PipelineValidationRuleRequest;
 import com.miniESB.dto.pipelineValidationRule.PipelineValidationRuleResponse;
 import com.miniESB.service.PipelineValidationRuleService;
@@ -39,6 +40,7 @@ public class PipelineValidationRuleController {
     @Operation(summary = "Attach a global rule or create a private validation rule",
             description = "If globalRuleId is provided, copies the global rule definition onto the pipeline. Otherwise creates a custom rule with the supplied fieldName + ruleType [+ pattern].")
     @PostMapping
+    @Auditable(action = "CREATE", targetEntity = "Pipeline Validation Rule")
     public ResponseEntity<PipelineValidationRuleResponse> addRule(
             @PathVariable Long pipelineId,
             @Valid @RequestBody PipelineValidationRuleRequest request) {
@@ -49,6 +51,7 @@ public class PipelineValidationRuleController {
     // ── GET all ───────────────────────────────────────────────────────────────
     @Operation(summary = "List all validation rules of a pipeline (active + inactive)")
     @GetMapping
+    @Auditable(action = "READ_ALL", targetEntity = "Pipeline Validation Rule")
     public ResponseEntity<List<PipelineValidationRuleResponse>> getRules(
             @PathVariable Long pipelineId) {
         return ResponseEntity.ok(pipelineValidationRuleService.getRules(pipelineId));
@@ -58,6 +61,7 @@ public class PipelineValidationRuleController {
     @Operation(summary = "Update a private validation rule",
             description = "Only private (non-global) rules can be edited. Global rules must be detached and re-created.")
     @PutMapping("/{ruleId}")
+    @Auditable(action = "UPDATE", targetEntity = "Pipeline Validation Rule")
     public ResponseEntity<PipelineValidationRuleResponse> updateRule(
             @PathVariable Long pipelineId,
             @PathVariable Long ruleId,
@@ -69,6 +73,7 @@ public class PipelineValidationRuleController {
     // ── PATCH — toggle active ─────────────────────────────────────────────────
     @Operation(summary = "Toggle active/inactive on a validation rule")
     @PatchMapping("/{ruleId}/toggle")
+    @Auditable(action = "TOGGLE_ACTIVE", targetEntity = "Pipeline Validation Rule")
     public ResponseEntity<PipelineValidationRuleResponse> toggleActive(
             @PathVariable Long pipelineId,
             @PathVariable Long ruleId) {
@@ -80,6 +85,7 @@ public class PipelineValidationRuleController {
     @Operation(summary = "Remove a validation rule from the pipeline",
             description = "Detaches a global rule or permanently deletes a private rule.")
     @DeleteMapping("/{ruleId}")
+    @Auditable(action = "DELETE", targetEntity = "Pipeline Validation Rule")
     public ResponseEntity<Void> deleteRule(
             @PathVariable Long pipelineId,
             @PathVariable Long ruleId) {

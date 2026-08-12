@@ -235,9 +235,15 @@ export class DashboardContent implements OnInit {
   private buildDevKpis(pipes: Pipeline[], logs: AuditLog[]): void {
     const validated  = pipes.filter(p => p.status === 'VALIDATED').length;
     const configured = pipes.filter(p => p.status === 'CONFIGURED').length;
+    // Ne compter que les VRAIES exécutions de test sandbox (action RUN),
+    // pas les simples lectures de l'historique (action READ_ALL) — sinon
+    // chaque chargement du dashboard s'auto-compte comme un test, puisque
+    // loadDevPayloadsAndSandbox() lit lui-même /sandbox/{id}/logs et génère
+    // sa propre entrée d'audit à chaque rafraîchissement.
     const sandboxLogs = logs.filter(l =>
-      l.details?.toLowerCase().includes('sandbox') ||
-      l.targetEntity?.toLowerCase().includes('sandbox')
+      l.action === 'RUN' &&
+      (l.details?.toLowerCase().includes('sandbox') ||
+       l.targetEntity?.toLowerCase().includes('sandbox'))
     );
     const ok = sandboxLogs.filter(l => l.httpStatus == null || l.httpStatus < 400).length;
     const rate = sandboxLogs.length > 0 ? Math.round(ok / sandboxLogs.length * 100) : 0;

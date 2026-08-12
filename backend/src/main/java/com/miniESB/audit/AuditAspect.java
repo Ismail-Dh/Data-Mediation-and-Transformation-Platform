@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
+import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -14,8 +15,8 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
-import java.util.Arrays;
 
 @Aspect
 @Component
@@ -78,7 +79,7 @@ public class AuditAspect {
                     auditable.action(),
                     auditable.targetEntity(),
                     resolveTargetId(joinPoint.getArgs()),
-                    buildDetails(joinPoint.getArgs()),
+                    buildDetails(joinPoint),
                     httpStatus,
                     errorMessage,
                     errorCode,
@@ -102,7 +103,7 @@ public class AuditAspect {
                     auditable.action(),
                     auditable.targetEntity(),
                     resolveTargetId(joinPoint.getArgs()),
-                    buildDetails(joinPoint.getArgs()),
+                    buildDetails(joinPoint),
                     500,
                     ex.getMessage(),
                     ex.getClass().getSimpleName(),
@@ -138,13 +139,49 @@ public class AuditAspect {
         return null;
     }
 
-    private String buildDetails(Object[] args) {
+    private String buildDetails(ProceedingJoinPoint joinPoint) {
+        Object[] args = joinPoint.getArgs();
         if (args == null || args.length == 0) return null;
-        return Arrays.stream(args)
-                .filter(arg -> arg != null && !(arg instanceof Authentication))
-                .map(this::sanitize)
-                .reduce((a, b) -> a + " | " + b)
-                .orElse(null);
+
+        boolean[] sensitiveParam = resolveSensitiveParams(joinPoint, args.length);
+
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < args.length; i++) {
+            Object arg = args[i];
+            if (arg == null || arg instanceof Authentication) continue;
+
+            String rendered = sensitiveParam[i] ? "***" : sanitize(arg);
+            if (sb.length() > 0) sb.append(" | ");
+            sb.append(rendered);
+        }
+        return sb.length() == 0 ? null : sb.toString();
+    }
+
+    /**
+     * A raw method parameter (e.g. a plain String/primitive bound via
+     * @RequestParam or @PathVariable) has no fields for {@link #sanitize} to mask,
+     * so it would otherwise be logged verbatim. Parameters annotated with
+     * {@link Sensitive} directly are masked wholesale instead.
+     */
+    private boolean[] resolveSensitiveParams(ProceedingJoinPoint joinPoint, int argCount) {
+        boolean[] result = new boolean[argCount];
+        try {
+            if (joinPoint.getSignature() instanceof MethodSignature methodSignature) {
+                Annotation[][] paramAnnotations = methodSignature.getMethod().getParameterAnnotations();
+                for (int i = 0; i < Math.min(argCount, paramAnnotations.length); i++) {
+                    for (Annotation annotation : paramAnnotations[i]) {
+                        if (annotation instanceof Sensitive) {
+                            result[i] = true;
+                            break;
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.error("[AUDIT] Failed to resolve @Sensitive parameters for {}: {}",
+                    joinPoint.getSignature().getName(), e.getMessage());
+        }
+        return result;
     }
 
     private String sanitize(Object arg) {

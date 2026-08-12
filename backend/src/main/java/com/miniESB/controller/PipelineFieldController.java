@@ -1,6 +1,7 @@
 package com.miniESB.controller;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
+import com.miniESB.audit.Auditable;
 import com.miniESB.dto.pipelineField.PipelineFieldRequest;
 import com.miniESB.dto.pipelineField.PipelineFieldResponse;
 import com.miniESB.service.PipelineFieldService;
@@ -27,6 +28,7 @@ public class PipelineFieldController {
 
     @Operation(summary = "Add a field to the pipeline schema")
     @PostMapping
+    @Auditable(action = "CREATE", targetEntity = "Pipeline Field")
     public ResponseEntity<PipelineFieldResponse> addField(
             @PathVariable Long pipelineId,
             @Valid @RequestBody PipelineFieldRequest request) {
@@ -36,12 +38,14 @@ public class PipelineFieldController {
 
     @Operation(summary = "Get all fields of a pipeline schema")
     @GetMapping
+    @Auditable(action = "READ_ALL", targetEntity = "Pipeline Field")
     public ResponseEntity<List<PipelineFieldResponse>> getFields(@PathVariable Long pipelineId) {
         return ResponseEntity.ok(pipelineFieldService.getFields(pipelineId));
     }
 
     @Operation(summary = "Update a field")
     @PutMapping("/{fieldId}")
+    @Auditable(action = "UPDATE", targetEntity = "Pipeline Field")
     public ResponseEntity<PipelineFieldResponse> updateField(
             @PathVariable Long pipelineId,
             @PathVariable Long fieldId,
@@ -51,6 +55,7 @@ public class PipelineFieldController {
 
     @Operation(summary = "Delete a field")
     @DeleteMapping("/{fieldId}")
+    @Auditable(action = "DELETE", targetEntity = "Pipeline Field")
     public ResponseEntity<Void> deleteField(
             @PathVariable Long pipelineId,
             @PathVariable Long fieldId) {

@@ -1,4 +1,6 @@
 package com.miniESB.dto.auth;
 
-public record LoginRequest(String username, String password) {}
+import com.miniESB.audit.Sensitive;
+
+public record LoginRequest(String username, @Sensitive String password) {}
 

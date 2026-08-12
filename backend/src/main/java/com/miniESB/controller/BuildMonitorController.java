@@ -1,6 +1,7 @@
 package com.miniESB.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.miniESB.audit.Auditable;
 import com.miniESB.exception.DockerBuildException;
 import com.miniESB.exception.DockerDaemonException;
 import com.miniESB.exception.ResourceNotFoundException;
@@ -111,6 +112,7 @@ public class BuildMonitorController {
                     description = "Pipeline not found (emitted as BUILD_FAILED SSE event before stream closes)")
     })
     @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @Auditable(action = "BUILD_STREAM", targetEntity = "Docker Build")
     public SseEmitter streamBuildLogs(@PathVariable Long pipelineId) {
 
         // Timeout 0 = pas de timeout côté serveur (le build peut être long)
@@ -171,6 +173,7 @@ public class BuildMonitorController {
      */
     @Operation(summary = "Get build history for a pipeline")
     @GetMapping("/history")
+    @Auditable(action = "READ_ALL", targetEntity = "Docker Build")
     public Object getBuildHistory(@PathVariable Long pipelineId) {
         return generatorService.getVersionHistory(pipelineId);
     }
