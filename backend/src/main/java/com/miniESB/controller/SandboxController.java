@@ -1,5 +1,6 @@
 package com.miniESB.controller;
 
+import com.miniESB.audit.Auditable;
 import com.miniESB.domain.entity.SandboxLog;
 import com.miniESB.dto.sandbox.*;
 import com.miniESB.repository.SandboxLogRepository;
@@ -26,6 +27,7 @@ public class SandboxController {
     private final SandboxLogRepository sandboxLogRepository;
 
     @PostMapping("/run")
+    @Auditable(action = "RUN", targetEntity = "Sandbox")
     public ResponseEntity<SandboxResponse> run(
             @PathVariable Long pipelineId,
             @Valid @RequestBody SandboxRequest request) {
@@ -34,6 +36,7 @@ public class SandboxController {
 
     @Operation(summary = "Get paginated sandbox execution history")
     @GetMapping("/logs")
+    @Auditable(action = "READ_ALL", targetEntity = "Sandbox")
     public ResponseEntity<Page<SandboxLogResponse>> getLogs(
             @PathVariable Long pipelineId,
             @RequestParam(defaultValue = "0")  int page,

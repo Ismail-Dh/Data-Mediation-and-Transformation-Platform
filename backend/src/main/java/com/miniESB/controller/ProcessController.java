@@ -1,5 +1,6 @@
 package com.miniESB.controller;
 
+import com.miniESB.audit.Auditable;
 import com.miniESB.dto.process.ProcessRequest;
 import com.miniESB.dto.process.ProcessResponse;
 import com.miniESB.service.ProcessOrchestrationService;
@@ -38,6 +39,7 @@ public class ProcessController {
      * validation → mapping → dispatch → validation réponses → agrégation.
      */
     @PostMapping
+    @Auditable(action = "PROCESS", targetEntity = "Process")
     public ResponseEntity<ProcessResponse> process(
             @Valid @RequestBody ProcessRequest request) {
         ProcessResponse response = orchestrationService.process(request);

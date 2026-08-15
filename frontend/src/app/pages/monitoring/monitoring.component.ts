@@ -3,8 +3,13 @@ import {
   signal, inject, computed, ChangeDetectorRef
 } from '@angular/core';
 import { CommonModule, DecimalPipe } from '@angular/common';
+import { Subject, timer, of } from 'rxjs';
+import { switchMap, takeUntil, tap, catchError } from 'rxjs/operators';
 import { MonitoringService } from '../../services/monitoring/monitoring.service';
-import { MonitoringStatsResponse, ActionStat, HourlyBucket } from '../../models/monitoring.model'
+import { MonitoringStatsResponse, ActionStat, HourlyBucket, RoleStat, ErrorStat } from '../../models/monitoring.model'
+
+/** Auto-refresh interval for real-time platform monitoring. */
+const REFRESH_INTERVAL_MS = 30_000;
 
 @Component({
   selector: 'app-monitoring',
@@ -17,25 +22,16 @@ export class MonitoringComponent implements OnInit, OnDestroy {
   private monitoringService = inject(MonitoringService);
   private cdr               = inject(ChangeDetectorRef);
 
-  stats   = signal<MonitoringStatsResponse | null>(null);
-  loading = signal(true);
-  error   = signal<string | null>(null);
+  stats       = signal<MonitoringStatsResponse | null>(null);
+  loading     = signal(true);
+  error       = signal<string | null>(null);
+  lastUpdated = signal<Date | null>(null);
 
-  private refreshInterval: any;
+  private destroy$ = new Subject<void>();
+  /** Manually triggered refreshes (button click) go through this subject too. */
+  private manualRefresh$ = new Subject<void>();
 
   // ── Computed helpers ──────────────────────────────────────────────────────
-
-  pipelineUsageRate = computed(() => {
-    const s = this.stats();
-    if (!s || s.totalPipelines === 0) return 0;
-    return Math.round((s.configuredPipelines / s.totalPipelines) * 100);
-  });
-
-  payloadSuccessRate = computed(() => {
-    const s = this.stats();
-    if (!s || s.totalPayloads === 0) return 0;
-    return Math.round((s.successfulPayloads / s.totalPayloads) * 100);
-  });
 
   // Max value for bar chart scaling
   requestsChartMax = computed(() => {
@@ -50,33 +46,57 @@ export class MonitoringComponent implements OnInit, OnDestroy {
     return Math.max(...s.errorsByHour.map(b => b.count), 1);
   });
 
+  roleTotal = computed(() => {
+    const s = this.stats();
+    if (!s || !s.requestsByRole?.length) return 1;
+    return Math.max(s.requestsByRole.reduce((sum, r) => sum + Number(r.count), 0), 1);
+  });
+
   // ── Lifecycle ─────────────────────────────────────────────────────────────
 
   ngOnInit() {
-    this.load();
-    // auto-refresh every 30s
-    this.refreshInterval = setInterval(() => this.load(), 30_000);
+    // Real-time auto-refresh: fires immediately, then every REFRESH_INTERVAL_MS.
+    // A manual "Refresh" click restarts the same pipeline so it never overlaps
+    // with a pending automatic tick.
+    this.manualRefresh$
+      .pipe(
+        takeUntil(this.destroy$),
+        tap(() => { this.loading.set(true); this.error.set(null); }),
+        switchMap(() => timer(0, REFRESH_INTERVAL_MS)),
+        switchMap(() => this.fetchStats()),
+      )
+      .subscribe();
+
+    this.manualRefresh$.next();
   }
 
   ngOnDestroy() {
-    clearInterval(this.refreshInterval);
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
+  /** Manual refresh button — restarts the auto-refresh timer from now. */
   load() {
+    this.manualRefresh$.next();
+  }
+
+  private fetchStats() {
     this.loading.set(true);
-    this.error.set(null);
-    this.monitoringService.getStats().subscribe({
-      next: data => {
+    return this.monitoringService.getStats().pipe(
+      tap(data => {
         this.stats.set(data);
         this.loading.set(false);
+        this.lastUpdated.set(new Date());
+        this.error.set(null);
         this.cdr.detectChanges();
-      },
-      error: () => {
+      }),
+      catchError(() => {
         this.error.set('Unable to load statistics.');
         this.loading.set(false);
         this.cdr.detectChanges();
-      }
-    });
+        return of(null);
+      }),
+    );
   }
 
   // ── Chart helpers ─────────────────────────────────────────────────────────
@@ -86,9 +106,27 @@ export class MonitoringComponent implements OnInit, OnDestroy {
   }
 
   formatHour(hour: string): string {
-    // hour format from backend: "2024-01-15 14" → "14h"
-    const parts = hour.split(' ');
-    return parts.length > 1 ? `${parts[1]}h` : hour;
+    // Backend format: "2026-08-10T14" (ISO date truncated to hour, "T" separator).
+    // Also tolerate a space separator or a bare "14" just in case.
+    if (!hour) return hour;
+    const isoMatch = hour.match(/T(\d{1,2})$/);
+    if (isoMatch) return `${isoMatch[1]}h`;
+    const spaceParts = hour.split(' ');
+    if (spaceParts.length > 1) return `${spaceParts[1]}h`;
+    return /^\d{1,2}$/.test(hour) ? `${hour}h` : hour;
+  }
+
+  /** Human-readable "time ago" for the last recorded platform activity. */
+  lastActivityAgo(): string | null {
+    const s = this.stats();
+    if (!s?.lastActivityAt) return null;
+    const diffMs = Date.now() - new Date(s.lastActivityAt).getTime();
+    const m = Math.floor(diffMs / 60_000);
+    if (m < 1)  return 'just now';
+    if (m < 60) return `${m} min ago`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `${h}h ago`;
+    return `${Math.floor(h / 24)}d ago`;
   }
 
   getActionErrorRate(stat: ActionStat): number {
@@ -103,6 +141,16 @@ export class MonitoringComponent implements OnInit, OnDestroy {
     return 'action-error';
   }
 
+  rolePct(role: RoleStat): number {
+    return Math.round((Number(role.count) / this.roleTotal()) * 100);
+  }
+
+  formatRole(role: string): string {
+    return role.replace(/^ROLE_/, '');
+  }
+
   trackByHour(_: number, b: HourlyBucket) { return b.hour; }
   trackByAction(_: number, a: ActionStat) { return a.action; }
+  trackByRole(_: number, r: RoleStat) { return r.role; }
+  trackByError(_: number, e: ErrorStat) { return e.code; }
 }

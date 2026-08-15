@@ -1,6 +1,7 @@
 package com.miniESB.controller;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
+import com.miniESB.audit.Auditable;
 import com.miniESB.dto.validation.ValidationPreviewRequest;
 import com.miniESB.dto.validation.ValidationPreviewResponse;
 import com.miniESB.service.ValidationPreviewService;
@@ -75,6 +76,7 @@ public class ValidationPreviewController {
             @ApiResponse(responseCode = "404", description = "Pipeline not found")
     })
     @PostMapping("/preview")
+    @Auditable(action = "PREVIEW", targetEntity = "Validation Preview")
     public ResponseEntity<ValidationPreviewResponse> preview(
             @PathVariable Long pipelineId,
             @Valid @RequestBody ValidationPreviewRequest request) {

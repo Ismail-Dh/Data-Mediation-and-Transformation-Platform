@@ -148,5 +148,5 @@ class PayloadValidationIntegrationTest extends AbstractIntegrationTest {
         assertThat(response.getBody().get("status")).isEqualTo("VALIDATED");
     }
 
-  
+
 }

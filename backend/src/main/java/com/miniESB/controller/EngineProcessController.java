@@ -1,5 +1,6 @@
 package com.miniESB.controller;
 
+import com.miniESB.audit.Auditable;
 import com.miniESB.service.EngineProcessService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -50,6 +51,7 @@ public class EngineProcessController {
                              }""")))
     })
     @PostMapping
+    @Auditable(action = "PROCESS", targetEntity = "Engine Process")
     public ResponseEntity<?> process(@RequestBody Map<String, String> body) {
         try {
             Map<String, Object> result =

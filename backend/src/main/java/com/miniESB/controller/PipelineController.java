@@ -125,6 +125,7 @@ public class PipelineController {
     })
     @GetMapping("/my")
     @PreAuthorize("hasAnyRole('DEVELOPER','ADMIN')")
+    @Auditable(action = "READ_ALL", targetEntity = "Pipeline")
     public ResponseEntity<List<PipelineResponse>> getMyPipelines(Principal principal) {
         return ResponseEntity.ok(pipelineService.getMyPipelines(principal.getName()));
     }
@@ -137,12 +138,14 @@ public class PipelineController {
     })
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
+    @Auditable(action = "READ_ALL", targetEntity = "Pipeline")
     public ResponseEntity<List<PipelineResponse>> getAllPipelines() {
         return ResponseEntity.ok(pipelineService.getAllPipelines());
     }
     @Operation(summary = "Manually validate a pipeline — marks it as ready")
     @PatchMapping("/{pipelineId}/validate")
     @PreAuthorize("hasAnyRole('DEVELOPER', 'ADMIN')")
+    @Auditable(action = "VALIDATE", targetEntity = "Pipeline")
     public ResponseEntity<PipelineResponse> validatePipeline(
             @PathVariable Long pipelineId) {
         return ResponseEntity.ok(pipelineService.validatePipeline(pipelineId));
@@ -151,6 +154,7 @@ public class PipelineController {
     @Operation(summary = "Revert a validated pipeline back to CONFIGURED")
     @PatchMapping("/{pipelineId}/revert")
     @PreAuthorize("hasAnyRole('DEVELOPER', 'ADMIN')")
+    @Auditable(action = "REVERT", targetEntity = "Pipeline")
     public ResponseEntity<PipelineResponse> revertPipeline(
             @PathVariable Long pipelineId) {
         return ResponseEntity.ok(pipelineService.revertPipeline(pipelineId));

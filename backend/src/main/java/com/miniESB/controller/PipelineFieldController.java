@@ -1,6 +1,8 @@
 package com.miniESB.controller;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
+import com.miniESB.audit.Auditable;
+import com.miniESB.dto.pipelineField.PipelineFieldImportResponse;
 import com.miniESB.dto.pipelineField.PipelineFieldRequest;
 import com.miniESB.dto.pipelineField.PipelineFieldResponse;
 import com.miniESB.service.PipelineFieldService;
@@ -9,9 +11,11 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -27,6 +31,7 @@ public class PipelineFieldController {
 
     @Operation(summary = "Add a field to the pipeline schema")
     @PostMapping
+    @Auditable(action = "CREATE", targetEntity = "Pipeline Field")
     public ResponseEntity<PipelineFieldResponse> addField(
             @PathVariable Long pipelineId,
             @Valid @RequestBody PipelineFieldRequest request) {
@@ -36,12 +41,14 @@ public class PipelineFieldController {
 
     @Operation(summary = "Get all fields of a pipeline schema")
     @GetMapping
+    @Auditable(action = "READ_ALL", targetEntity = "Pipeline Field")
     public ResponseEntity<List<PipelineFieldResponse>> getFields(@PathVariable Long pipelineId) {
         return ResponseEntity.ok(pipelineFieldService.getFields(pipelineId));
     }
 
     @Operation(summary = "Update a field")
     @PutMapping("/{fieldId}")
+    @Auditable(action = "UPDATE", targetEntity = "Pipeline Field")
     public ResponseEntity<PipelineFieldResponse> updateField(
             @PathVariable Long pipelineId,
             @PathVariable Long fieldId,
@@ -51,10 +58,25 @@ public class PipelineFieldController {
 
     @Operation(summary = "Delete a field")
     @DeleteMapping("/{fieldId}")
+    @Auditable(action = "DELETE", targetEntity = "Pipeline Field")
     public ResponseEntity<Void> deleteField(
             @PathVariable Long pipelineId,
             @PathVariable Long fieldId) {
         pipelineFieldService.deleteField(pipelineId, fieldId);
         return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "Import fields from a JSON schema file",
+            description = "Accepts a .json file containing an array of "
+                    + "{ fieldPath, fieldType, required } entries and bulk-creates "
+                    + "the corresponding pipeline fields. Invalid or duplicate entries "
+                    + "are skipped and reported in the response instead of failing the whole import.")
+    @PostMapping(value = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Auditable(action = "IMPORT", targetEntity = "Pipeline Field")
+    public ResponseEntity<PipelineFieldImportResponse> importFields(
+            @PathVariable Long pipelineId,
+            @RequestParam("file") MultipartFile file) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(pipelineFieldService.importFieldsFromJson(pipelineId, file));
     }
 }

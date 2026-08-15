@@ -78,6 +78,24 @@ public class MonitoringServiceImpl implements MonitoringService {
                         toLong(row[2])))
                 .toList();
 
+        // ── Real platform KPIs (no pipeline/payload data) ───────────────────────
+        long activeUsers24h = monitoringRepository.countDistinctUsersSince(since24h);
+        Long maxDuration    = monitoringRepository.maxDurationMs();
+
+        List<MonitoringStatsResponse.RoleStat> requestsByRole = monitoringRepository
+                .countByRole()
+                .stream()
+                .map(row -> new MonitoringStatsResponse.RoleStat((String) row[0], toLong(row[1])))
+                .toList();
+
+        List<MonitoringStatsResponse.ErrorStat> topErrors = monitoringRepository
+                .topErrorCodes()
+                .stream()
+                .map(row -> new MonitoringStatsResponse.ErrorStat((String) row[0], toLong(row[1])))
+                .toList();
+
+        Instant lastActivityAt = monitoringRepository.lastActivityAt();
+
         return new MonitoringStatsResponse(
                 totalRequests,
                 totalErrors,
@@ -90,7 +108,12 @@ public class MonitoringServiceImpl implements MonitoringService {
                 failedPayloads,
                 errorsByHour,
                 requestsByHour,
-                requestsByAction
+                requestsByAction,
+                activeUsers24h,
+                maxDuration,
+                requestsByRole,
+                topErrors,
+                lastActivityAt
         );
     }
 

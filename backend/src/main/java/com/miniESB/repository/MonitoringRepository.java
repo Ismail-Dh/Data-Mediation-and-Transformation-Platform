@@ -72,4 +72,53 @@ public interface MonitoringRepository extends JpaRepository<AuditLog, Long> {
             ORDER BY total DESC
             """, nativeQuery = true)
     List<Object[]> countByAction();
+
+    // ── Extra platform KPIs ─────────────────────────────────────────────────────
+
+    /**
+     * Distinct users who performed at least one action since :since.
+     * Used for the "active users" KPI (real platform activity, not pipeline data).
+     */
+    @Query("SELECT COUNT(DISTINCT a.performedBy) FROM AuditLog a WHERE a.timestamp >= :since")
+    long countDistinctUsersSince(@Param("since") Instant since);
+
+    /**
+     * Slowest recorded request — null while no duration_ms has been captured yet.
+     */
+    @Query("SELECT MAX(a.durationMs) FROM AuditLog a WHERE a.durationMs IS NOT NULL")
+    Long maxDurationMs();
+
+    /**
+     * Requests grouped by the caller's role (ADMIN / DEVELOPER / …).
+     */
+    @Query(value = """
+            SELECT COALESCE(performed_by_role, 'UNKNOWN') AS role,
+                   COUNT(*)                                AS cnt
+            FROM audit_logs
+            GROUP BY 1
+            ORDER BY cnt DESC
+            """, nativeQuery = true)
+    List<Object[]> countByRole();
+
+    /**
+     * Most frequent error codes across the whole platform (top 5).
+     */
+    @Query(value = """
+            SELECT COALESCE(error_code, 'UNKNOWN') AS code,
+                   COUNT(*)                          AS cnt
+            FROM audit_logs
+            WHERE http_status >= 400
+            GROUP BY 1
+            ORDER BY cnt DESC
+            LIMIT 5
+            """, nativeQuery = true)
+    List<Object[]> topErrorCodes();
+
+    /**
+     * Timestamp of the most recent audit log entry, all-time.
+     * Lets the UI explain an empty 24h window ("last activity was X ago")
+     * instead of a bare, ambiguous "no data".
+     */
+    @Query("SELECT MAX(a.timestamp) FROM AuditLog a")
+    Instant lastActivityAt();
 }

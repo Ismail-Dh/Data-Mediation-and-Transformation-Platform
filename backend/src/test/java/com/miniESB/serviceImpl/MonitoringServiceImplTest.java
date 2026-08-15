@@ -66,6 +66,11 @@ class MonitoringServiceImplTest {
             when(monitoringRepository.countRequestsByHourSince(org.mockito.ArgumentMatchers.any())).thenReturn(List.of());
             when(monitoringRepository.countErrorsByHourSince(org.mockito.ArgumentMatchers.any())).thenReturn(List.of());
             when(monitoringRepository.countByAction()).thenReturn(List.of());
+            when(monitoringRepository.countDistinctUsersSince(org.mockito.ArgumentMatchers.any())).thenReturn(0L);
+            when(monitoringRepository.maxDurationMs()).thenReturn(null);
+            when(monitoringRepository.countByRole()).thenReturn(List.of());
+            when(monitoringRepository.topErrorCodes()).thenReturn(List.of());
+            when(monitoringRepository.lastActivityAt()).thenReturn(null);
 
             MonitoringStatsResponse result = service.getStats();
 
@@ -87,6 +92,11 @@ class MonitoringServiceImplTest {
             when(monitoringRepository.countRequestsByHourSince(org.mockito.ArgumentMatchers.any())).thenReturn(List.of());
             when(monitoringRepository.countErrorsByHourSince(org.mockito.ArgumentMatchers.any())).thenReturn(List.of());
             when(monitoringRepository.countByAction()).thenReturn(List.of());
+            when(monitoringRepository.countDistinctUsersSince(org.mockito.ArgumentMatchers.any())).thenReturn(0L);
+            when(monitoringRepository.maxDurationMs()).thenReturn(null);
+            when(monitoringRepository.countByRole()).thenReturn(List.of());
+            when(monitoringRepository.topErrorCodes()).thenReturn(List.of());
+            when(monitoringRepository.lastActivityAt()).thenReturn(null);
 
             MonitoringStatsResponse result = service.getStats();
 
@@ -117,6 +127,11 @@ class MonitoringServiceImplTest {
             when(monitoringRepository.countRequestsByHourSince(org.mockito.ArgumentMatchers.any())).thenReturn(List.of());
             when(monitoringRepository.countErrorsByHourSince(org.mockito.ArgumentMatchers.any())).thenReturn(List.of());
             when(monitoringRepository.countByAction()).thenReturn(List.of());
+            when(monitoringRepository.countDistinctUsersSince(org.mockito.ArgumentMatchers.any())).thenReturn(0L);
+            when(monitoringRepository.maxDurationMs()).thenReturn(null);
+            when(monitoringRepository.countByRole()).thenReturn(List.of());
+            when(monitoringRepository.topErrorCodes()).thenReturn(List.of());
+            when(monitoringRepository.lastActivityAt()).thenReturn(null);
 
             MonitoringStatsResponse result = service.getStats();
 
@@ -148,6 +163,11 @@ class MonitoringServiceImplTest {
             when(monitoringRepository.countRequestsByHourSince(org.mockito.ArgumentMatchers.any())).thenReturn(List.of());
             when(monitoringRepository.countErrorsByHourSince(org.mockito.ArgumentMatchers.any())).thenReturn(List.of());
             when(monitoringRepository.countByAction()).thenReturn(List.of());
+            when(monitoringRepository.countDistinctUsersSince(org.mockito.ArgumentMatchers.any())).thenReturn(0L);
+            when(monitoringRepository.maxDurationMs()).thenReturn(null);
+            when(monitoringRepository.countByRole()).thenReturn(List.of());
+            when(monitoringRepository.topErrorCodes()).thenReturn(List.of());
+            when(monitoringRepository.lastActivityAt()).thenReturn(null);
 
             MonitoringStatsResponse result = service.getStats();
 
@@ -178,6 +198,11 @@ class MonitoringServiceImplTest {
             when(monitoringRepository.countErrorsByHourSince(org.mockito.ArgumentMatchers.any()))
                     .thenReturn(List.<Object[]>of(new Object[]{"2025-01-01T10:00", 1L}));
             when(monitoringRepository.countByAction()).thenReturn(List.of());
+            when(monitoringRepository.countDistinctUsersSince(org.mockito.ArgumentMatchers.any())).thenReturn(0L);
+            when(monitoringRepository.maxDurationMs()).thenReturn(null);
+            when(monitoringRepository.countByRole()).thenReturn(List.of());
+            when(monitoringRepository.topErrorCodes()).thenReturn(List.of());
+            when(monitoringRepository.lastActivityAt()).thenReturn(null);
 
             MonitoringStatsResponse result = service.getStats();
 
@@ -202,6 +227,11 @@ class MonitoringServiceImplTest {
             when(monitoringRepository.countErrorsByHourSince(org.mockito.ArgumentMatchers.any()))
                     .thenReturn(List.of());
             when(monitoringRepository.countByAction()).thenReturn(List.of());
+            when(monitoringRepository.countDistinctUsersSince(org.mockito.ArgumentMatchers.any())).thenReturn(0L);
+            when(monitoringRepository.maxDurationMs()).thenReturn(null);
+            when(monitoringRepository.countByRole()).thenReturn(List.of());
+            when(monitoringRepository.topErrorCodes()).thenReturn(List.of());
+            when(monitoringRepository.lastActivityAt()).thenReturn(null);
 
             MonitoringStatsResponse result = service.getStats();
 
@@ -228,12 +258,83 @@ class MonitoringServiceImplTest {
             when(monitoringRepository.countErrorsByHourSince(org.mockito.ArgumentMatchers.any())).thenReturn(List.of());
             when(monitoringRepository.countByAction())
                     .thenReturn(List.<Object[]>of(new Object[]{"VALIDATE", 10L, 2L}));
+            when(monitoringRepository.countDistinctUsersSince(org.mockito.ArgumentMatchers.any())).thenReturn(0L);
+            when(monitoringRepository.maxDurationMs()).thenReturn(null);
+            when(monitoringRepository.countByRole()).thenReturn(List.of());
+            when(monitoringRepository.topErrorCodes()).thenReturn(List.of());
+            when(monitoringRepository.lastActivityAt()).thenReturn(null);
             MonitoringStatsResponse result = service.getStats();
 
             assertThat(result.requestsByAction()).hasSize(1);
             assertThat(result.requestsByAction().get(0).action()).isEqualTo("VALIDATE");
             assertThat(result.requestsByAction().get(0).total()).isEqualTo(10L);
             assertThat(result.requestsByAction().get(0).errors()).isEqualTo(2L);
+        }
+    }
+
+    // ── Real platform KPIs ───────────────────────────────────────────────────────
+
+    @Nested
+    @DisplayName("KPIs plateforme réels (audit_logs uniquement)")
+    class PlatformKpis {
+
+        @Test
+        @DisplayName("activeUsers24h, maxDurationMs, requestsByRole et topErrors correctement mappés")
+        void platform_kpis_mapped() {
+            when(monitoringRepository.countAllRequests()).thenReturn(0L);
+            when(monitoringRepository.countErrors()).thenReturn(0L);
+            when(monitoringRepository.avgDurationMs()).thenReturn(null);
+            when(pipelineRepository.count()).thenReturn(0L);
+            when(pipelineRepository.findAll()).thenReturn(List.of());
+            when(payloadRepository.findAll()).thenReturn(List.of());
+            when(monitoringRepository.countRequestsByHourSince(org.mockito.ArgumentMatchers.any())).thenReturn(List.of());
+            when(monitoringRepository.countErrorsByHourSince(org.mockito.ArgumentMatchers.any())).thenReturn(List.of());
+            when(monitoringRepository.countByAction()).thenReturn(List.of());
+            when(monitoringRepository.countDistinctUsersSince(org.mockito.ArgumentMatchers.any())).thenReturn(7L);
+            when(monitoringRepository.maxDurationMs()).thenReturn(980L);
+            when(monitoringRepository.countByRole())
+                    .thenReturn(List.<Object[]>of(new Object[]{"ROLE_ADMIN", 30L}, new Object[]{"ROLE_DEVELOPER", 70L}));
+            when(monitoringRepository.topErrorCodes())
+                    .thenReturn(List.<Object[]>of(new Object[]{"VALIDATION_ERROR", 5L}));
+            java.time.Instant lastActivity = java.time.Instant.parse("2026-08-10T09:00:00Z");
+            when(monitoringRepository.lastActivityAt()).thenReturn(lastActivity);
+
+            MonitoringStatsResponse result = service.getStats();
+
+            assertThat(result.activeUsers24h()).isEqualTo(7L);
+            assertThat(result.maxDurationMs()).isEqualTo(980L);
+            assertThat(result.requestsByRole()).hasSize(2);
+            assertThat(result.requestsByRole().get(0).role()).isEqualTo("ROLE_ADMIN");
+            assertThat(result.requestsByRole().get(0).count()).isEqualTo(30L);
+            assertThat(result.topErrors()).hasSize(1);
+            assertThat(result.topErrors().get(0).code()).isEqualTo("VALIDATION_ERROR");
+            assertThat(result.topErrors().get(0).count()).isEqualTo(5L);
+            assertThat(result.lastActivityAt()).isEqualTo(lastActivity);
+        }
+
+        @Test
+        @DisplayName("maxDurationMs = null quand aucune durée n'a encore été capturée")
+        void maxDurationMs_null_when_none_captured() {
+            when(monitoringRepository.countAllRequests()).thenReturn(0L);
+            when(monitoringRepository.countErrors()).thenReturn(0L);
+            when(monitoringRepository.avgDurationMs()).thenReturn(null);
+            when(pipelineRepository.count()).thenReturn(0L);
+            when(pipelineRepository.findAll()).thenReturn(List.of());
+            when(payloadRepository.findAll()).thenReturn(List.of());
+            when(monitoringRepository.countRequestsByHourSince(org.mockito.ArgumentMatchers.any())).thenReturn(List.of());
+            when(monitoringRepository.countErrorsByHourSince(org.mockito.ArgumentMatchers.any())).thenReturn(List.of());
+            when(monitoringRepository.countByAction()).thenReturn(List.of());
+            when(monitoringRepository.countDistinctUsersSince(org.mockito.ArgumentMatchers.any())).thenReturn(0L);
+            when(monitoringRepository.maxDurationMs()).thenReturn(null);
+            when(monitoringRepository.countByRole()).thenReturn(List.of());
+            when(monitoringRepository.topErrorCodes()).thenReturn(List.of());
+            when(monitoringRepository.lastActivityAt()).thenReturn(null);
+
+            MonitoringStatsResponse result = service.getStats();
+
+            assertThat(result.maxDurationMs()).isNull();
+            assertThat(result.requestsByRole()).isEmpty();
+            assertThat(result.topErrors()).isEmpty();
         }
     }
 }

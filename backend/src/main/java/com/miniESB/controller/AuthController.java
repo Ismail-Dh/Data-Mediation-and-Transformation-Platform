@@ -1,6 +1,7 @@
 package com.miniESB.controller;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
+import com.miniESB.audit.Auditable;
 import com.miniESB.dto.auth.AuthResponse;
 import com.miniESB.dto.auth.LoginRequest;
 import com.miniESB.dto.auth.RegisterRequest;
@@ -49,10 +50,11 @@ public class AuthController {
 
     @Operation(summary = "Login", description = "Authenticates a user and returns a JWT token.")
     @ApiResponses({
-        @ApiResponse(responseCode = "200", description = "Login successful, token returned"),
-        @ApiResponse(responseCode = "401", description = "Invalid credentials")
+            @ApiResponse(responseCode = "200", description = "Login successful, token returned"),
+            @ApiResponse(responseCode = "401", description = "Invalid credentials")
     })
     @PostMapping("/login")
+    @Auditable(action = "LOGIN", targetEntity = "Auth")
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
         authManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.username(), request.password())
@@ -64,10 +66,11 @@ public class AuthController {
 
     @Operation(summary = "Register", description = "Creates a new user account and returns a JWT token.")
     @ApiResponses({
-        @ApiResponse(responseCode = "201", description = "Account created successfully"),
-        @ApiResponse(responseCode = "409", description = "Username already exists")
+            @ApiResponse(responseCode = "201", description = "Account created successfully"),
+            @ApiResponse(responseCode = "409", description = "Username already exists")
     })
     @PostMapping("/register")
+    @Auditable(action = "REGISTER", targetEntity = "Auth")
     public ResponseEntity<AuthResponse> register(@RequestBody RegisterRequest request) {
         if (userRepository.existsByUsername(request.username())) {
             return ResponseEntity.status(HttpStatus.CONFLICT).build();

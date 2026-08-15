@@ -97,7 +97,7 @@
           <div class="empty-state" *ngIf="actions.length === 0">No data available.</div>
           <div class="action-list" *ngIf="actions.length > 0">
             <div class="action-row" *ngFor="let a of actions">
-              <span class="action-row__label">{{ a.action }}</span>
+              <span class="action-row__label" [title]="a.action">{{ a.action }}</span>
               <div class="bar-track"><div class="bar-fill" [style.width.%]="a.pct"></div></div>
               <span class="action-row__count">{{ a.total | number }}</span>
               <span class="action-row__err">{{ a.errors }} err</span>
