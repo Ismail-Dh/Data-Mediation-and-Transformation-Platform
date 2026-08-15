@@ -1,5 +1,6 @@
 package com.miniESB.dto.monitoring;
 
+import java.time.Instant;
 import java.util.List;
 
 /**
@@ -28,9 +29,18 @@ public record MonitoringStatsResponse(
         List<HourlyBucket> requestsByHour,     // for bar chart
 
         // ── Per-action breakdown ───────────────────────────────────────────────
-        List<ActionStat> requestsByAction
+        List<ActionStat> requestsByAction,
+
+        // ── Real platform KPIs (audit_logs only, no pipeline/payload data) ─────
+        long    activeUsers24h,        // distinct performedBy in the last 24h
+        Long    maxDurationMs,         // slowest recorded request, null if none captured yet
+        List<RoleStat>  requestsByRole,   // breakdown of requests per caller role
+        List<ErrorStat> topErrors,        // top 5 error codes by frequency
+        Instant lastActivityAt            // timestamp of the most recent audit log entry, all-time
 
 ) {
     public record HourlyBucket(String hour, long count) {}
     public record ActionStat(String action, long total, long errors) {}
+    public record RoleStat(String role, long count) {}
+    public record ErrorStat(String code, long count) {}
 }

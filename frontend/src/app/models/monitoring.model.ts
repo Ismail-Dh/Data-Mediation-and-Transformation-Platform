@@ -9,6 +9,16 @@ export interface ActionStat {
   errors: number;
 }
 
+export interface RoleStat {
+  role: string;
+  count: number;
+}
+
+export interface ErrorStat {
+  code: string;
+  count: number;
+}
+
 export interface MonitoringStatsResponse {
   // Global KPIs
   totalRequests: number;
@@ -16,11 +26,12 @@ export interface MonitoringStatsResponse {
   errorRatePct: number;
   avgDurationMs: number | null;
 
-  // Pipelines
+  // Pipelines (kept for backward compat with the admin dashboard widget —
+  // NOT used on the /monitoring page anymore, which is platform-only)
   totalPipelines: number;
   configuredPipelines: number;
 
-  // Payloads
+  // Payloads (idem — not used on /monitoring)
   totalPayloads: number;
   successfulPayloads: number;
   failedPayloads: number;
@@ -31,4 +42,11 @@ export interface MonitoringStatsResponse {
 
   // Per-action breakdown
   requestsByAction: ActionStat[];
+
+  // Real platform KPIs (audit_logs only, no pipeline/payload data)
+  activeUsers24h: number;
+  maxDurationMs: number | null;
+  requestsByRole: RoleStat[];
+  topErrors: ErrorStat[];
+  lastActivityAt: string | null;
 }

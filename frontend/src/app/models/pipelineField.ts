@@ -20,3 +20,18 @@ export interface PipelineFieldResponse {
   required:  boolean;
   nullable:  boolean;
 }
+
+/** Une entrée du fichier JSON de schéma qui n'a pas pu être importée. */
+export interface PipelineFieldImportError {
+  fieldPath: string | null;
+  reason:    string;
+}
+
+/** Réponse de POST /api/pipelines/{pipelineId}/fields/import */
+export interface PipelineFieldImportResponse {
+  totalRequested: number;
+  created:        number;
+  skipped:        number;
+  fields:         PipelineFieldResponse[];
+  errors:         PipelineFieldImportError[];
+}

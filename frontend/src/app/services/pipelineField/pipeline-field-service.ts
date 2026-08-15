@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
-import { PipelineFieldRequest ,  PipelineFieldResponse }  from '../../models/pipelineField';
+import { PipelineFieldRequest ,  PipelineFieldResponse, PipelineFieldImportResponse }  from '../../models/pipelineField';
 
 @Injectable({ providedIn: 'root' })
 export class PipelineFieldService {
@@ -54,6 +54,23 @@ export class PipelineFieldService {
   deleteField(pipelineId: number, fieldId: number): Observable<void> {
     return this.http.delete<void>(
       `${this.base}/api/pipelines/${pipelineId}/fields/${fieldId}`
+    );
+  }
+
+  /**
+   * POST /api/pipelines/{pipelineId}/fields/import
+   * Importe en masse les champs du schéma à partir d'un fichier JSON
+   * (tableau de { fieldPath, fieldType, required }).
+   * Import "best effort" : les entrées invalides ou en doublon sont
+   * ignorées et reportées dans la réponse plutôt que de faire échouer
+   * tout l'import.
+   */
+  importFieldsFromJson(pipelineId: number, file: File): Observable<PipelineFieldImportResponse> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post<PipelineFieldImportResponse>(
+      `${this.base}/api/pipelines/${pipelineId}/fields/import`,
+      formData
     );
   }
 }

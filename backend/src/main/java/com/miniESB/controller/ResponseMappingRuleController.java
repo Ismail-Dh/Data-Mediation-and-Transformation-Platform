@@ -1,5 +1,6 @@
 package com.miniESB.controller;
 
+import com.miniESB.audit.Auditable;
 import com.miniESB.dto.response.CreateResponseMappingRuleRequest;
 import com.miniESB.dto.response.ResponseMappingRuleResponse;
 import com.miniESB.service.ResponseMappingRuleAdminService;
@@ -44,6 +45,7 @@ public class ResponseMappingRuleController {
             @ApiResponse(responseCode = "404", description = "Pipeline not found")
     })
     @GetMapping
+    @Auditable(action = "READ_ALL", targetEntity = "Response Mapping Rule")
     public ResponseEntity<List<ResponseMappingRuleResponse>> getRules(
             @Parameter(description = "ID of the pipeline") @PathVariable Long pipelineId) {
         return ResponseEntity.ok(responseMappingRuleAdminService.getRules(pipelineId));
@@ -56,6 +58,7 @@ public class ResponseMappingRuleController {
             @ApiResponse(responseCode = "404", description = "Pipeline not found")
     })
     @PostMapping
+    @Auditable(action = "CREATE", targetEntity = "Response Mapping Rule")
     public ResponseEntity<ResponseMappingRuleResponse> createRule(
             @Parameter(description = "ID of the pipeline") @PathVariable Long pipelineId,
             @Valid @RequestBody CreateResponseMappingRuleRequest request) {
@@ -71,6 +74,7 @@ public class ResponseMappingRuleController {
             @ApiResponse(responseCode = "404", description = "Pipeline or rule not found")
     })
     @PutMapping("/{ruleId}")
+    @Auditable(action = "UPDATE", targetEntity = "Response Mapping Rule")
     public ResponseEntity<ResponseMappingRuleResponse> updateRule(
             @Parameter(description = "ID of the pipeline") @PathVariable Long pipelineId,
             @Parameter(description = "ID of the rule to update") @PathVariable Long ruleId,
@@ -84,6 +88,7 @@ public class ResponseMappingRuleController {
             @ApiResponse(responseCode = "404", description = "Pipeline or rule not found")
     })
     @DeleteMapping("/{ruleId}")
+    @Auditable(action = "DELETE", targetEntity = "Response Mapping Rule")
     public ResponseEntity<Void> deleteRule(
             @Parameter(description = "ID of the pipeline") @PathVariable Long pipelineId,
             @Parameter(description = "ID of the rule to delete") @PathVariable Long ruleId) {

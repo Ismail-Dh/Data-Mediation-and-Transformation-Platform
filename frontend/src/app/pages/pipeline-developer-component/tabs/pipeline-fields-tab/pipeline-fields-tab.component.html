@@ -1,4 +1,50 @@
 <div class="tab-panel">
+  <div class="json-import">
+    <input
+      #jsonFileInput
+      type="file"
+      accept="application/json,.json"
+      class="json-import-input"
+      (change)="onJsonFileSelected($event)"
+    />
+    <button
+      type="button"
+      class="btn btn--outline btn--sm"
+      [disabled]="importing"
+      (click)="triggerJsonImport()"
+    >
+      <svg viewBox="0 0 20 20" class="btn-icon">
+        <path d="M10 3v10m0 0l-3.5-3.5M10 13l3.5-3.5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M4 15v1.5A1.5 1.5 0 0 0 5.5 18h9a1.5 1.5 0 0 0 1.5-1.5V15" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+      </svg>
+      {{ importing ? 'Import en cours…' : 'Importer un schéma JSON' }}
+    </button>
+    <span class="json-import-hint">Fichier .json : tableau de champs {{ '{' }} fieldPath, fieldType, required {{ '}' }}</span>
+  </div>
+
+  <div class="import-banner import-banner--error" *ngIf="importErrorMessage">
+    <span>{{ importErrorMessage }}</span>
+    <button type="button" class="import-banner-close" (click)="dismissImportResult()" aria-label="Fermer">&times;</button>
+  </div>
+
+  <div
+    class="import-banner"
+    *ngIf="importResult"
+    [class.import-banner--success]="importResult.errors.length === 0"
+    [class.import-banner--warning]="importResult.errors.length > 0"
+  >
+    <div class="import-banner-summary">
+      <strong>{{ importResult.created }}</strong> champ(s) créé(s) sur {{ importResult.totalRequested }} demandé(s).
+      <span *ngIf="importResult.skipped > 0">{{ importResult.skipped }} ignoré(s).</span>
+    </div>
+    <ul class="import-banner-errors" *ngIf="importResult.errors.length > 0">
+      <li *ngFor="let e of importResult.errors">
+        <code>{{ e.fieldPath || '(inconnu)' }}</code> : {{ e.reason }}
+      </li>
+    </ul>
+    <button type="button" class="import-banner-close" (click)="dismissImportResult()" aria-label="Fermer">&times;</button>
+  </div>
+
   <form [formGroup]="fieldForm" (ngSubmit)="saveField()" class="inline-form">
     <div class="inline-form-fields">
       <div class="field field--inline">

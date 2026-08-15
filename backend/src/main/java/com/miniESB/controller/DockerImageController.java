@@ -1,5 +1,6 @@
 package com.miniESB.controller;
 
+import com.miniESB.audit.Auditable;
 import com.miniESB.dto.docker.*;
 import com.miniESB.exception.DockerBuildException;
 import com.miniESB.exception.DockerDaemonException;
@@ -53,7 +54,7 @@ public class DockerImageController {
 
     private final DockerImageGeneratorService generatorService;
     private final ImageVersionService         imageVersionService;
-    private final DockerImagePushService pushService; 
+    private final DockerImagePushService pushService;
 
 
     // ── POST /generate ────────────────────────────────────────────────────────
@@ -92,6 +93,7 @@ public class DockerImageController {
                              }""")))
     })
     @PostMapping("/generate")
+    @Auditable(action = "GENERATE", targetEntity = "Docker Image")
     public ResponseEntity<?> generate(@PathVariable Long pipelineId) {
         try {
             DockerImageBuildResponse response = generatorService.generateImage(pipelineId);
@@ -127,6 +129,7 @@ public class DockerImageController {
 
     @Operation(summary = "Get Docker image info for a pipeline")
     @GetMapping
+    @Auditable(action = "READ", targetEntity = "Docker Image")
     public ResponseEntity<DockerImageResponse> getImageInfo(@PathVariable Long pipelineId) {
         return ResponseEntity.ok(generatorService.getImageInfo(pipelineId));
     }
@@ -135,6 +138,7 @@ public class DockerImageController {
 
     @Operation(summary = "Download Docker image as tar archive")
     @GetMapping("/download")
+    @Auditable(action = "DOWNLOAD", targetEntity = "Docker Image")
     public ResponseEntity<byte[]> download(@PathVariable Long pipelineId) throws Exception {
         byte[] imageBytes = generatorService.exportImage(pipelineId);
         String filename   = "pipeline-" + pipelineId + ".tar";
@@ -157,6 +161,7 @@ public class DockerImageController {
      */
     @Operation(summary = "Manually bump MINOR or MAJOR version for a pipeline image")
     @PostMapping("/version/bump")
+    @Auditable(action = "BUMP_VERSION", targetEntity = "Docker Image")
     public ResponseEntity<VersionBumpResponse> bumpVersion(
             @PathVariable Long pipelineId,
             @RequestBody @Valid VersionBumpRequest request) {
@@ -174,6 +179,7 @@ public class DockerImageController {
      */
     @Operation(summary = "Get the current semantic version of a pipeline image")
     @GetMapping("/version")
+    @Auditable(action = "READ", targetEntity = "Docker Image")
     public ResponseEntity<Map<String, Object>> getCurrentVersion(
             @PathVariable Long pipelineId) {
         return ResponseEntity.ok(generatorService.getCurrentVersionInfo(pipelineId));
@@ -206,26 +212,28 @@ public class DockerImageController {
     }
     @Operation(summary = "Get version history for a pipeline")
     @GetMapping("/versions")
+    @Auditable(action = "READ_ALL", targetEntity = "Docker Image")
     public ResponseEntity<List<BuildLogEntryResponse>> getVersionHistory(
-        @PathVariable Long pipelineId) {
-      return ResponseEntity.ok(generatorService.getVersionHistory(pipelineId));
+            @PathVariable Long pipelineId) {
+        return ResponseEntity.ok(generatorService.getVersionHistory(pipelineId));
     }
     @Operation(summary = "Push pipeline image to a Docker registry")
-@PostMapping("/push")
-public ResponseEntity<?> push(
-        @PathVariable Long pipelineId,
-        @Valid @RequestBody PushImageRequest request) {
-    try {
-        return ResponseEntity.ok(
-                pushService.pushImage(pipelineId, request.registryId()));
-    } catch (IllegalStateException e) {
-        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
-                .body(Map.of("error", e.getMessage(), "errorType", "IMAGE_NOT_READY"));
-    } catch (Exception e) {
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of("error", "Push failed: " + e.getMessage(),
-                             "errorType", "PUSH_FAILED"));
+    @PostMapping("/push")
+    @Auditable(action = "PUSH", targetEntity = "Docker Image")
+    public ResponseEntity<?> push(
+            @PathVariable Long pipelineId,
+            @Valid @RequestBody PushImageRequest request) {
+        try {
+            return ResponseEntity.ok(
+                    pushService.pushImage(pipelineId, request.registryId()));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
+                    .body(Map.of("error", e.getMessage(), "errorType", "IMAGE_NOT_READY"));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Push failed: " + e.getMessage(),
+                            "errorType", "PUSH_FAILED"));
+        }
     }
-}
 
 }

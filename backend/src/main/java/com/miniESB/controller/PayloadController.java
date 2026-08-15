@@ -1,6 +1,7 @@
 package com.miniESB.controller;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
+import com.miniESB.audit.Auditable;
 import com.miniESB.dto.payload.PayloadRequest;
 import com.miniESB.dto.payload.PayloadResponse;
 import com.miniESB.service.PayloadService;
@@ -26,8 +27,9 @@ public class PayloadController {
     private final PayloadService payloadService;
 
     @Operation(summary = "Submit a payload to a pipeline",
-               description = "Validates the payload structure against the pipeline schema. Returns 422 if violations found.")
+            description = "Validates the payload structure against the pipeline schema. Returns 422 if violations found.")
     @PostMapping
+    @Auditable(action = "CREATE", targetEntity = "Payload")
     public ResponseEntity<PayloadResponse> receivePayload(
             @PathVariable Long pipelineId,
             @Valid @RequestBody PayloadRequest request) {
@@ -37,14 +39,16 @@ public class PayloadController {
 
     @Operation(summary = "Get all payloads of a pipeline")
     @GetMapping
+    @Auditable(action = "READ_ALL", targetEntity = "Payload")
     public ResponseEntity<List<PayloadResponse>> getPayloads(@PathVariable Long pipelineId) {
         return ResponseEntity.ok(payloadService.getPayloadsByPipeline(pipelineId));
     }
 
     @Operation(summary = "Get a payload by ID")
     @GetMapping("/{payloadId}")
+    @Auditable(action = "READ", targetEntity = "Payload")
     public ResponseEntity<PayloadResponse> getPayload(@PathVariable Long pipelineId,
-                                                       @PathVariable Long payloadId) {
+                                                      @PathVariable Long payloadId) {
         return ResponseEntity.ok(payloadService.getPayloadById(payloadId));
     }
 }

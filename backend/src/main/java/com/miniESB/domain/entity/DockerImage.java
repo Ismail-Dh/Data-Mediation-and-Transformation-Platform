@@ -67,6 +67,10 @@ public class DockerImage {
     @Builder.Default
     private List<BuildLog> buildLogs = new ArrayList<>();
 
+
+    @OneToMany(mappedBy = "dockerImage", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<BuildLogEntry> buildLogEntries = new ArrayList<>();
     // ── Helper ────────────────────────────────────────────────────────────────
 
     /**
